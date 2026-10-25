@@ -3,6 +3,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import { setGlobalOptions } from 'firebase-functions/v2'
+import { defineString } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 import { onDocumentDeleted, onDocumentWritten } from 'firebase-functions/v2/firestore'
 
@@ -28,6 +29,37 @@ function exigirTexto(v: unknown, campo: string): string {
 }
 
 // ---------- Usuarios y roles ----------
+
+// Correo del administrador inicial. `firebase deploy` lo pregunta la primera vez y lo
+// guarda en functions/.env.<proyecto> (no se sube al repositorio).
+const ADMIN_INICIAL = defineString('ADMIN_INICIAL', {
+  description: 'Correo del administrador inicial (el que creaste en Authentication)',
+})
+
+/** Convierte en admin a la cuenta de ADMIN_INICIAL, solo mientras no exista ningún admin. */
+export const reclamarAdminInicial = onCall(async (req) => {
+  const email = (req.auth?.token.email ?? '').toLowerCase()
+  const esperado = ADMIN_INICIAL.value().trim().toLowerCase()
+  if (!req.auth || !email || !esperado || email !== esperado) {
+    throw new HttpsError('permission-denied', 'Esta cuenta no es la del administrador inicial.')
+  }
+  const admins = await db.collection('usuarios').where('rol', '==', 'admin').limit(1).get()
+  if (!admins.empty) throw new HttpsError('failed-precondition', 'Ya hay un administrador. Pídele que te asigne un rol.')
+  await getAuth().setCustomUserClaims(req.auth.uid, { rol: 'admin' })
+  await db.doc(`usuarios/${req.auth.uid}`).set(
+    {
+      nombre: req.auth.token.name ?? email,
+      email,
+      rol: 'admin',
+      area: '',
+      activo: true,
+      tokensFCM: [],
+      creado: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  )
+  return {}
+})
 
 export const crearUsuario = onCall(async (req) => {
   exigirAdmin(req)

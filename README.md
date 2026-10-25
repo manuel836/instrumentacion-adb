@@ -24,6 +24,7 @@ npm install
 npm --prefix functions install
 npm --prefix functions run build
 cp .env.example .env.local          # deja VITE_USE_EMULATORS=true
+echo 'ADMIN_INICIAL=manuel@adb.test' > functions/.env.local
 firebase emulators:start --project demo-instrumentacion-adb --only auth,firestore,storage,functions
 
 # En otra terminal: crea el admin inicial en los emuladores
@@ -44,14 +45,20 @@ Pruebas:
 
 ## Puesta en producción
 
-1. Crear el proyecto en Firebase con ID `instrumentacion-adb` (así el dominio queda
-   `instrumentacion-adb.web.app`), activar plan Blaze y una alerta de presupuesto en Google Cloud.
-2. Activar Authentication (correo y contraseña), Firestore, Storage y Hosting.
-3. La configuración web del proyecto ya está en `.env.production` (la usa `npm run build`).
-   Para desarrollo con emuladores se usa `.env.local`, que tiene prioridad en `npm run dev`.
-4. `npm run build && firebase deploy`
-5. Crear el admin: `gcloud auth application-default login` y luego
-   `GCLOUD_PROJECT=instrumentacion-adb node functions/scripts/crear-admin.mjs correo "Manuel" 'contraseña'`.
+El proyecto Firebase `instrumentacion-adb` ya tiene Blaze, Authentication (correo y contraseña),
+Firestore (nam5) y Storage. Su configuración web está en `.env.production`.
+
+1. En la consola de Firebase, **Authentication → Usuarios → Agregar usuario**: crea la cuenta del administrador.
+2. Abre [Google Cloud Shell](https://shell.cloud.google.com) con la misma cuenta de Google y corre:
+
+   ```bash
+   git clone https://github.com/manuel836/instrumentacion-adb && cd instrumentacion-adb
+   bash scripts/desplegar.sh
+   ```
+
+   La primera vez pide iniciar sesión en Firebase y el valor de `ADMIN_INICIAL`: escribe el correo del paso 1.
+3. Abre https://instrumentacion-adb.web.app, entra con esa cuenta y pulsa **Soy el administrador inicial**.
+   Solo funciona para ese correo y mientras no exista otro admin. Desde ahí se dan de alta los demás usuarios.
 
 **El dominio queda grabado en cada tag.** No grabes tags reales hasta tener el dominio definitivo;
 cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL exacta que se grabará.

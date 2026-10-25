@@ -1,4 +1,6 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from './firebase'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
@@ -22,17 +24,46 @@ function ConSesion({ children }: { children: ReactNode }) {
 
   if (cargando) return null
   if (!user) return <Navigate to="/login" replace state={{ desde: location.pathname }} />
-  if (!rol)
-    return (
-      <div className="p-8 text-center">
-        <p className="font-semibold">Tu cuenta no tiene un rol asignado.</p>
-        <p className="mt-2 text-slate-500">Pide al administrador que te asigne uno.</p>
-        <button className="btn-secundario mt-6" onClick={() => void salir()}>
+  if (!rol) return <SinRol onSalir={() => void salir()} />
+  return <>{children}</>
+}
+
+const reclamarAdminInicial = httpsCallable(functions, 'reclamarAdminInicial')
+
+function SinRol({ onSalir }: { onSalir: () => void }) {
+  const { user } = useAuth()
+  const [mensaje, setMensaje] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  async function reclamar() {
+    setEnviando(true)
+    setMensaje('')
+    try {
+      await reclamarAdminInicial()
+      await user?.getIdToken(true)
+    } catch (err) {
+      setMensaje((err as Error).message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="p-8 text-center">
+      <p className="font-semibold">Tu cuenta no tiene un rol asignado.</p>
+      <p className="mt-2 text-slate-500">Pide al administrador que te asigne uno.</p>
+      <div className="mt-6 flex flex-col items-center gap-3">
+        <button className="btn-secundario" onClick={onSalir}>
           Salir
         </button>
+        {/* Solo funciona para el correo configurado como administrador inicial y mientras no haya otro admin. */}
+        <button className="text-sm text-marca-700 underline" disabled={enviando} onClick={() => void reclamar()}>
+          Soy el administrador inicial
+        </button>
+        {mensaje && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mensaje}</p>}
       </div>
-    )
-  return <>{children}</>
+    </div>
+  )
 }
 
 function SoloSi({ permitido, children }: { permitido: boolean; children: ReactNode }) {
