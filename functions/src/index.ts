@@ -32,6 +32,10 @@ function exigirTexto(v: unknown, campo: string): string {
 
 // ---------- Usuarios y roles ----------
 
+// Las funciones invocables son públicas a nivel de Cloud Run (cada una revisa el rol).
+// Declararlo hace que cada despliegue vuelva a aplicar el permiso, no solo el primero.
+const PUBLICA = { invoker: 'public' as const }
+
 // Correo del administrador inicial. `firebase deploy` lo pregunta la primera vez y lo
 // guarda en functions/.env.<proyecto> (no se sube al repositorio).
 const ADMIN_INICIAL = defineString('ADMIN_INICIAL', {
@@ -39,7 +43,7 @@ const ADMIN_INICIAL = defineString('ADMIN_INICIAL', {
 })
 
 /** Convierte en admin a la cuenta de ADMIN_INICIAL, solo mientras no exista ningún admin. */
-export const reclamarAdminInicial = onCall(async (req) => {
+export const reclamarAdminInicial = onCall(PUBLICA, async (req) => {
   const email = (req.auth?.token.email ?? '').toLowerCase()
   const esperado = ADMIN_INICIAL.value().trim().toLowerCase()
   if (!req.auth || !email || !esperado || email !== esperado) {
@@ -63,7 +67,7 @@ export const reclamarAdminInicial = onCall(async (req) => {
   return {}
 })
 
-export const crearUsuario = onCall(async (req) => {
+export const crearUsuario = onCall(PUBLICA, async (req) => {
   exigirAdmin(req)
   const nombre = exigirTexto(req.data?.nombre, 'el nombre')
   const email = exigirTexto(req.data?.email, 'el correo').toLowerCase()
@@ -76,6 +80,8 @@ export const crearUsuario = onCall(async (req) => {
     .createUser({ email, password, displayName: nombre })
     .catch((e: { code?: string }) => {
       if (e.code === 'auth/email-already-exists') throw new HttpsError('already-exists', 'Ese correo ya tiene usuario.')
+      if (e.code === 'auth/invalid-email') throw new HttpsError('invalid-argument', 'El correo no es válido.')
+      if (e.code === 'auth/invalid-password') throw new HttpsError('invalid-argument', 'La contraseña no es válida.')
       throw e
     })
   await getAuth().setCustomUserClaims(user.uid, { rol })
@@ -83,7 +89,7 @@ export const crearUsuario = onCall(async (req) => {
   return { uid: user.uid }
 })
 
-export const asignarRol = onCall(async (req) => {
+export const asignarRol = onCall(PUBLICA, async (req) => {
   exigirAdmin(req)
   const uid = exigirTexto(req.data?.uid, 'el usuario')
   const rol = exigirRol(req.data?.rol)
@@ -94,7 +100,7 @@ export const asignarRol = onCall(async (req) => {
   return {}
 })
 
-export const cambiarActivo = onCall(async (req) => {
+export const cambiarActivo = onCall(PUBLICA, async (req) => {
   exigirAdmin(req)
   const uid = exigirTexto(req.data?.uid, 'el usuario')
   const activo = req.data?.activo === true
@@ -106,7 +112,7 @@ export const cambiarActivo = onCall(async (req) => {
   return {}
 })
 
-export const revocarSesiones = onCall(async (req) => {
+export const revocarSesiones = onCall(PUBLICA, async (req) => {
   exigirAdmin(req)
   const uid = exigirTexto(req.data?.uid, 'el usuario')
   await getAuth().revokeRefreshTokens(uid)

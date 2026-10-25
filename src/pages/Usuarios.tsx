@@ -36,21 +36,30 @@ export function Usuarios() {
     [],
   )
 
-  async function accion(f: () => Promise<unknown>, ok: string) {
+  async function accion(f: () => Promise<unknown>, ok: string): Promise<boolean> {
     setMensaje('')
     try {
       await f()
       setMensaje(ok)
+      return true
     } catch (err) {
-      setMensaje(`Error: ${(err as Error).message}`)
+      const code = (err as { code?: string }).code
+      setMensaje(
+        code === 'functions/internal' || code === 'functions/unavailable'
+          ? 'Error: no se pudo contactar al servidor. Revisa tu señal o avisa al administrador del sistema.'
+          : `Error: ${(err as Error).message}`,
+      )
+      return false
     }
   }
 
   async function onCrear(e: FormEvent) {
     e.preventDefault()
     setEnviando(true)
-    await accion(() => crearUsuario(form), `Usuario ${form.email} creado.`)
-    setForm({ nombre: '', email: '', password: '', rol: 'operador', area: '' })
+    // Si falla se conservan los datos para corregir y reintentar.
+    if (await accion(() => crearUsuario(form), `Usuario ${form.email} creado.`)) {
+      setForm({ nombre: '', email: '', password: '', rol: 'operador', area: '' })
+    }
     setEnviando(false)
   }
 
