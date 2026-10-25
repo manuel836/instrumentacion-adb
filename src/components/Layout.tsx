@@ -33,6 +33,9 @@ function Menu({ bitacora, exportar, onSalir }: { bitacora: boolean; exportar: bo
         <>
           <button className="fixed inset-0 z-30 cursor-default" aria-label="Cerrar menú" onClick={() => setAbierto(false)} />
           <div className="absolute right-0 z-40 mt-2 w-48 divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-lg">
+            <Link to="/cuenta" className={clase}>
+              Cambiar contraseña
+            </Link>
             {bitacora && (
               <Link to="/bitacora" className={clase}>
                 Bitácora de cambios
@@ -77,13 +80,7 @@ export function Layout() {
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
         <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <span className="text-lg font-bold">Instrumentación ADB</span>
-          {p.verBitacora || p.exportar ? (
-            <Menu bitacora={p.verBitacora} exportar={p.exportar} onSalir={() => void salir()} />
-          ) : (
-            <button className="text-sm text-white/80" onClick={() => void salir()}>
-              Salir
-            </button>
-          )}
+          <Menu bitacora={p.verBitacora} exportar={p.exportar} onSalir={() => void salir()} />
         </div>
         <BarraConexion />
         <AvisoNotificaciones />

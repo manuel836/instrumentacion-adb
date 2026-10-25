@@ -12,6 +12,7 @@ import { Imprimir } from './pages/Imprimir'
 import { DetalleCalibracion } from './pages/DetalleCalibracion'
 import { NuevaCalibracion } from './pages/NuevaCalibracion'
 import { ChatGeneral } from './pages/ChatGeneral'
+import { Cuenta } from './pages/Cuenta'
 import { DetalleFalla } from './pages/DetalleFalla'
 import { Escanear } from './pages/Escanear'
 import { Fallas } from './pages/Fallas'
@@ -113,6 +114,7 @@ function Rutas() {
         <Route path="fallas/nueva" element={<SoloSi permitido={p.reportarFallas}><NuevaFalla /></SoloSi>} />
         <Route path="fallas/:id" element={<DetalleFalla />} />
         <Route path="chat" element={<ChatGeneral />} />
+        <Route path="cuenta" element={<Cuenta />} />
         <Route path="bitacora" element={<SoloSi permitido={p.verBitacora}><Bitacora /></SoloSi>} />
         <Route path="exportar" element={<SoloSi permitido={p.exportar}><Exportar /></SoloSi>} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />

@@ -50,6 +50,8 @@ Pruebas:
   calibraciones), permisos del operador, los tres Excel y el PDF de la vista de impresión.
   En los emuladores la bitácora muestra `fake-auth-id@gmail.com` como autor de las ediciones:
   el emulador no manda el usuario real al trigger; en producción sale el nombre de quien editó.
+- `node e2e/usuarios.cjs`: un usuario cambia su propia contraseña (Menú > Cambiar contraseña) y el
+  admin lo elimina (ya no puede entrar y queda en la bitácora). Solo necesita el admin de prueba.
 
 Para correr las pruebas de punta a punta, compila apuntando a los emuladores con
 `npx vite build --mode e2e` (con `npm run build` manda la configuración de producción de `.env.production`).
