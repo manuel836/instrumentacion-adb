@@ -184,7 +184,7 @@ export const alBorrarFotoUbicacion = onDocumentDeleted('instrumentos/{id}/ubicac
 // ---------- Fallas ----------
 
 /** URL pública de la app para los enlaces de las notificaciones. */
-const ORIGEN = process.env.PUBLIC_ORIGIN ?? 'https://instrumentacion-adb.web.app'
+const ORIGEN = process.env.PUBLIC_ORIGIN ?? 'https://instrumentacion-adb-fertinal.web.app'
 
 interface Aviso {
   titulo: string
