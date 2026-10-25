@@ -47,8 +47,8 @@ Pruebas:
 1. Crear el proyecto en Firebase con ID `instrumentacion-adb` (así el dominio queda
    `instrumentacion-adb.web.app`), activar plan Blaze y una alerta de presupuesto en Google Cloud.
 2. Activar Authentication (correo y contraseña), Firestore, Storage y Hosting.
-3. Llenar `.env.local` con la configuración web del proyecto, `VITE_USE_EMULATORS=false` y
-   `VITE_PUBLIC_ORIGIN=https://instrumentacion-adb.web.app`.
+3. La configuración web del proyecto ya está en `.env.production` (la usa `npm run build`).
+   Para desarrollo con emuladores se usa `.env.local`, que tiene prioridad en `npm run dev`.
 4. `npm run build && firebase deploy`
 5. Crear el admin: `gcloud auth application-default login` y luego
    `GCLOUD_PROJECT=instrumentacion-adb node functions/scripts/crear-admin.mjs correo "Manuel" 'contraseña'`.
