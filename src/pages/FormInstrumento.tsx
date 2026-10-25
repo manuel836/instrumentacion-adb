@@ -49,7 +49,8 @@ export function FormInstrumento() {
   const set = <K extends keyof InstrumentoNuevo>(k: K, v: InstrumentoNuevo[K]) => setDatos((d) => ({ ...d, [k]: v }))
   const num = (s: string) => (s.trim() === '' ? null : Number(s))
 
-  async function onSubmit(e: FormEvent) {
+  // El tag NFC y las fotos son opcionales: se pueden agregar después desde la ficha.
+  async function onSubmit(e: Pick<FormEvent, 'preventDefault'>, conTagYFotos = true) {
     e.preventDefault()
     setError(null)
     const tagISA = datos.tagISA.trim().toUpperCase()
@@ -70,8 +71,8 @@ export function FormInstrumento() {
         navigate(`/instrumentos/${id}`, { replace: true })
       } else {
         const nuevoId = crearInstrumento(limpio)
-        // Alta rápida en campo: después del alta se vincula el tag y se toma la foto obligatoria.
-        navigate(`/instrumentos/${nuevoId}/vincular`, { replace: true })
+        // Alta rápida en campo: después del alta se ofrece vincular el tag y tomar fotos.
+        navigate(conTagYFotos ? `/instrumentos/${nuevoId}/vincular` : `/instrumentos/${nuevoId}`, { replace: true })
       }
     } finally {
       setGuardando(false)
@@ -83,7 +84,11 @@ export function FormInstrumento() {
   return (
     <form onSubmit={onSubmit} className="space-y-4 p-4">
       <h1 className="text-xl font-bold">{id ? `Editar ${datos.tagISA}` : 'Alta de instrumento'}</h1>
-      {!id && <p className="text-sm text-slate-500">Solo el tag, el área y el servicio son obligatorios; lo demás se completa después.</p>}
+      {!id && (
+        <p className="text-sm text-slate-500">
+          Solo el tag, el área y el servicio son obligatorios. El tag NFC, las fotos y lo demás se pueden agregar después desde la ficha.
+        </p>
+      )}
 
       <Campo label="Tag ISA *">
         <input
@@ -180,6 +185,18 @@ export function FormInstrumento() {
           {id ? 'Guardar' : 'Siguiente: tag y fotos'}
         </button>
       </div>
+      {!id && (
+        <button
+          type="button"
+          className="btn-secundario w-full"
+          disabled={guardando}
+          onClick={(e) => {
+            if (e.currentTarget.form?.reportValidity()) void onSubmit(e, false)
+          }}
+        >
+          Guardar sin tag ni fotos
+        </button>
+      )}
     </form>
   )
 }

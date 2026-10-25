@@ -59,7 +59,7 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
         <h2 className="font-semibold">Ubicación en campo</h2>
         {editable && (
           <button className="text-sm font-semibold text-marca-700" onClick={() => setEditando((e) => !e)}>
-            {editando ? 'Listo' : 'Editar fotos'}
+            {editando ? 'Listo' : fotos.length === 0 ? '+ Agregar fotos' : 'Editar fotos'}
           </button>
         )}
       </div>

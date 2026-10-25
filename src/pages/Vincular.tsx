@@ -75,7 +75,7 @@ export function Vincular() {
       </h1>
 
       <section className="tarjeta space-y-3">
-        <h2 className="font-semibold">1. Grabar el tag</h2>
+        <h2 className="font-semibold">1. Grabar el tag (opcional)</h2>
         {inst.nfcToken && estado !== 'grabado' && (
           <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
             Este instrumento ya tiene un tag. Si grabas uno nuevo, el anterior deja de funcionar.
@@ -107,7 +107,7 @@ export function Vincular() {
       </section>
 
       <section className="tarjeta space-y-3">
-        <h2 className="font-semibold">2. Fotos de ubicación</h2>
+        <h2 className="font-semibold">2. Fotos de ubicación (opcional)</h2>
         {necesitaFotos ? (
           <>
             <p className="text-sm text-slate-600">
@@ -115,9 +115,16 @@ export function Vincular() {
               para que cualquiera lo encuentre, por ejemplo “Nivel 2, lado norte de la caldera B”.
             </p>
             <SelectorFotos fotos={fotos} onChange={setFotos} max={MAX_FOTOS_UBICACION} portada={portada} onPortada={setPortada} />
-            <button className="btn-primario w-full" disabled={fotos.length === 0 || guardando} onClick={() => void guardarFotos()}>
-              {guardando ? 'Procesando fotos…' : 'Guardar y terminar'}
-            </button>
+            {fotos.length > 0 ? (
+              <button className="btn-primario w-full" disabled={guardando} onClick={() => void guardarFotos()}>
+                {guardando ? 'Procesando fotos…' : 'Guardar y terminar'}
+              </button>
+            ) : (
+              <Link to={`/instrumentos/${inst.id}`} replace className="btn-secundario w-full">
+                Terminar sin fotos
+              </Link>
+            )}
+            <p className="text-xs text-slate-500">Puedes grabar el tag y agregar fotos después desde la ficha.</p>
           </>
         ) : (
           <>
