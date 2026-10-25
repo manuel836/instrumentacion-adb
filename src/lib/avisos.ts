@@ -23,6 +23,8 @@ async function registrarToken(uid: string) {
     // Con la app abierta FCM no muestra la notificación: se la pedimos al service worker.
     onMessage(messaging, (m) => {
       const n = m.notification
+      // Si ya está viendo esa falla o ese chat, el mensaje aparece en pantalla sin aviso.
+      if (m.data?.ruta && m.data.ruta === location.pathname && document.visibilityState === 'visible') return
       void navigator.serviceWorker.ready.then((r) =>
         r.active?.postMessage({ tipo: 'mostrar-aviso', titulo: n?.title, cuerpo: n?.body, ruta: m.data?.ruta }),
       )

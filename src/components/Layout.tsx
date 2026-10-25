@@ -1,7 +1,8 @@
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
 import { useFallas } from '../lib/fallas'
+import { useNoLeidosGeneral } from '../lib/chat'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
 
 export function BarraConexion() {
@@ -17,14 +18,25 @@ export function BarraConexion() {
   )
 }
 
+function Globo({ n }: { n: number }) {
+  return (
+    <span className="absolute -top-1 -right-3 rounded-full bg-red-600 px-1.5 text-[10px] leading-4 font-bold text-white">
+      {n > 99 ? '99+' : n}
+    </span>
+  )
+}
+
 const claseNav = ({ isActive }: { isActive: boolean }) =>
   `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${isActive ? 'text-marca-700' : 'text-slate-500'}`
 
 export function Layout() {
-  const { rol, salir } = useAuth()
+  const { user, rol, salir } = useAuth()
   const p = permisos(rol)
   const fallas = useFallas()
   const abiertas = fallas?.filter((f) => f.estado === 'Abierta').length ?? 0
+  const { pathname } = useLocation()
+  const noLeidos = useNoLeidosGeneral(user?.uid)
+  const sinLeer = pathname === '/chat' ? 0 : noLeidos
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
@@ -47,13 +59,16 @@ export function Layout() {
         <NavLink to="/fallas" className={claseNav}>
           <span className="relative text-xl">
             ⚠
-            {abiertas > 0 && (
-              <span className="absolute -top-1 -right-3 rounded-full bg-red-600 px-1.5 text-[10px] leading-4 font-bold text-white">
-                {abiertas}
-              </span>
-            )}
+            {abiertas > 0 && <Globo n={abiertas} />}
           </span>
           Fallas
+        </NavLink>
+        <NavLink to="/chat" className={claseNav}>
+          <span className="relative text-xl">
+            💬
+            {sinLeer > 0 && <Globo n={sinLeer} />}
+          </span>
+          Chat
         </NavLink>
         <NavLink to="/escanear" className={claseNav}>
           <span className="text-xl">⌁</span>Escanear

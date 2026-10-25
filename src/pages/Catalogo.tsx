@@ -5,6 +5,7 @@ import { useInstrumentos } from '../lib/instrumentos'
 import { AREAS, ESTADOS_INSTRUMENTO } from '../types'
 import { Estado, Pendiente } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
+import { vencimiento } from '../lib/tolerancia'
 
 function normalizar(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -90,6 +91,7 @@ export function Catalogo() {
                   <p className="truncate text-xs text-slate-400">
                     {i.area}
                     {!i.nfcToken && ' · sin tag'}
+                    {vencimiento(i.proximaCalibracion) === 'vencida' && <span className="text-red-700"> · calibración vencida</span>}
                   </p>
                 </div>
               </Link>

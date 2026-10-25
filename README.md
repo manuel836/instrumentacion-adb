@@ -10,9 +10,9 @@ Firebase (Auth, Firestore con caché persistente, Storage, Cloud Functions, Host
 
 | Fase | Contenido | Estado |
 | --- | --- | --- |
-| 1. Base | Login y roles, catálogo offline, grabar y leer NTAG213, galería de ubicación, vista de invitado | Lista para prueba en campo |
-| 2. Fallas | Abierta → En proceso → Cerrada, fotos con cola offline, push a técnicos | Lista para prueba en campo |
-| 3. Chat y calibraciones | Chat por falla y canal general, As-Found / As-Left | Pendiente |
+| 1. Base | Login y roles, catálogo offline, grabar y leer NTAG213, galería de ubicación, vista de invitado | En producción |
+| 2. Fallas | Abierta → En proceso → Cerrada, fotos con cola offline, push a técnicos | En producción |
+| 3. Chat y calibraciones | Chat por falla (con fotos) y canal general con push; calibraciones As-Found / As-Left con tolerancia y próxima calibración | Lista para prueba en campo |
 | 4. Bitácora y exportes | Auditoría, Excel y PDF | Pendiente |
 
 ## Desarrollo local con emuladores
@@ -44,6 +44,11 @@ Pruebas:
   y los emuladores (alta, grabar tag con NFC simulado, fotos, invitado, modo avión y cola de subida).
 - `node e2e/fase2.cjs`: fallas de punta a punta (alta de usuarios, reporte sin señal, tomar, cerrar y
   estado del instrumento). Correr después de `fase1.cjs`.
+- `node e2e/fase3.cjs`: chat de falla sin señal y con foto, canal general con globo de no leídos,
+  calibración registrada sin señal y próxima calibración en la ficha. Correr después de `fase1.cjs`.
+
+Para correr las pruebas de punta a punta, compila apuntando a los emuladores con
+`npx vite build --mode e2e` (con `npm run build` manda la configuración de producción de `.env.production`).
 
 Las notificaciones push no se pueden probar con emuladores (FCM no tiene emulador): se prueban en el
 proyecto real con `VITE_FIREBASE_VAPID_KEY` configurada.

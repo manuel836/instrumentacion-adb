@@ -22,6 +22,13 @@ service firebase.storage {
         && request.resource.contentType == 'image/webp';
     }
 
+    match /fallas/{fallaId}/mensajes/{msgId}/{archivo} {
+      allow read: if conRol();
+      allow create: if conRol()
+        && request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType == 'image/webp';
+    }
+
     match /instrumentos/{id}/docs/{archivo} {
       allow read: if conRol();
       allow create, update: if tecnico() && request.resource.size < 25 * 1024 * 1024;

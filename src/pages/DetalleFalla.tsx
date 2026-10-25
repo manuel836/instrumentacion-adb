@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { cerrarFalla, tomarFalla, useFalla } from '../lib/fallas'
+import { hiloDeFalla } from '../lib/chat'
+import { Chat } from '../components/Chat'
 import { Pendiente } from '../components/Estado'
 import { EstadoFalla, fechaCorta } from '../components/EstadoFalla'
 import { FotoImg } from '../components/FotoImg'
@@ -124,9 +126,9 @@ export function DetalleFalla() {
         </form>
       )}
 
-      <section className="tarjeta">
+      <section className="tarjeta space-y-3">
         <h2 className="font-semibold">Chat de la falla</h2>
-        <p className="text-sm text-slate-500">Disponible en la Fase 3.</p>
+        <Chat ruta={hiloDeFalla(falla.id)} conFotos vacio="Aún no hay mensajes. Escribe para coordinar la atención." />
       </section>
 
       {visor !== null && (

@@ -6,6 +6,9 @@ import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
 import { precargarMiniaturas } from './lib/instrumentos'
 import { Catalogo } from './pages/Catalogo'
+import { DetalleCalibracion } from './pages/DetalleCalibracion'
+import { NuevaCalibracion } from './pages/NuevaCalibracion'
+import { ChatGeneral } from './pages/ChatGeneral'
 import { DetalleFalla } from './pages/DetalleFalla'
 import { Escanear } from './pages/Escanear'
 import { Fallas } from './pages/Fallas'
@@ -101,9 +104,12 @@ function Rutas() {
         <Route path="instrumentos/:id" element={<Ficha />} />
         <Route path="instrumentos/:id/editar" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />
         <Route path="instrumentos/:id/vincular" element={<SoloSi permitido={p.grabarTags}><Vincular /></SoloSi>} />
+        <Route path="instrumentos/:id/calibrar" element={<SoloSi permitido={p.registrarCalibraciones}><NuevaCalibracion /></SoloSi>} />
+        <Route path="instrumentos/:id/calibraciones/:calId" element={<DetalleCalibracion />} />
         <Route path="fallas" element={<Fallas />} />
         <Route path="fallas/nueva" element={<SoloSi permitido={p.reportarFallas}><NuevaFalla /></SoloSi>} />
         <Route path="fallas/:id" element={<DetalleFalla />} />
+        <Route path="chat" element={<ChatGeneral />} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -210,7 +210,7 @@ async function avisar(uids: string[], aviso: Aviso) {
     const res = await getMessaging().sendEachForMulticast({
       tokens: destinos.map((d) => d.token),
       webpush: {
-        notification: { title: aviso.titulo, body: aviso.cuerpo, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: aviso.ruta },
+        notification: { title: aviso.titulo, body: aviso.cuerpo, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: aviso.ruta, renotify: true },
         fcmOptions: { link: `${ORIGEN}${aviso.ruta}` },
         headers: { Urgency: 'high', TTL: String(60 * 60 * 24) },
       },
@@ -273,4 +273,43 @@ export const alActualizarFalla = onDocumentUpdated('fallas/{id}', async (ev) => 
       ruta: `/fallas/${ev.params.id}`,
     })
   }
+})
+
+// ---------- Chat ----------
+
+const resumen = (m: FirebaseFirestore.DocumentData) =>
+  String(m.texto ?? '').slice(0, 140) || (Array.isArray(m.fotos) && m.fotos.length > 0 ? '📷 Foto' : '')
+
+/**
+ * Avisa a los participantes del hilo de una falla: quien la reportó, el técnico
+ * asignado y quienes ya escribieron. Mientras nadie la toma, también a los técnicos.
+ */
+export const alCrearMensaje = onDocumentCreated('fallas/{fallaId}/mensajes/{msgId}', async (ev) => {
+  const m = ev.data?.data()
+  if (!m) return
+  const falla = await db.doc(`fallas/${ev.params.fallaId}`).get()
+  if (!falla.exists) return
+  const autores = await db.collection(`fallas/${ev.params.fallaId}/mensajes`).select('autor').get()
+  const uids = new Set<string>([
+    falla.get('reportadoPor.uid'),
+    falla.get('tecnicoAsignado.uid'),
+    ...autores.docs.map((d) => d.get('autor.uid')),
+    ...(falla.get('tecnicoAsignado') ? [] : await tecnicos()),
+  ])
+  uids.delete(m.autor?.uid)
+  await avisar(
+    [...uids].filter((u): u is string => typeof u === 'string' && u !== ''),
+    { titulo: `${falla.get('tagISA')} · ${m.autor?.nombre ?? 'Mensaje'}`, cuerpo: resumen(m), ruta: `/fallas/${ev.params.fallaId}` },
+  )
+})
+
+/** Avisa al equipo de cada mensaje del canal general. */
+export const alCrearMensajeGeneral = onDocumentCreated('chat_general/{msgId}', async (ev) => {
+  const m = ev.data?.data()
+  if (!m) return
+  const activos = await db.collection('usuarios').where('activo', '==', true).get()
+  await avisar(
+    activos.docs.map((d) => d.id).filter((u) => u !== m.autor?.uid),
+    { titulo: `Canal general · ${m.autor?.nombre ?? 'Mensaje'}`, cuerpo: resumen(m), ruta: '/chat' },
+  )
 })
