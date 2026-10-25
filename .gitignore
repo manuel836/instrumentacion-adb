@@ -8,3 +8,4 @@ functions/lib
 *.log
 .firebase
 e2e/salida
+functions/.env.*
