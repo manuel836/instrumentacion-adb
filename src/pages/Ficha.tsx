@@ -48,6 +48,7 @@ export function Ficha() {
           </div>
         </div>
         {inst.ubicacionTexto && <p className="mt-2 text-sm">📍 {inst.ubicacionTexto}</p>}
+        {!inst.nfcToken && <p className="mt-2 text-sm text-slate-500">Sin tag NFC todavía.</p>}
         <div className="mt-2">
           <ProximaCalibracion proxima={inst.proximaCalibracion} />
         </div>
