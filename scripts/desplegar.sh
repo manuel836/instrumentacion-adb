@@ -30,4 +30,4 @@ echo "Publicando en Firebase…"
 $FIREBASE deploy --project instrumentacion-adb
 
 echo
-echo "Listo: https://instrumentacion-adb.web.app"
+echo "Listo: https://instrumentacion-adb-fertinal.web.app"

@@ -52,6 +52,8 @@ proyecto real con `VITE_FIREBASE_VAPID_KEY` configurada.
 
 El proyecto Firebase `instrumentacion-adb` ya tiene Blaze, Authentication (correo y contraseña),
 Firestore (nam5) y Storage. Su configuración web está en `.env.production`.
+La dirección oficial (la que se graba en los tags) es **instrumentacion-adb-fertinal.web.app**;
+el despliegue publica también en el sitio por defecto, instrumentacion-adb.web.app.
 
 1. En la consola de Firebase, **Authentication → Usuarios → Agregar usuario**: crea la cuenta del administrador.
 2. Abre [Google Cloud Shell](https://shell.cloud.google.com) con la misma cuenta de Google y corre:
@@ -62,7 +64,7 @@ Firestore (nam5) y Storage. Su configuración web está en `.env.production`.
    ```
 
    La primera vez pide iniciar sesión en Firebase y el valor de `ADMIN_INICIAL`: escribe el correo del paso 1.
-3. Abre https://instrumentacion-adb.web.app, entra con esa cuenta y pulsa **Soy el administrador inicial**.
+3. Abre https://instrumentacion-adb-fertinal.web.app, entra con esa cuenta y pulsa **Soy el administrador inicial**.
    Solo funciona para ese correo y mientras no exista otro admin. Desde ahí se dan de alta los demás usuarios.
 
 **El dominio queda grabado en cada tag.** No grabes tags reales hasta tener el dominio definitivo;
