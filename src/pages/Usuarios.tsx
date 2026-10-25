@@ -13,6 +13,7 @@ const crearUsuario = httpsCallable<{ nombre: string; email: string; password: st
 const asignarRol = httpsCallable<{ uid: string; rol: Rol }>(functions, 'asignarRol')
 const cambiarActivo = httpsCallable<{ uid: string; activo: boolean }>(functions, 'cambiarActivo')
 const revocarSesiones = httpsCallable<{ uid: string }>(functions, 'revocarSesiones')
+const eliminarUsuario = httpsCallable<{ uid: string }>(functions, 'eliminarUsuario')
 
 const ROLES: { v: Rol; t: string }[] = [
   { v: 'operador', t: 'Operador' },
@@ -27,6 +28,7 @@ export function Usuarios() {
   const [mensaje, setMensaje] = useState('')
   const [form, setForm] = useState({ nombre: '', email: '', password: '', rol: 'operador' as Rol, area: '' })
   const [enviando, setEnviando] = useState(false)
+  const [porEliminar, setPorEliminar] = useState<string | null>(null)
 
   useEffect(
     () =>
@@ -142,6 +144,32 @@ export function Usuarios() {
                 >
                   {u.activo ? 'Dar de baja' : 'Reactivar'}
                 </button>
+                <button className="btn-peligro flex-1 py-1.5 text-sm" disabled={!online} onClick={() => setPorEliminar(u.uid)}>
+                  Eliminar
+                </button>
+              </div>
+            )}
+            {porEliminar === u.uid && (
+              <div className="space-y-2 rounded-lg bg-red-50 p-3 text-sm text-red-900">
+                <p>
+                  ¿Eliminar a <b>{u.nombre}</b> para siempre? Ya no podrá entrar. Sus fallas, mensajes y calibraciones se conservan con su
+                  nombre.
+                </p>
+                <div className="flex gap-2">
+                  <button className="btn-secundario flex-1 py-1.5 text-sm" onClick={() => setPorEliminar(null)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className="btn-peligro flex-1 py-1.5 text-sm"
+                    disabled={!online}
+                    onClick={() => {
+                      setPorEliminar(null)
+                      void accion(() => eliminarUsuario({ uid: u.uid }), `Usuario ${u.email} eliminado.`)
+                    }}
+                  >
+                    Sí, eliminar
+                  </button>
+                </div>
               </div>
             )}
           </div>

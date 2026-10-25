@@ -4,6 +4,8 @@ import { BarraConexion } from '../components/Layout'
 
 const mensajes: Record<string, string> = {
   'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+  'auth/wrong-password': 'Correo o contraseña incorrectos.',
+  'auth/user-not-found': 'Correo o contraseña incorrectos.',
   'auth/user-disabled': 'Tu usuario está desactivado. Habla con el administrador.',
   'auth/network-request-failed': 'Sin conexión. La primera vez necesitas señal para entrar.',
   'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.',

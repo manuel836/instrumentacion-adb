@@ -138,6 +138,38 @@ export const cambiarActivo = onCall(PUBLICA, async (req) => {
   return {}
 })
 
+/**
+ * Borra la cuenta y su ficha de usuario. Fallas, mensajes, calibraciones y bitácora
+ * guardan el nombre de quien los hizo, así que el historial se conserva tal cual.
+ */
+export const eliminarUsuario = onCall(PUBLICA, async (req) => {
+  exigirAdmin(req)
+  const uid = exigirTexto(req.data?.uid, 'el usuario')
+  if (uid === req.auth?.uid) throw new HttpsError('failed-precondition', 'No puedes eliminarte a ti mismo.')
+  const ref = db.doc(`usuarios/${uid}`)
+  const u = await ref.get()
+  await getAuth()
+    .deleteUser(uid)
+    .catch((e: { code?: string }) => {
+      // Si la cuenta ya no existía, igual se limpia su ficha.
+      if (e.code !== 'auth/user-not-found') throw e
+    })
+  await ref.delete()
+  const datos = u.data() ?? {}
+  await registrar({
+    usuario: adminDe(req),
+    coleccion: 'usuarios',
+    docId: uid,
+    ruta: `usuarios/${uid}`,
+    instrumentoId: null,
+    etiqueta: String(datos.nombre ?? datos.email ?? uid),
+    accion: 'borrar',
+    antes: { nombre: datos.nombre ?? null, email: datos.email ?? null, rol: datos.rol ?? null },
+    despues: {},
+  })
+  return {}
+})
+
 export const revocarSesiones = onCall(PUBLICA, async (req) => {
   exigirAdmin(req)
   const uid = exigirTexto(req.data?.uid, 'el usuario')
