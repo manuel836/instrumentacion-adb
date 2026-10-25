@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
 
 // Se corre con: npm run test:reglas (levanta el emulador de Firestore).
 
@@ -159,5 +159,83 @@ describe('fallas', () => {
     await assertFails(updateDoc(ref_, { descripcion: 'otra cosa' }))
     await assertSucceeds(updateDoc(ref_, { estado: 'Cerrada', causaRaiz: 'Diafragma dañado', accionCorrectiva: 'Se cambió el sensor' }))
     await assertFails(updateDoc(ref_, { estado: 'Abierta' }))
+  })
+})
+
+describe('chat', () => {
+  const msg = (uid: string, extra: Record<string, unknown> = {}) => ({
+    autor: { uid, nombre: 'Op' },
+    texto: 'Ya voy para allá',
+    fotos: [],
+    fecha: serverTimestamp(),
+    ...extra,
+  })
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'fallas/f1'), { instrumentoId: 'i1', estado: 'Abierta', reportadoPor: { uid: 'u-operador', nombre: 'Op' } }),
+    )
+  })
+
+  it('cualquiera con rol escribe en el hilo de una falla a su nombre', async () => {
+    await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador')))
+    await assertSucceeds(getDocs(collection(como('tecnico'), 'fallas/f1/mensajes')))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m2'), msg('otro')))
+    await assertFails(setDoc(doc(como(null), 'fallas/f1/mensajes/m3'), msg('x')))
+    await assertFails(getDocs(collection(como(null), 'fallas/f1/mensajes')))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/no-existe/mensajes/m4'), msg('u-operador')))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m5'), msg('u-operador', { texto: '' })))
+  })
+
+  it('el autor solo completa las URLs de sus fotos', async () => {
+    const foto = { ruta: 'a', miniatura: 'b', url: null, miniaturaUrl: null }
+    await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador', { texto: '', fotos: [foto] })))
+    await assertSucceeds(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), { fotos: [{ ...foto, url: 'https://x' }] }))
+    await assertFails(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), { texto: 'editado' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'fallas/f1/mensajes/m1'), { fotos: [{ ...foto, url: 'https://y' }] }))
+  })
+
+  it('canal general: solo texto, sin editar', async () => {
+    await assertSucceeds(setDoc(doc(como('operador'), 'chat_general/m1'), msg('u-operador')))
+    await assertFails(setDoc(doc(como('operador'), 'chat_general/m2'), msg('u-operador', { fotos: [{ ruta: 'a' }] })))
+    await assertFails(updateDoc(doc(como('operador'), 'chat_general/m1'), { texto: 'otro' }))
+    await assertFails(getDocs(collection(como(null), 'chat_general')))
+  })
+})
+
+describe('calibraciones', () => {
+  const cal = (uid: string, extra: Record<string, unknown> = {}) => ({
+    fecha: Timestamp.now(),
+    tecnico: { uid, nombre: 'Téc' },
+    puntos: [
+      { entrada: 0, asFound: 0.1, asLeft: null },
+      { entrada: 20, asFound: 19.9, asLeft: null },
+    ],
+    tolerancia: 0.5,
+    rangoMin: 0,
+    rangoMax: 20,
+    unidades: 'kg/cm²',
+    patron: '',
+    resultado: 'Aprobada sin ajuste',
+    observaciones: '',
+    proxima: null,
+    ...extra,
+  })
+
+  it('el técnico registra a su nombre; el operador solo consulta', async () => {
+    await assertSucceeds(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c1'), cal('u-tecnico')))
+    await assertSucceeds(getDocs(collection(como('operador'), 'instrumentos/i1/calibraciones')))
+    await assertFails(setDoc(doc(como('operador'), 'instrumentos/i1/calibraciones/c2'), cal('u-operador')))
+    await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c3'), cal('otro')))
+    await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c4'), cal('u-tecnico', { resultado: 'Bien' })))
+    await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c5'), cal('u-tecnico', { rangoMax: 0 })))
+  })
+
+  it('solo el admin corrige o borra un registro', async () => {
+    await assertSucceeds(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c1'), cal('u-tecnico')))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c1'), { resultado: 'Ajustada' }))
+    await assertSucceeds(updateDoc(doc(como('admin'), 'instrumentos/i1/calibraciones/c1'), { resultado: 'Ajustada' }))
+    await assertFails(deleteDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c1')))
+    await assertSucceeds(deleteDoc(doc(como('admin'), 'instrumentos/i1/calibraciones/c1')))
   })
 })

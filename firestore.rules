@@ -13,6 +13,26 @@ service cloud.firestore {
 
     function cambian() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
+    function calibracionValida(d) {
+      return d.fecha is timestamp
+        && d.puntos is list && d.puntos.size() >= 1 && d.puntos.size() <= 11
+        && d.resultado in ['Aprobada sin ajuste', 'Ajustada', 'Fuera de tolerancia']
+        && d.tolerancia is number && d.tolerancia > 0
+        && d.rangoMin is number && d.rangoMax is number && d.rangoMax > d.rangoMin
+        && (d.proxima == null || d.proxima is timestamp)
+        && d.observaciones is string && d.observaciones.size() <= 2000;
+    }
+
+    // Mensaje de chat a nombre de quien lo escribe, con texto o fotos.
+    function mensajeValido(d, maxFotos) {
+      return d.autor.uid == request.auth.uid
+        && d.autor.nombre is string
+        && d.texto is string && d.texto.size() <= 2000
+        && d.fotos is list && d.fotos.size() <= maxFotos
+        && (d.texto.size() > 0 || d.fotos.size() > 0)
+        && d.fecha == request.time;
+    }
+
     function instrumentoValido(d) {
       return d.tagISA is string && d.tagISA.size() >= 2 && d.tagISA.size() <= 16
         && d.servicio is string && d.servicio.size() >= 1 && d.servicio.size() <= 200
@@ -46,9 +66,14 @@ service cloud.firestore {
         allow delete: if tecnico();
       }
 
+      // Calibraciones: las registra un técnico a su nombre; el registro no se edita
+      // (solo el admin puede corregir o borrar).
       match /calibraciones/{calId} {
         allow read: if conRol();
-        allow create, update: if tecnico();
+        allow create: if tecnico() && calibracionValida(request.resource.data)
+          && request.resource.data.tecnico.uid == request.auth.uid;
+        allow update: if admin() && calibracionValida(request.resource.data);
+        allow delete: if admin();
       }
     }
 
@@ -75,6 +100,25 @@ service cloud.firestore {
         || (conRol() && resource.data.reportadoPor.uid == request.auth.uid
             && cambian().hasOnly(['fotos'])
             && request.resource.data.fotos.size() == resource.data.fotos.size());
+      allow delete: if admin();
+
+      // Chat de la falla: cualquiera con rol escribe; el autor solo completa las URLs de sus fotos.
+      match /mensajes/{msgId} {
+        allow read: if conRol();
+        allow create: if conRol() && mensajeValido(request.resource.data, 4)
+          && exists(/databases/$(database)/documents/fallas/$(id));
+        allow update: if conRol() && resource.data.autor.uid == request.auth.uid
+          && cambian().hasOnly(['fotos'])
+          && request.resource.data.fotos.size() == resource.data.fotos.size();
+        allow delete: if admin();
+      }
+    }
+
+    // Canal general del equipo (solo texto).
+    match /chat_general/{msgId} {
+      allow read: if conRol();
+      allow create: if conRol() && mensajeValido(request.resource.data, 0);
+      allow update: if false;
       allow delete: if admin();
     }
 

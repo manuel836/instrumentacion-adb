@@ -107,3 +107,39 @@ export interface Falla {
   accionCorrectiva: string
   fechas: { creada: Timestamp | null; tomada: Timestamp | null; cerrada: Timestamp | null }
 }
+
+export interface Mensaje {
+  id: string
+  autor: Persona
+  texto: string
+  fotos: FotoFalla[]
+  fecha: Timestamp | null
+}
+
+export const RESULTADOS_CALIBRACION = ['Aprobada sin ajuste', 'Ajustada', 'Fuera de tolerancia'] as const
+export type ResultadoCalibracion = (typeof RESULTADOS_CALIBRACION)[number]
+
+export interface PuntoCalibracion {
+  /** Valor aplicado con el patrón, en unidades de proceso. */
+  entrada: number
+  /** Lectura del instrumento antes de ajustar. */
+  asFound: number | null
+  /** Lectura del instrumento después de ajustar. */
+  asLeft: number | null
+}
+
+export interface Calibracion {
+  id: string
+  fecha: Timestamp
+  tecnico: Persona
+  puntos: PuntoCalibracion[]
+  /** Tolerancia en % del span. */
+  tolerancia: number
+  rangoMin: number
+  rangoMax: number
+  unidades: string
+  patron: string
+  resultado: ResultadoCalibracion
+  observaciones: string
+  proxima: Timestamp | null
+}

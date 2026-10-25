@@ -6,6 +6,8 @@ import { Estado, Pendiente } from '../components/Estado'
 import { Galeria } from '../components/Galeria'
 import { ListaFallas } from '../components/ListaFallas'
 import { useFallasDeInstrumento } from '../lib/fallas'
+import { useCalibraciones } from '../lib/calibraciones'
+import { fechaDia, ProximaCalibracion, ResultadoCal } from '../components/Calibracion'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -23,13 +25,13 @@ export function Ficha() {
   const p = permisos(rol)
   const archivo = useRef<HTMLInputElement>(null)
   const fallas = useFallasDeInstrumento(id)
+  const calibraciones = useCalibraciones(id)
 
   if (inst === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
   if (inst === null) return <p className="p-6 text-slate-500">Este instrumento no existe.</p>
 
   const rango =
     inst.rangoMin !== null || inst.rangoMax !== null ? `${inst.rangoMin ?? '?'} a ${inst.rangoMax ?? '?'} ${inst.unidades}` : ''
-  const proxima = inst.proximaCalibracion?.toDate().toLocaleDateString('es-MX', { dateStyle: 'medium' })
 
   return (
     <div className="space-y-3 p-3">
@@ -46,7 +48,9 @@ export function Ficha() {
           </div>
         </div>
         {inst.ubicacionTexto && <p className="mt-2 text-sm">📍 {inst.ubicacionTexto}</p>}
-        <p className="mt-2 text-sm text-slate-600">Próxima calibración: {proxima ?? 'sin programar'}</p>
+        <div className="mt-2">
+          <ProximaCalibracion proxima={inst.proximaCalibracion} />
+        </div>
         {p.editarInstrumentos && (
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Link to={`/instrumentos/${inst.id}/editar`} className="btn-secundario">
@@ -111,6 +115,33 @@ export function Ficha() {
               }}
             />
           </>
+        )}
+      </section>
+
+      <section className="tarjeta">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Calibraciones</h2>
+          {p.registrarCalibraciones && (
+            <Link to={`/instrumentos/${inst.id}/calibrar`} className="text-sm font-semibold text-marca-700">
+              + Registrar
+            </Link>
+          )}
+        </div>
+        {!calibraciones || calibraciones.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">Sin calibraciones registradas.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {calibraciones.map((c) => (
+              <li key={c.id}>
+                <Link to={`/instrumentos/${inst.id}/calibraciones/${c.id}`} className="flex items-center gap-2 py-3 text-sm active:bg-slate-50">
+                  <span className="font-medium">{fechaDia(c.fecha)}</span>
+                  <ResultadoCal resultado={c.resultado} />
+                  {c.sinSincronizar && <Pendiente />}
+                  <span className="ml-auto truncate text-xs text-slate-500">{c.tecnico.nombre}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
