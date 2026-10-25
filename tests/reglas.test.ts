@@ -111,3 +111,53 @@ describe('usuarios y bitácora', () => {
     await assertFails(updateDoc(doc(como('admin'), 'auditoria/a1'), { accion: 'y' }))
   })
 })
+
+describe('fallas', () => {
+  const nueva = (uid: string) => ({
+    instrumentoId: 'i1',
+    tagISA: 'PT-101',
+    area: 'Generación de vapor',
+    estado: 'Abierta',
+    reportadoPor: { uid, nombre: 'Op' },
+    tecnicoAsignado: null,
+    descripcion: 'Lectura congelada en cero',
+    fotos: [{ ruta: 'fallas/f1/0.webp', miniatura: 'fallas/f1/0_min.webp', url: null, miniaturaUrl: null }],
+    causaRaiz: '',
+    accionCorrectiva: '',
+    fechas: { creada: null, tomada: null, cerrada: null },
+  })
+  const tecnico = { uid: 'u-tecnico', nombre: 'Téc' }
+
+  async function sembrar(datos: Record<string, unknown>) {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'fallas/f1'), datos))
+  }
+
+  it('el operador reporta a su nombre; el invitado no', async () => {
+    await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1'), nueva('u-operador')))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f2'), nueva('otro')))
+    await assertFails(setDoc(doc(como(null), 'fallas/f3'), nueva('x')))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f4'), { ...nueva('u-operador'), estado: 'Cerrada' }))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f5'), { ...nueva('u-operador'), instrumentoId: 'no-existe' }))
+  })
+
+  it('el operador no cambia estado ni asignación, solo completa sus fotos', async () => {
+    await sembrar(nueva('u-operador'))
+    const ref_ = doc(como('operador'), 'fallas/f1')
+    await assertFails(updateDoc(ref_, { estado: 'En proceso', tecnicoAsignado: { uid: 'u-operador', nombre: 'Op' } }))
+    await assertSucceeds(
+      updateDoc(ref_, { fotos: [{ ruta: 'fallas/f1/0.webp', miniatura: 'fallas/f1/0_min.webp', url: 'https://x', miniaturaUrl: null }] }),
+    )
+    await assertFails(updateDoc(ref_, { fotos: [] }))
+  })
+
+  it('el técnico la toma y la cierra con causa raíz y acción correctiva', async () => {
+    await sembrar(nueva('u-operador'))
+    const ref_ = doc(como('tecnico'), 'fallas/f1')
+    await assertFails(updateDoc(ref_, { estado: 'En proceso' }))
+    await assertSucceeds(updateDoc(ref_, { estado: 'En proceso', tecnicoAsignado: tecnico }))
+    await assertFails(updateDoc(ref_, { estado: 'Cerrada', causaRaiz: '', accionCorrectiva: 'Se cambió' }))
+    await assertFails(updateDoc(ref_, { descripcion: 'otra cosa' }))
+    await assertSucceeds(updateDoc(ref_, { estado: 'Cerrada', causaRaiz: 'Diafragma dañado', accionCorrectiva: 'Se cambió el sensor' }))
+    await assertFails(updateDoc(ref_, { estado: 'Abierta' }))
+  })
+})

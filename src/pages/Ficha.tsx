@@ -4,6 +4,8 @@ import { permisos, useAuth } from '../auth/AuthContext'
 import { adjuntarDocumento, quitarDocumento, useInstrumento } from '../lib/instrumentos'
 import { Estado, Pendiente } from '../components/Estado'
 import { Galeria } from '../components/Galeria'
+import { ListaFallas } from '../components/ListaFallas'
+import { useFallasDeInstrumento } from '../lib/fallas'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -20,6 +22,7 @@ export function Ficha() {
   const { rol } = useAuth()
   const p = permisos(rol)
   const archivo = useRef<HTMLInputElement>(null)
+  const fallas = useFallasDeInstrumento(id)
 
   if (inst === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
   if (inst === null) return <p className="p-6 text-slate-500">Este instrumento no existe.</p>
@@ -112,8 +115,19 @@ export function Ficha() {
       </section>
 
       <section className="tarjeta">
-        <h2 className="font-semibold">Historial de fallas</h2>
-        <p className="text-sm text-slate-500">Disponible en la Fase 2.</p>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Historial de fallas</h2>
+          {p.reportarFallas && (
+            <Link to={`/fallas/nueva?instrumento=${inst.id}`} className="text-sm font-semibold text-red-700">
+              ⚠ Reportar falla
+            </Link>
+          )}
+        </div>
+        {fallas.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">Sin fallas registradas.</p>
+        ) : (
+          <ListaFallas fallas={fallas} conTag={false} />
+        )}
       </section>
     </div>
   )

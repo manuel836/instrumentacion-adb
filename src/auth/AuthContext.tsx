@@ -81,6 +81,8 @@ export function permisos(rol: Rol | null) {
     editarInstrumentos: tecnico,
     grabarTags: tecnico,
     gestionarFotos: tecnico,
+    reportarFallas: rol !== null,
+    atenderFallas: tecnico,
     gestionarUsuarios: rol === 'admin',
   }
 }

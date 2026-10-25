@@ -6,7 +6,10 @@ import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
 import { precargarMiniaturas } from './lib/instrumentos'
 import { Catalogo } from './pages/Catalogo'
+import { DetalleFalla } from './pages/DetalleFalla'
 import { Escanear } from './pages/Escanear'
+import { Fallas } from './pages/Fallas'
+import { NuevaFalla } from './pages/NuevaFalla'
 import { Ficha } from './pages/Ficha'
 import { FormInstrumento } from './pages/FormInstrumento'
 import { Login } from './pages/Login'
@@ -98,6 +101,9 @@ function Rutas() {
         <Route path="instrumentos/:id" element={<Ficha />} />
         <Route path="instrumentos/:id/editar" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />
         <Route path="instrumentos/:id/vincular" element={<SoloSi permitido={p.grabarTags}><Vincular /></SoloSi>} />
+        <Route path="fallas" element={<Fallas />} />
+        <Route path="fallas/nueva" element={<SoloSi permitido={p.reportarFallas}><NuevaFalla /></SoloSi>} />
+        <Route path="fallas/:id" element={<DetalleFalla />} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -57,6 +57,43 @@ service cloud.firestore {
       allow read: if conRol();
     }
 
+    // Fallas: Abierta → En proceso → Cerrada. Cualquiera con rol reporta;
+    // solo técnicos y admin las toman y cierran.
+    match /fallas/{id} {
+      allow read: if conRol();
+      allow create: if conRol()
+        && request.resource.data.estado == 'Abierta'
+        && request.resource.data.reportadoPor.uid == request.auth.uid
+        && request.resource.data.tecnicoAsignado == null
+        && request.resource.data.descripcion is string
+        && request.resource.data.descripcion.size() >= 3 && request.resource.data.descripcion.size() <= 2000
+        && request.resource.data.fotos is list && request.resource.data.fotos.size() <= 6
+        && request.resource.data.causaRaiz == '' && request.resource.data.accionCorrectiva == ''
+        && exists(/databases/$(database)/documents/instrumentos/$(request.resource.data.instrumentoId));
+      allow update: if (tecnico() && cambioDeFallaValido())
+        // El teléfono de quien reporta solo completa las URLs de sus fotos al subirlas.
+        || (conRol() && resource.data.reportadoPor.uid == request.auth.uid
+            && cambian().hasOnly(['fotos'])
+            && request.resource.data.fotos.size() == resource.data.fotos.size());
+      allow delete: if admin();
+    }
+
+    function cambioDeFallaValido() {
+      let antes = resource.data;
+      let despues = request.resource.data;
+      let fijos = !cambian().hasAny(['instrumentoId', 'tagISA', 'area', 'reportadoPor', 'descripcion'])
+        && despues.fechas.creada == antes.fechas.creada;
+      let cerrada = despues.estado == 'Cerrada'
+        && despues.causaRaiz is string && despues.causaRaiz.size() >= 3
+        && despues.accionCorrectiva is string && despues.accionCorrectiva.size() >= 3
+        && despues.tecnicoAsignado != null;
+      return fijos && antes.estado != 'Cerrada' && (
+        (despues.estado == antes.estado)
+        || (antes.estado == 'Abierta' && despues.estado == 'En proceso' && despues.tecnicoAsignado != null)
+        || (antes.estado in ['Abierta', 'En proceso'] && cerrada)
+      );
+    }
+
     // Vista de invitado: solo se lee un documento por su token exacto; no se puede listar.
     match /publico/{token} {
       allow get: if true;
