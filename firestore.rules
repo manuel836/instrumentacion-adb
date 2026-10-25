@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// Los permisos se aplican aquí, no solo en la interfaz. El rol viaja como
+// custom claim `rol` (admin | tecnico | operador) y solo lo asigna una Cloud Function.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function conSesion() { return request.auth != null; }
+    function rol() { return request.auth.token.get('rol', ''); }
+    function conRol() { return conSesion() && rol() in ['admin', 'tecnico', 'operador']; }
+    function tecnico() { return conSesion() && rol() in ['admin', 'tecnico']; }
+    function admin() { return conSesion() && rol() == 'admin'; }
+
+    function cambian() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    function instrumentoValido(d) {
+      return d.tagISA is string && d.tagISA.size() >= 2 && d.tagISA.size() <= 16
+        && d.servicio is string && d.servicio.size() >= 1 && d.servicio.size() <= 200
+        && d.area in ['Generación de vapor', 'Almacenamiento de amoniaco', 'Tratamiento de agua']
+        && d.estado in ['Operando', 'Con falla', 'Fuera de servicio']
+        && (d.nfcToken == null || (d.nfcToken is string && d.nfcToken.matches('^[A-Za-z0-9]{16,22}$')))
+        && d.docs is list && d.docs.size() <= 30;
+    }
+
+    match /usuarios/{uid} {
+      allow read: if admin() || (conSesion() && request.auth.uid == uid);
+      // Cada usuario solo registra sus tokens de notificación; el resto lo escriben las Functions.
+      allow update: if conSesion() && request.auth.uid == uid && cambian().hasOnly(['tokensFCM']);
+    }
+
+    match /instrumentos/{id} {
+      allow read: if conRol();
+      allow create: if tecnico() && instrumentoValido(request.resource.data)
+        && request.resource.data.get('portadaMiniatura', null) == null;
+      // portadaMiniatura la mantiene una Function a partir de la galería.
+      allow update: if tecnico() && instrumentoValido(request.resource.data)
+        && !cambian().hasAny(['portadaMiniatura']);
+      allow delete: if admin();
+
+      match /ubicacion/{fotoId} {
+        allow read: if conRol();
+        allow create, update: if tecnico()
+          && request.resource.data.pie is string && request.resource.data.pie.size() <= 300
+          && request.resource.data.orden is int
+          && request.resource.data.esPortada is bool;
+        allow delete: if tecnico();
+      }
+
+      match /calibraciones/{calId} {
+        allow read: if conRol();
+        allow create, update: if tecnico();
+      }
+    }
+
+    // Precarga de miniaturas de todas las galerías (consulta de grupo).
+    match /{ruta=**}/ubicacion/{fotoId} {
+      allow read: if conRol();
+    }
+
+    // Vista de invitado: solo se lee un documento por su token exacto; no se puede listar.
+    match /publico/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // Bitácora: la escriben triggers de Cloud Functions; nadie la edita ni la borra.
+    match /auditoria/{id} {
+      allow read: if tecnico();
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,135 @@
+import { useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
+import { MAX_FOTOS_UBICACION, PUBLIC_ORIGIN, TOKEN_LENGTH } from '../config'
+import { useAuth } from '../auth/AuthContext'
+import { agregarFotosUbicacion, asignarToken, useFotosUbicacion, useInstrumento } from '../lib/instrumentos'
+import { grabarUrl, nfcDisponible } from '../lib/nfc'
+import { bytesNdef, generarToken, urlDeTag } from '../lib/token'
+import { SelectorFotos, type FotoNueva } from '../components/SelectorFotos'
+
+type EstadoNfc = 'inicio' | 'esperando' | 'grabado' | 'error'
+
+export function Vincular() {
+  const { id } = useParams()
+  const inst = useInstrumento(id)
+  const fotosExistentes = useFotosUbicacion(id)
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
+  // Un token nuevo por visita: regrabar deja inválido el token anterior.
+  const token = useMemo(() => generarToken(TOKEN_LENGTH), [])
+  const url = urlDeTag(PUBLIC_ORIGIN, token)
+  const [estado, setEstado] = useState<EstadoNfc>('inicio')
+  const [error, setError] = useState('')
+  const abortar = useRef<AbortController | null>(null)
+
+  const [fotos, setFotos] = useState<FotoNueva[]>([])
+  const [portada, setPortada] = useState(0)
+  const [guardando, setGuardando] = useState(false)
+
+  if (inst === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (inst === null) return <p className="p-6 text-slate-500">Este instrumento no existe.</p>
+
+  async function grabar() {
+    if (!inst) return
+    setError('')
+    setEstado('esperando')
+    abortar.current = new AbortController()
+    try {
+      await grabarUrl(url, abortar.current.signal)
+      asignarToken(inst.id, token)
+      setEstado('grabado')
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        setEstado('inicio')
+        return
+      }
+      setEstado('error')
+      setError(
+        (err as Error).name === 'NotAllowedError'
+          ? 'Chrome no tiene permiso de NFC. Actívalo en la configuración del sitio y vuelve a intentar.'
+          : `No se pudo grabar: ${(err as Error).message}`,
+      )
+    }
+  }
+
+  async function guardarFotos() {
+    if (!inst) return
+    setGuardando(true)
+    try {
+      // La portada elegida va primero para que quede marcada como tal.
+      const ordenadas = [fotos[portada], ...fotos.filter((_, i) => i !== portada)]
+      await agregarFotosUbicacion(inst.id, ordenadas, user?.displayName || user?.email || '', 0, false)
+      navigate(`/instrumentos/${inst.id}`, { replace: true })
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const necesitaFotos = fotosExistentes.length === 0
+
+  return (
+    <div className="space-y-4 p-4">
+      <h1 className="text-xl font-bold">
+        Tag NFC de <span className="font-mono">{inst.tagISA}</span>
+      </h1>
+
+      <section className="tarjeta space-y-3">
+        <h2 className="font-semibold">1. Grabar el tag</h2>
+        {inst.nfcToken && estado !== 'grabado' && (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            Este instrumento ya tiene un tag. Si grabas uno nuevo, el anterior deja de funcionar.
+          </p>
+        )}
+        {!nfcDisponible() ? (
+          <p className="rounded-lg bg-slate-100 p-3 text-sm">
+            Este navegador no puede grabar tags. Usa Chrome en un teléfono Android con NFC activado.
+          </p>
+        ) : estado === 'grabado' ? (
+          <p className="rounded-lg bg-emerald-50 p-3 font-medium text-emerald-800">✓ Tag grabado y vinculado.</p>
+        ) : estado === 'esperando' ? (
+          <div className="space-y-3 text-center">
+            <div className="mx-auto h-20 w-20 animate-pulse rounded-full bg-marca-100" />
+            <p className="font-medium">Acerca el tag a la parte trasera del teléfono…</p>
+            <button className="btn-secundario" onClick={() => abortar.current?.abort()}>
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button className="btn-primario w-full" onClick={() => void grabar()}>
+            Grabar tag
+          </button>
+        )}
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <p className="break-all text-xs text-slate-400">
+          {url} · {bytesNdef(url)} de 144 bytes
+        </p>
+      </section>
+
+      <section className="tarjeta space-y-3">
+        <h2 className="font-semibold">2. Fotos de ubicación</h2>
+        {necesitaFotos ? (
+          <>
+            <p className="text-sm text-slate-600">
+              De 1 a {MAX_FOTOS_UBICACION} fotos: una toma general (equipo, nivel, columna) y una de cerca. Agrega un pie
+              para que cualquiera lo encuentre, por ejemplo “Nivel 2, lado norte de la caldera B”.
+            </p>
+            <SelectorFotos fotos={fotos} onChange={setFotos} max={MAX_FOTOS_UBICACION} portada={portada} onPortada={setPortada} />
+            <button className="btn-primario w-full" disabled={fotos.length === 0 || guardando} onClick={() => void guardarFotos()}>
+              {guardando ? 'Procesando fotos…' : 'Guardar y terminar'}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-slate-600">
+              Ya tiene {fotosExistentes.length} {fotosExistentes.length === 1 ? 'foto' : 'fotos'}. Puedes cambiarlas desde la ficha.
+            </p>
+            <Link to={`/instrumentos/${inst.id}`} className="btn-primario w-full">
+              Ir a la ficha
+            </Link>
+          </>
+        )}
+      </section>
+    </div>
+  )
+}
