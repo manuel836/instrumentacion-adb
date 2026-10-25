@@ -17,8 +17,8 @@ describe('token de tag', () => {
   })
 
   it('cabe holgadamente en un NTAG213', () => {
-    const url = urlDeTag('https://instrumentacion-adb.web.app', generarToken(22))
+    const url = urlDeTag('https://instrumentacion-adb-fertinal.web.app', generarToken(22))
     expect(bytesNdef(url)).toBeLessThan(NTAG213_BYTES_UTILES)
-    expect(bytesNdef(url)).toBeLessThanOrEqual(64)
+    expect(bytesNdef(url)).toBeLessThanOrEqual(72)
   })
 })
