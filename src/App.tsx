@@ -5,7 +5,10 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
 import { precargarMiniaturas } from './lib/instrumentos'
+import { Bitacora } from './pages/Bitacora'
 import { Catalogo } from './pages/Catalogo'
+import { Exportar } from './pages/Exportar'
+import { Imprimir } from './pages/Imprimir'
 import { DetalleCalibracion } from './pages/DetalleCalibracion'
 import { NuevaCalibracion } from './pages/NuevaCalibracion'
 import { ChatGeneral } from './pages/ChatGeneral'
@@ -110,8 +113,20 @@ function Rutas() {
         <Route path="fallas/nueva" element={<SoloSi permitido={p.reportarFallas}><NuevaFalla /></SoloSi>} />
         <Route path="fallas/:id" element={<DetalleFalla />} />
         <Route path="chat" element={<ChatGeneral />} />
+        <Route path="bitacora" element={<SoloSi permitido={p.verBitacora}><Bitacora /></SoloSi>} />
+        <Route path="exportar" element={<SoloSi permitido={p.exportar}><Exportar /></SoloSi>} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
       </Route>
+      <Route
+        path="/imprimir"
+        element={
+          <ConSesion>
+            <SoloSi permitido={p.exportar}>
+              <Imprimir />
+            </SoloSi>
+          </ConSesion>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

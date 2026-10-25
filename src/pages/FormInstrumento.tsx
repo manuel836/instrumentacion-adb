@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Timestamp } from 'firebase/firestore'
 import {
@@ -34,8 +34,12 @@ export function FormInstrumento() {
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
+  // Se carga una sola vez: las actualizaciones que llegan mientras se edita
+  // (sincronización, cambios de estado de las Functions) no borran lo escrito.
+  const cargado = useRef<string | null>(null)
   useEffect(() => {
-    if (existente) {
+    if (existente && cargado.current !== existente.id) {
+      cargado.current = existente.id
       const { id: _id, sinSincronizar: _s, ...resto } = existente
       setDatos(resto)
       setMasDatos(true)

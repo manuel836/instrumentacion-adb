@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { useEffect, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
 import { useFallas } from '../lib/fallas'
@@ -14,6 +15,40 @@ export function BarraConexion() {
       {!online && 'Sin conexión: los cambios se guardan en el teléfono'}
       {!online && subidas > 0 && ' · '}
       {subidas > 0 && `${subidas} ${subidas === 1 ? 'archivo' : 'archivos'} por subir`}
+    </div>
+  )
+}
+
+function Menu({ bitacora, exportar, onSalir }: { bitacora: boolean; exportar: boolean; onSalir: () => void }) {
+  const [abierto, setAbierto] = useState(false)
+  const { pathname } = useLocation()
+  useEffect(() => setAbierto(false), [pathname])
+  const clase = 'block px-4 py-3 text-left text-slate-800 active:bg-slate-100'
+  return (
+    <div className="relative">
+      <button className="rounded-lg px-2 py-1 text-sm font-medium text-white/90" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
+        Menú ▾
+      </button>
+      {abierto && (
+        <>
+          <button className="fixed inset-0 z-30 cursor-default" aria-label="Cerrar menú" onClick={() => setAbierto(false)} />
+          <div className="absolute right-0 z-40 mt-2 w-48 divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-lg">
+            {bitacora && (
+              <Link to="/bitacora" className={clase}>
+                Bitácora de cambios
+              </Link>
+            )}
+            {exportar && (
+              <Link to="/exportar" className={clase}>
+                Exportar Excel / PDF
+              </Link>
+            )}
+            <button className={`${clase} w-full text-red-700`} onClick={onSalir}>
+              Salir
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -42,9 +77,13 @@ export function Layout() {
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
         <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <span className="text-lg font-bold">Instrumentación ADB</span>
-          <button className="text-sm text-white/80" onClick={() => void salir()}>
-            Salir
-          </button>
+          {p.verBitacora || p.exportar ? (
+            <Menu bitacora={p.verBitacora} exportar={p.exportar} onSalir={() => void salir()} />
+          ) : (
+            <button className="text-sm text-white/80" onClick={() => void salir()}>
+              Salir
+            </button>
+          )}
         </div>
         <BarraConexion />
         <AvisoNotificaciones />

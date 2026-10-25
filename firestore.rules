@@ -82,6 +82,11 @@ service cloud.firestore {
       allow read: if conRol();
     }
 
+    // Reporte de calibraciones de todos los instrumentos (consulta de grupo).
+    match /{ruta=**}/calibraciones/{calId} {
+      allow read: if conRol();
+    }
+
     // Fallas: Abierta → En proceso → Cerrada. Cualquiera con rol reporta;
     // solo técnicos y admin las toman y cierran.
     match /fallas/{id} {
