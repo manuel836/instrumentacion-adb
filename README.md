@@ -12,8 +12,8 @@ Firebase (Auth, Firestore con caché persistente, Storage, Cloud Functions, Host
 | --- | --- | --- |
 | 1. Base | Login y roles, catálogo offline, grabar y leer NTAG213, galería de ubicación, vista de invitado | En producción |
 | 2. Fallas | Abierta → En proceso → Cerrada, fotos con cola offline, push a técnicos | En producción |
-| 3. Chat y calibraciones | Chat por falla (con fotos) y canal general con push; calibraciones As-Found / As-Left con tolerancia y próxima calibración | Lista para prueba en campo |
-| 4. Bitácora y exportes | Auditoría, Excel y PDF | Pendiente |
+| 3. Chat y calibraciones | Chat por falla (con fotos) y canal general con push; calibraciones As-Found / As-Left con tolerancia y próxima calibración | En producción |
+| 4. Bitácora y exportes | Bitácora de cambios (quién, qué, cuándo, antes y después) escrita por Functions; Excel (3 reportes) y vista de impresión a PDF | Lista para prueba en campo |
 
 ## Desarrollo local con emuladores
 
@@ -46,6 +46,10 @@ Pruebas:
   estado del instrumento). Correr después de `fase1.cjs`.
 - `node e2e/fase3.cjs`: chat de falla sin señal y con foto, canal general con globo de no leídos,
   calibración registrada sin señal y próxima calibración en la ficha. Correr después de `fase1.cjs`.
+- `node e2e/fase4.cjs`: bitácora (edición con valor anterior y nuevo, altas de usuarios, fallas,
+  calibraciones), permisos del operador, los tres Excel y el PDF de la vista de impresión.
+  En los emuladores la bitácora muestra `fake-auth-id@gmail.com` como autor de las ediciones:
+  el emulador no manda el usuario real al trigger; en producción sale el nombre de quien editó.
 
 Para correr las pruebas de punta a punta, compila apuntando a los emuladores con
 `npx vite build --mode e2e` (con `npm run build` manda la configuración de producción de `.env.production`).

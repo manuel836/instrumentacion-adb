@@ -84,6 +84,8 @@ export function permisos(rol: Rol | null) {
     reportarFallas: rol !== null,
     atenderFallas: tecnico,
     registrarCalibraciones: tecnico,
+    verBitacora: tecnico,
+    exportar: tecnico,
     gestionarUsuarios: rol === 'admin',
   }
 }

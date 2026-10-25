@@ -239,3 +239,19 @@ describe('calibraciones', () => {
     await assertSucceeds(deleteDoc(doc(como('admin'), 'instrumentos/i1/calibraciones/c1')))
   })
 })
+
+describe('bitácora y reportes', () => {
+  it('cualquiera con rol consulta todas las calibraciones para el reporte; el invitado no', async () => {
+    const { collectionGroup, getDocs: gd } = await import('firebase/firestore')
+    await assertSucceeds(gd(collectionGroup(como('tecnico'), 'calibraciones')))
+    await assertFails(gd(collectionGroup(como(null), 'calibraciones')))
+  })
+
+  it('nadie escribe ni borra en la bitácora; el técnico la consulta por instrumento', async () => {
+    const { query: q, where: w } = await import('firebase/firestore')
+    await assertSucceeds(getDocs(q(collection(como('tecnico'), 'auditoria'), w('instrumentoId', '==', 'i1'))))
+    await assertFails(setDoc(doc(como('admin'), 'auditoria/a2'), { accion: 'crear' }))
+    await assertFails(deleteDoc(doc(como('admin'), 'auditoria/a1')))
+    await assertFails(getDocs(collection(como('operador'), 'auditoria')))
+  })
+})

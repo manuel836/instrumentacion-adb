@@ -8,6 +8,9 @@ import { defineString } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { logger } from 'firebase-functions/v2'
+import { registrar } from './bitacora.js'
+
+export { auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento } from './bitacora.js'
 
 initializeApp()
 setGlobalOptions({ region: 'us-central1', maxInstances: 5 })
@@ -23,6 +26,24 @@ function exigirAdmin(req: CallableRequest) {
 function exigirRol(rol: unknown): Rol {
   if (!ROLES.includes(rol as Rol)) throw new HttpsError('invalid-argument', 'Rol inválido.')
   return rol as Rol
+}
+
+const adminDe = (req: CallableRequest) => ({ uid: req.auth!.uid, nombre: String(req.auth!.token.name ?? req.auth!.token.email ?? 'Admin') })
+
+/** Anota en la bitácora un cambio de usuario hecho por el admin. */
+async function auditarUsuario(req: CallableRequest, uid: string, accion: 'crear' | 'editar', antes: Record<string, unknown>, despues: Record<string, unknown>) {
+  const u = await db.doc(`usuarios/${uid}`).get()
+  await registrar({
+    usuario: adminDe(req),
+    coleccion: 'usuarios',
+    docId: uid,
+    ruta: `usuarios/${uid}`,
+    instrumentoId: null,
+    etiqueta: String(u.get('nombre') ?? u.get('email') ?? uid),
+    accion,
+    antes,
+    despues,
+  })
 }
 
 function exigirTexto(v: unknown, campo: string): string {
@@ -86,6 +107,7 @@ export const crearUsuario = onCall(PUBLICA, async (req) => {
     })
   await getAuth().setCustomUserClaims(user.uid, { rol })
   await db.doc(`usuarios/${user.uid}`).set({ nombre, email, rol, area, activo: true, tokensFCM: [], creado: FieldValue.serverTimestamp() })
+  await auditarUsuario(req, user.uid, 'crear', {}, { nombre, email, rol, ...(area ? { area } : {}) })
   return { uid: user.uid }
 })
 
@@ -94,9 +116,11 @@ export const asignarRol = onCall(PUBLICA, async (req) => {
   const uid = exigirTexto(req.data?.uid, 'el usuario')
   const rol = exigirRol(req.data?.rol)
   if (uid === req.auth?.uid) throw new HttpsError('failed-precondition', 'No puedes cambiar tu propio rol.')
+  const rolAnterior = (await db.doc(`usuarios/${uid}`).get()).get('rol') ?? null
   await getAuth().setCustomUserClaims(uid, { rol })
   // rolActualizado avisa al teléfono del usuario que renueve su token para ver el rol nuevo.
   await db.doc(`usuarios/${uid}`).update({ rol, rolActualizado: FieldValue.serverTimestamp() })
+  if (rolAnterior !== rol) await auditarUsuario(req, uid, 'editar', { rol: rolAnterior }, { rol })
   return {}
 })
 
@@ -108,7 +132,9 @@ export const cambiarActivo = onCall(PUBLICA, async (req) => {
   await getAuth().updateUser(uid, { disabled: !activo })
   if (!activo) await getAuth().revokeRefreshTokens(uid)
   // El historial del usuario se conserva; solo se marca inactivo.
+  const antes = (await db.doc(`usuarios/${uid}`).get()).get('activo') ?? null
   await db.doc(`usuarios/${uid}`).update({ activo })
+  if (antes !== activo) await auditarUsuario(req, uid, 'editar', { activo: antes }, { activo })
   return {}
 })
 

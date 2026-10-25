@@ -160,6 +160,11 @@ export function Ficha() {
           <ListaFallas fallas={fallas} conTag={false} />
         )}
       </section>
+      {p.verBitacora && (
+        <Link to={`/bitacora?instrumento=${inst.id}`} className="block py-2 text-center text-sm font-semibold text-marca-700">
+          Ver bitácora de cambios de {inst.tagISA}
+        </Link>
+      )}
     </div>
   )
 }
