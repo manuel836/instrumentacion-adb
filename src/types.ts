@@ -77,3 +77,33 @@ export interface Publico {
   ubicacionTexto: string
   fotosUbicacion: { url: string | null; miniaturaUrl: string | null; pie: string; esPortada: boolean }[]
 }
+
+export const ESTADOS_FALLA = ['Abierta', 'En proceso', 'Cerrada'] as const
+export type EstadoFalla = (typeof ESTADOS_FALLA)[number]
+
+export interface Persona {
+  uid: string
+  nombre: string
+}
+
+export interface FotoFalla {
+  ruta: string
+  miniatura: string
+  url: string | null
+  miniaturaUrl: string | null
+}
+
+export interface Falla {
+  id: string
+  instrumentoId: string
+  tagISA: string
+  area: string
+  estado: EstadoFalla
+  reportadoPor: Persona
+  tecnicoAsignado: Persona | null
+  descripcion: string
+  fotos: FotoFalla[]
+  causaRaiz: string
+  accionCorrectiva: string
+  fechas: { creada: Timestamp | null; tomada: Timestamp | null; cerrada: Timestamp | null }
+}

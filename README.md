@@ -11,7 +11,7 @@ Firebase (Auth, Firestore con caché persistente, Storage, Cloud Functions, Host
 | Fase | Contenido | Estado |
 | --- | --- | --- |
 | 1. Base | Login y roles, catálogo offline, grabar y leer NTAG213, galería de ubicación, vista de invitado | Lista para prueba en campo |
-| 2. Fallas | Abierta → En proceso → Cerrada, fotos con cola offline, push a técnicos | Pendiente |
+| 2. Fallas | Abierta → En proceso → Cerrada, fotos con cola offline, push a técnicos | Lista para prueba en campo |
 | 3. Chat y calibraciones | Chat por falla y canal general, As-Found / As-Left | Pendiente |
 | 4. Bitácora y exportes | Auditoría, Excel y PDF | Pendiente |
 
@@ -41,6 +41,11 @@ Pruebas:
 - `npm run test:reglas`: reglas de Firestore contra el emulador.
 - `node e2e/fase1.cjs`: flujo completo con Playwright contra `npm run build && npx vite preview --port 4173`
   y los emuladores (alta, grabar tag con NFC simulado, fotos, invitado, modo avión y cola de subida).
+- `node e2e/fase2.cjs`: fallas de punta a punta (alta de usuarios, reporte sin señal, tomar, cerrar y
+  estado del instrumento). Correr después de `fase1.cjs`.
+
+Las notificaciones push no se pueden probar con emuladores (FCM no tiene emulador): se prueban en el
+proyecto real con `VITE_FIREBASE_VAPID_KEY` configurada.
 
 ## Puesta en producción
 
@@ -66,5 +71,8 @@ cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL 
 - `src/lib/nfc.ts`: Web NFC (`NDEFReader`). Cada tag guarda una URL `https://<dominio>/t/<token>`
   con un token aleatorio de 18 caracteres (unos 50 de los 144 bytes del NTAG213). No se usa `makeReadOnly()`.
 - `functions/src/index.ts`: alta de usuarios y roles (custom claim `rol`), baja y cierre de sesiones,
-  y el documento `publico/{token}` que alimenta la vista de invitado.
+  el documento `publico/{token}` que alimenta la vista de invitado y, en fallas, el push a técnicos y
+  el estado del instrumento ("Con falla" mientras haya fallas abiertas o en proceso).
+- `src/sw.ts`: service worker propio (Workbox + Firebase Messaging) para el app shell, la caché de fotos
+  y los avisos push con la app cerrada.
 - `firestore.rules` y `storage.rules`: los permisos de la tabla de roles se aplican en el servidor.

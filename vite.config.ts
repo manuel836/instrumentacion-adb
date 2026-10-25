@@ -10,7 +10,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      strategies: 'generateSW',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['icons/icon.svg'],
       manifest: {
         name: 'Instrumentación ADB',
@@ -29,22 +31,9 @@ export default defineConfig({
           { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallback: '/index.html',
-        runtimeCaching: [
-          {
-            // Fotos y documentos de Storage: una vez vistos quedan disponibles sin señal.
-            urlPattern: ({ url }) =>
-              url.hostname === 'firebasestorage.googleapis.com' || url.hostname.endsWith('.firebasestorage.app'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'storage-media',
-              expiration: { maxEntries: 6000, maxAgeSeconds: 60 * 60 * 24 * 180 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
   ],

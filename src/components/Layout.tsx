@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
+import { useFallas } from '../lib/fallas'
+import { AvisoNotificaciones } from './AvisoNotificaciones'
 
 export function BarraConexion() {
   const online = useOnline()
@@ -21,6 +23,8 @@ const claseNav = ({ isActive }: { isActive: boolean }) =>
 export function Layout() {
   const { rol, salir } = useAuth()
   const p = permisos(rol)
+  const fallas = useFallas()
+  const abiertas = fallas?.filter((f) => f.estado === 'Abierta').length ?? 0
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
@@ -31,6 +35,7 @@ export function Layout() {
           </button>
         </div>
         <BarraConexion />
+        <AvisoNotificaciones />
       </header>
       <main className="flex-1 pb-24">
         <Outlet />
@@ -38,6 +43,17 @@ export function Layout() {
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-2xl border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <NavLink to="/" end className={claseNav}>
           <span className="text-xl">☰</span>Catálogo
+        </NavLink>
+        <NavLink to="/fallas" className={claseNav}>
+          <span className="relative text-xl">
+            ⚠
+            {abiertas > 0 && (
+              <span className="absolute -top-1 -right-3 rounded-full bg-red-600 px-1.5 text-[10px] leading-4 font-bold text-white">
+                {abiertas}
+              </span>
+            )}
+          </span>
+          Fallas
         </NavLink>
         <NavLink to="/escanear" className={claseNav}>
           <span className="text-xl">⌁</span>Escanear

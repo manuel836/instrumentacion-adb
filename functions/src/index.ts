@@ -1,10 +1,12 @@
 import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
+import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
 import { setGlobalOptions } from 'firebase-functions/v2'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
-import { onDocumentDeleted, onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { logger } from 'firebase-functions/v2'
 
 initializeApp()
 setGlobalOptions({ region: 'us-central1', maxInstances: 5 })
@@ -145,4 +147,92 @@ export const alBorrarFotoUbicacion = onDocumentDeleted('instrumentos/{id}/ubicac
       .filter((r): r is string => typeof r === 'string')
       .map((r) => bucket.file(r).delete({ ignoreNotFound: true })),
   )
+})
+
+// ---------- Fallas ----------
+
+/** URL pública de la app para los enlaces de las notificaciones. */
+const ORIGEN = process.env.PUBLIC_ORIGIN ?? 'https://instrumentacion-adb.web.app'
+
+interface Aviso {
+  titulo: string
+  cuerpo: string
+  ruta: string
+}
+
+/** Envía un push web a los usuarios indicados y limpia los tokens que ya no sirven. */
+async function avisar(uids: string[], aviso: Aviso) {
+  if (uids.length === 0) return
+  const docs = await Promise.all(uids.map((u) => db.doc(`usuarios/${u}`).get()))
+  const destinos = docs.flatMap((d) =>
+    d.exists && d.get('activo') !== false ? ((d.get('tokensFCM') as string[] | undefined) ?? []).map((t) => ({ uid: d.id, token: t })) : [],
+  )
+  if (destinos.length === 0) return
+  try {
+    const res = await getMessaging().sendEachForMulticast({
+      tokens: destinos.map((d) => d.token),
+      webpush: {
+        notification: { title: aviso.titulo, body: aviso.cuerpo, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag: aviso.ruta },
+        fcmOptions: { link: `${ORIGEN}${aviso.ruta}` },
+        headers: { Urgency: 'high', TTL: String(60 * 60 * 24) },
+      },
+      data: { ruta: aviso.ruta },
+    })
+    const invalidos = res.responses
+      .map((r, i) => ({ r, d: destinos[i] }))
+      .filter(({ r }) => !r.success && ['messaging/registration-token-not-registered', 'messaging/invalid-argument'].includes(r.error?.code ?? ''))
+    await Promise.all(invalidos.map(({ d }) => db.doc(`usuarios/${d.uid}`).update({ tokensFCM: FieldValue.arrayRemove(d.token) })))
+  } catch (err) {
+    // Sin FCM (por ejemplo en los emuladores) el resto del trigger sigue.
+    logger.warn('No se pudo enviar el push', err)
+  }
+}
+
+async function tecnicos(): Promise<string[]> {
+  const snap = await db.collection('usuarios').where('rol', 'in', ['tecnico', 'admin']).where('activo', '==', true).get()
+  return snap.docs.map((d) => d.id)
+}
+
+/** Con alguna falla abierta o en proceso el instrumento queda "Con falla"; al cerrarse todas vuelve a "Operando". */
+async function actualizarEstadoInstrumento(instrumentoId: string) {
+  const ref = db.doc(`instrumentos/${instrumentoId}`)
+  const [inst, abiertas] = await Promise.all([
+    ref.get(),
+    db.collection('fallas').where('instrumentoId', '==', instrumentoId).where('estado', 'in', ['Abierta', 'En proceso']).limit(1).get(),
+  ])
+  if (!inst.exists) return
+  const actual = inst.get('estado') as string
+  if (actual === 'Fuera de servicio') return
+  const nuevo = abiertas.empty ? 'Operando' : 'Con falla'
+  if (actual !== nuevo) await ref.update({ estado: nuevo })
+}
+
+export const alCrearFalla = onDocumentCreated('fallas/{id}', async (ev) => {
+  const f = ev.data?.data()
+  if (!f) return
+  await actualizarEstadoInstrumento(f.instrumentoId)
+  // Sale cuando el teléfono que reportó sincroniza, aunque haya reportado sin señal.
+  const reporta = f.reportadoPor?.uid as string | undefined
+  const uids = (await tecnicos()).filter((u) => u !== reporta)
+  await avisar(uids, {
+    titulo: `Falla en ${f.tagISA}`,
+    cuerpo: `${f.reportadoPor?.nombre ?? 'Alguien'}: ${String(f.descripcion).slice(0, 140)}`,
+    ruta: `/fallas/${ev.params.id}`,
+  })
+})
+
+export const alActualizarFalla = onDocumentUpdated('fallas/{id}', async (ev) => {
+  const antes = ev.data?.before.data()
+  const despues = ev.data?.after.data()
+  if (!antes || !despues || antes.estado === despues.estado) return
+  await actualizarEstadoInstrumento(despues.instrumentoId)
+  const reporta = despues.reportadoPor?.uid as string | undefined
+  const quien = despues.tecnicoAsignado?.nombre ?? 'Un técnico'
+  if (reporta && reporta !== despues.tecnicoAsignado?.uid) {
+    await avisar([reporta], {
+      titulo: `${despues.tagISA}: falla ${String(despues.estado).toLowerCase()}`,
+      cuerpo: despues.estado === 'Cerrada' ? `${quien} la cerró: ${String(despues.accionCorrectiva).slice(0, 120)}` : `${quien} la está atendiendo.`,
+      ruta: `/fallas/${ev.params.id}`,
+    })
+  }
 })

@@ -9,8 +9,11 @@ import { db, storage } from '../firebase'
 type Destino =
   /** Escribe la URL en un campo del documento. */
   | { tipo: 'campo'; docPath: string; campo: string }
-  /** Escribe la URL en el elemento de un arreglo cuyo `ruta` coincide. */
-  | { tipo: 'arreglo'; docPath: string; campo: string }
+  /**
+   * Escribe la URL en el elemento de un arreglo cuyo campo `clave` (por defecto
+   * `ruta`) coincide con la ruta subida; la URL va en `campoUrl` (por defecto `url`).
+   */
+  | { tipo: 'arreglo'; docPath: string; campo: string; clave?: string; campoUrl?: string }
 
 export interface Subida {
   id: string
@@ -83,12 +86,12 @@ async function aplicarDestino(s: Subida, url: string) {
   if (s.destino.tipo === 'campo') {
     await updateDoc(ref_, { [s.destino.campo]: url })
   } else {
-    const campo = s.destino.campo
+    const { campo, clave = 'ruta', campoUrl = 'url' } = s.destino
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(ref_)
       if (!snap.exists()) return
-      const arr = ((snap.get(campo) as { ruta: string; url: string | null }[] | undefined) ?? []).map((x) =>
-        x.ruta === s.ruta ? { ...x, url } : x,
+      const arr = ((snap.get(campo) as Record<string, unknown>[] | undefined) ?? []).map((x) =>
+        x[clave] === s.ruta ? { ...x, [campoUrl]: url } : x,
       )
       tx.update(ref_, { [campo]: arr })
     })
