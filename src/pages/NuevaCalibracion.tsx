@@ -49,7 +49,10 @@ export function NuevaCalibracion() {
   const navigate = useNavigate()
 
   const [fecha, setFecha] = useState(hoyISO)
-  const [proxima, setProxima] = useState(() => sumarMeses(hoyISO(), 12))
+  // La próxima calibración es opcional: empieza vacía y se llena con los atajos o a mano.
+  const [proxima, setProxima] = useState('')
+  /** Meses elegidos con un atajo: si cambia la fecha, la próxima se recalcula. */
+  const [plazo, setPlazo] = useState<number | null>(null)
   const [patron, setPatron] = useState('')
   const [min, setMin] = useState('')
   const [max, setMax] = useState('')
@@ -97,6 +100,7 @@ export function NuevaCalibracion() {
     if (!rangoOk) return setError('Captura el rango: el máximo debe ser mayor que el mínimo.')
     if (nTol === null || nTol <= 0) return setError('La tolerancia debe ser mayor que 0.')
     if (puntos.length < 2) return setError('Captura al menos 2 puntos con entrada y lectura As-Found.')
+    if (proxima && proxima <= fecha) return setError('La próxima calibración debe ser después de la fecha de esta.')
     const final = resultado || sugerido
     if (!final) return
     const fechaTs = aTimestamp(fecha)
@@ -139,7 +143,7 @@ export function NuevaCalibracion() {
             max={hoyISO()}
             onChange={(e) => {
               setFecha(e.target.value)
-              if (e.target.value) setProxima(sumarMeses(e.target.value, 12))
+              if (e.target.value && plazo) setProxima(sumarMeses(e.target.value, plazo))
             }}
           />
         </label>
@@ -210,17 +214,52 @@ export function NuevaCalibracion() {
       </label>
 
       <div>
-        <label className="block">
-          <span className="etiqueta">Próxima calibración</span>
-          <input className="campo" type="date" value={proxima} min={fecha} onChange={(e) => setProxima(e.target.value)} />
-        </label>
+        <span className="etiqueta">Próxima calibración (opcional)</span>
+        <div className="flex gap-2">
+          <input
+            className="campo"
+            type="date"
+            aria-label="Próxima calibración"
+            value={proxima}
+            min={fecha}
+            onChange={(e) => {
+              setProxima(e.target.value)
+              setPlazo(null)
+            }}
+          />
+          {proxima && (
+            <button
+              type="button"
+              className="btn-secundario shrink-0 px-3"
+              onClick={() => {
+                setProxima('')
+                setPlazo(null)
+              }}
+            >
+              Quitar
+            </button>
+          )}
+        </div>
         <div className="mt-2 flex gap-2">
           {[6, 12, 24].map((m) => (
-            <button key={m} type="button" className="rounded-full border border-slate-300 px-3 py-1 text-sm" onClick={() => setProxima(sumarMeses(fecha, m))}>
+            <button
+              key={m}
+              type="button"
+              className={`rounded-full border px-3 py-1 text-sm ${plazo === m ? 'border-marca-700 bg-marca-50 font-semibold text-marca-800' : 'border-slate-300'}`}
+              onClick={() => {
+                setPlazo(m)
+                setProxima(sumarMeses(fecha, m))
+              }}
+            >
               {m} meses
             </button>
           ))}
         </div>
+        <p className="mt-1.5 text-xs text-slate-500">
+          {proxima
+            ? 'La ficha del instrumento mostrará esta fecha y avisará cuando se acerque.'
+            : 'Sin fecha, el instrumento queda “sin calibración programada”. Puedes ponerla después al editar el instrumento.'}
+        </p>
       </div>
 
       <label className="block">
