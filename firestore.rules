@@ -97,7 +97,8 @@ service cloud.firestore {
     }
 
     // Fallas: Abierta → En proceso → Cerrada. Cualquiera con rol reporta;
-    // solo técnicos y admin las toman y cierran.
+    // solo técnicos y admin las toman y cierran. Solo el admin elimina una (en cualquier
+    // estado, si se reportó por error); la Function alBorrarFalla borra su chat y sus fotos.
     match /fallas/{id} {
       allow read: if conRol();
       allow create: if conRol()

@@ -12,6 +12,7 @@ import { RefaccionesUsadas } from '../components/RefaccionesUsadas'
 import { dondeEsta } from '../types'
 import { useInstrumento } from '../lib/instrumentos'
 import { AvisoDisparo } from '../components/AvisoDisparo'
+import { BorrarFalla } from '../components/BorrarFalla'
 
 export function DetalleFalla() {
   const { id } = useParams()
@@ -27,7 +28,7 @@ export function DetalleFalla() {
   const [error, setError] = useState('')
 
   if (falla === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
-  if (falla === null) return <p className="p-6 text-slate-500">Esta falla no existe.</p>
+  if (falla === null) return <p className="p-6 text-slate-500">Esta falla no existe. Puede que el administrador la haya eliminado.</p>
 
   const yo = { uid: user?.uid ?? '', nombre: user?.displayName || user?.email || 'Técnico' }
 
@@ -152,6 +153,8 @@ export function DetalleFalla() {
           }
         />
       </section>
+
+      {p.borrarFallas && <BorrarFalla falla={falla} />}
 
       {visor !== null && (
         <Visor fotos={falla.fotos.map((f) => ({ url: f.url, ruta: f.ruta, pie: '' }))} inicio={visor} onCerrar={() => setVisor(null)} />

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
+import { collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Falla, FotoFalla, Instrumento, Persona } from '../types'
 import { comprimirFoto } from './images'
 import type { ConPendiente } from './instrumentos'
-import { encolar } from './uploadQueue'
+import { descartarDePrefijo, encolar } from './uploadQueue'
 
 const colFallas = collection(db, 'fallas')
 
@@ -117,4 +117,15 @@ export function cerrarFalla(id: string, causaRaiz: string, accionCorrectiva: str
     // Cerrar sin haberla tomado la asigna a quien la cierra.
     ...(yaAsignada ? {} : { tecnicoAsignado: tecnico, 'fechas.tomada': serverTimestamp() }),
   })
+}
+
+/**
+ * Elimina una falla reportada por error, en cualquier estado (solo admin). Desaparece
+ * al momento en este teléfono; una Function borra después su chat y sus fotos y
+ * regresa el instrumento a "Operando" si ya no le queda otra pendiente.
+ */
+export function borrarFalla(id: string): Promise<void> {
+  // Lo que este teléfono aún no sube de esa falla (fotos del reporte o del chat) ya sobra.
+  void descartarDePrefijo(`fallas/${id}/`)
+  return deleteDoc(doc(db, 'fallas', id))
 }

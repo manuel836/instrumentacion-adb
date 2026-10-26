@@ -205,6 +205,17 @@ describe('fallas', () => {
     await assertSucceeds(updateDoc(ref_, { estado: 'Cerrada', causaRaiz: 'Diafragma dañado', accionCorrectiva: 'Se cambió el sensor' }))
     await assertFails(updateDoc(ref_, { estado: 'Abierta' }))
   })
+
+  it('solo el admin la elimina, esté abierta, en proceso o cerrada', async () => {
+    for (const estado of ['Abierta', 'En proceso', 'Cerrada']) {
+      await sembrar({ ...nueva('u-operador'), estado, tecnicoAsignado: estado === 'Abierta' ? null : tecnico })
+      // Ni quien la reportó ni el técnico que la atiende.
+      await assertFails(deleteDoc(doc(como('operador'), 'fallas/f1')))
+      await assertFails(deleteDoc(doc(como('tecnico'), 'fallas/f1')))
+      await assertFails(deleteDoc(doc(como(null), 'fallas/f1')))
+      await assertSucceeds(deleteDoc(doc(como('admin'), 'fallas/f1')))
+    }
+  })
 })
 
 describe('chat', () => {
@@ -230,6 +241,11 @@ describe('chat', () => {
     await assertFails(getDocs(collection(como(null), 'fallas/f1/mensajes')))
     await assertFails(setDoc(doc(como('operador'), 'fallas/no-existe/mensajes/m4'), msg('u-operador')))
     await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m5'), msg('u-operador', { texto: '' })))
+  })
+
+  it('una falla eliminada ya no recibe mensajes', async () => {
+    await assertSucceeds(deleteDoc(doc(como('admin'), 'fallas/f1')))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador')))
   })
 
   it('al cerrar la falla se cierra su chat, pero lo escrito se sigue leyendo', async () => {

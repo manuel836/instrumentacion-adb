@@ -96,6 +96,8 @@ export function permisos(rol: Rol | null) {
     gestionarFotos: tecnico,
     reportarFallas: rol !== null,
     atenderFallas: tecnico,
+    /** Eliminar una falla reportada por error, en cualquier estado. */
+    borrarFallas: rol === 'admin',
     registrarCalibraciones: tecnico,
     verBitacora: tecnico,
     exportar: tecnico,
