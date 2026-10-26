@@ -47,6 +47,8 @@ export function instrumentoVacio(): InstrumentoNuevo {
     alimentacion: '',
     nfcToken: null,
     estado: 'Operando',
+    disparaCaldera: false,
+    notaDisparo: '',
     proximaCalibracion: null,
     docs: [],
     portadaMiniatura: null,

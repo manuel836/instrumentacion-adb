@@ -10,10 +10,14 @@ import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
 import { RefaccionesUsadas } from '../components/RefaccionesUsadas'
 import { dondeEsta } from '../types'
+import { useInstrumento } from '../lib/instrumentos'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 export function DetalleFalla() {
   const { id } = useParams()
   const falla = useFalla(id)
+  // El aviso de disparo de caldera sale del instrumento (puede marcarse después de reportar).
+  const inst = useInstrumento(falla?.instrumentoId)
   const { user, rol } = useAuth()
   const p = permisos(rol)
   const [visor, setVisor] = useState<number | null>(null)
@@ -40,6 +44,7 @@ export function DetalleFalla() {
 
   return (
     <div className="space-y-3 p-3">
+      {inst?.disparaCaldera && falla.estado !== 'Cerrada' && <AvisoDisparo nota={inst.notaDisparo} />}
       <section className="tarjeta space-y-2">
         <div className="flex items-center gap-2">
           <Link to={`/instrumentos/${falla.instrumentoId}`} className="font-mono text-2xl font-bold text-marca-700 underline">

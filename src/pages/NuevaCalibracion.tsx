@@ -6,6 +6,7 @@ import { registrarCalibracion, useCalibraciones } from '../lib/calibraciones'
 import { useInstrumento } from '../lib/instrumentos'
 import { errorPct, puntosDelRango, resultadoSugerido } from '../lib/tolerancia'
 import { RESULTADOS_CALIBRACION, type ResultadoCalibracion } from '../types'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 interface Fila {
   entrada: string
@@ -129,8 +130,12 @@ export function NuevaCalibracion() {
     <form onSubmit={onSubmit} className="space-y-4 p-4">
       <div>
         <h1 className="text-xl font-bold">Registrar calibración</h1>
-        <p className="font-mono text-slate-600">{inst.tagISA}</p>
+        <p className="font-mono text-slate-600">
+          {inst.tagISA}
+          {inst.subArea && <span className="font-sans text-sm"> · {inst.subArea}</span>}
+        </p>
       </div>
+      {inst.disparaCaldera && <AvisoDisparo nota={inst.notaDisparo} />}
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">

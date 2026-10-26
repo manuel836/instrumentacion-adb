@@ -43,6 +43,20 @@ export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: s
   { campo: 'alimentacion', titulo: 'Alimentación', ayuda: 'Opcional.', ejemplo: '24 VDC lazo', alias: ['voltaje'] },
   { campo: 'estado', titulo: 'Estado', ayuda: `Opcional (si va vacío: Operando). Uno de: ${ESTADOS_INSTRUMENTO.join(', ')}.`, ejemplo: 'Operando', alias: ['estatus', 'status'] },
   {
+    campo: 'disparaCaldera',
+    titulo: 'Dispara caldera',
+    ayuda: 'Opcional. Sí si al intervenirlo puede disparar la caldera (si va vacío: No).',
+    ejemplo: 'Sí',
+    alias: ['disparo', 'disparacaldera', 'disparodecaldera', 'trip'],
+  },
+  {
+    campo: 'notaDisparo',
+    titulo: 'Precauciones de disparo',
+    ayuda: 'Opcional. Qué cuidar antes de intervenirlo (bypass, avisar a operación…). Máximo 300 letras.',
+    ejemplo: 'Poner en bypass el disparo por baja presión',
+    alias: ['precauciones', 'notadisparo'],
+  },
+  {
     campo: 'proximaCalibracion',
     titulo: 'Próxima calibración',
     ayuda: 'Opcional. Fecha de Excel o texto día/mes/año (31/12/2026).',
@@ -85,6 +99,14 @@ function estado(v: string): EstadoInstrumento | null {
   if (k.startsWith('fuera') || k === 'baja' || k === 'fs') return 'Fuera de servicio'
   if (k.includes('falla')) return 'Con falla'
   if (['ok', 'operativo', 'enservicio', 'activo', 'funcionando'].includes(k)) return 'Operando'
+  return null
+}
+
+/** Sí / No escrito como sea ("si", "X", "1", "no"…); null si no se entiende. */
+function siNo(v: string): boolean | null {
+  const k = clave(v)
+  if (['si', 's', 'x', '1', 'true', 'verdadero', 'dispara'].includes(k)) return true
+  if (['no', 'n', '0', 'false', 'falso'].includes(k)) return false
   return null
 }
 
@@ -166,6 +188,8 @@ export interface Analisis {
 }
 
 function mismoValor(campo: Campo, a: unknown, b: unknown): boolean {
+  // Los instrumentos de antes no tienen el campo: cuentan como "No".
+  if (campo === 'disparaCaldera') return !!a === !!b
   if (campo === 'proximaCalibracion') {
     const fa = a && typeof (a as { toDate?: () => Date }).toDate === 'function' ? (a as { toDate: () => Date }).toDate() : (a as Date | null)
     const fb = b as Date | null
@@ -276,6 +300,12 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         else leido.proximaCalibracion = f
       } else if (campo === 'subArea') {
         leido.subArea = ['sinsubarea', 'ninguna', 'ninguno'].includes(clave(t)) ? '' : t
+      } else if (campo === 'disparaCaldera') {
+        const b = siNo(t)
+        if (b === null) errores.push(`Dispara caldera "${t}": escribe Sí o No.`)
+        else leido.disparaCaldera = b
+      } else if (campo === 'notaDisparo') {
+        leido.notaDisparo = t.slice(0, 300)
       } else if (campo === 'servicio') {
         if (t.length > 200) errores.push('El servicio pasa de 200 letras.')
         else leido.servicio = t
@@ -354,6 +384,8 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         senal: leido.senal ?? '4-20 mA',
         alimentacion: leido.alimentacion ?? '',
         estado: leido.estado ?? 'Operando',
+        disparaCaldera: leido.disparaCaldera ?? false,
+        notaDisparo: leido.notaDisparo ?? '',
         proximaCalibracion: leido.proximaCalibracion ?? null,
       },
     })

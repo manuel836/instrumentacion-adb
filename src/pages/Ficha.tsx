@@ -12,6 +12,7 @@ import { BorrarInstrumento } from '../components/BorrarInstrumento'
 import { RefaccionesDelInstrumento } from '../components/RefaccionesUsadas'
 import { Icono } from '../components/Icono'
 import { dondeEsta } from '../types'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -40,6 +41,7 @@ export function Ficha() {
   return (
     <div className="space-y-3 p-3">
       <section className="tarjeta">
+        {inst.disparaCaldera && <AvisoDisparo nota={inst.notaDisparo} className="mb-3" />}
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="font-mono text-2xl font-bold">{inst.tagISA}</h1>

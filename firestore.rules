@@ -38,6 +38,8 @@ service cloud.firestore {
         && d.servicio is string && d.servicio.size() >= 1 && d.servicio.size() <= 200
         && d.area in ['Generación de vapor', 'Almacenamiento de amoniaco', 'Tratamiento de agua']
         && d.get('subArea', '') is string && d.get('subArea', '').size() <= 60
+        && d.get('disparaCaldera', false) is bool
+        && d.get('notaDisparo', '') is string && d.get('notaDisparo', '').size() <= 300
         && d.estado in ['Operando', 'Con falla', 'Fuera de servicio']
         && (d.nfcToken == null || (d.nfcToken is string && d.nfcToken.matches('^[A-Za-z0-9]{16,22}$')))
         && d.docs is list && d.docs.size() <= 30;

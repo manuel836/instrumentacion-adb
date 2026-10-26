@@ -159,3 +159,27 @@ describe('sub áreas', () => {
     expect(a.actualizar).toEqual([{ fila: 3, id: 's1', tagISA: 'LT-200', cambios: { marca: 'ABB' } }])
   })
 })
+
+describe('disparo de caldera', () => {
+  const hojas = (filas: (string | number | null)[][]) => [{ nombre: 'Instrumentos', filas: [['Tag ISA', 'Servicio', 'Área', 'Dispara caldera', 'Precauciones'], ...filas] }]
+  const existentes: Existente[] = [{ id: 'i1', tagISA: 'PT-101', datos: { area: 'Generación de vapor', servicio: 'Presión' } }]
+
+  it('entiende Sí y No; vacío es No; los de antes sin la marca cuentan como No', () => {
+    const a = analizar(
+      hojas([
+        ['PT-101', null, 'vapor', 'no', null],
+        ['LSLL-20', 'Nivel muy bajo domo', 'vapor', 'Sí', 'Bypass antes de desconectar'],
+        ['TT-30', 'Temperatura', 'vapor', null, null],
+        ['PT-40', 'Presión', 'vapor', 'quizá', null],
+      ]),
+      existentes,
+      true,
+    )
+    expect(a.sinCambios).toBe(1)
+    expect(a.nuevos.map((n) => [n.datos.tagISA, n.datos.disparaCaldera, n.datos.notaDisparo])).toEqual([
+      ['LSLL-20', true, 'Bypass antes de desconectar'],
+      ['TT-30', false, ''],
+    ])
+    expect(a.errores.map((e) => e.mensaje)).toEqual(['Dispara caldera "quizá": escribe Sí o No.'])
+  })
+})

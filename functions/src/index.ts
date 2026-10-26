@@ -242,13 +242,16 @@ async function reconstruir(instrumentoId: string, tokenAnterior?: string | null)
     area: inst.get('area') ?? '',
     subArea: inst.get('subArea') ?? '',
     estado: inst.get('estado') ?? '',
+    // Aviso de seguridad: también lo ve quien escanea el tag sin cuenta (contratistas).
+    disparaCaldera: inst.get('disparaCaldera') === true,
+    notaDisparo: inst.get('notaDisparo') ?? '',
     ubicacionTexto: inst.get('ubicacionTexto') ?? '',
     fotosUbicacion: fotos.map((f) => ({ url: f.url ?? null, miniaturaUrl: f.miniaturaUrl ?? null, pie: f.pie ?? '', esPortada: !!f.esPortada })),
     actualizado: FieldValue.serverTimestamp(),
   })
 }
 
-const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'subArea', 'estado', 'ubicacionTexto', 'nfcToken']
+const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'subArea', 'estado', 'disparaCaldera', 'notaDisparo', 'ubicacionTexto', 'nfcToken']
 
 export const alEscribirInstrumento = onDocumentWritten('instrumentos/{id}', async (ev) => {
   const antes = ev.data?.before.data()

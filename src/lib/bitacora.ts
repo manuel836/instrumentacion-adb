@@ -120,6 +120,8 @@ const CAMPOS: Record<string, string> = {
   nfcToken: 'Tag NFC',
   estado: 'Estado',
   subArea: 'Sub área',
+  disparaCaldera: 'Puede disparar la caldera',
+  notaDisparo: 'Precauciones de disparo',
   proximaCalibracion: 'Próxima calibración',
   docs: 'Documentos',
   pie: 'Pie de foto',

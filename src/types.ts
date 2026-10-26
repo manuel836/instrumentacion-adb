@@ -47,6 +47,10 @@ export interface Instrumento {
   alimentacion: string
   nfcToken: string | null
   estado: EstadoInstrumento
+  /** Medición o retroaviso que, al intervenirlo, puede disparar la caldera. */
+  disparaCaldera: boolean
+  /** Qué cuidar antes de intervenirlo (bypass, avisar a operación…). */
+  notaDisparo: string
   proximaCalibracion: Timestamp | null
   docs: DocAdjunto[]
   /** Ruta y URL de la miniatura de portada, copiadas aquí para listas y precarga offline. */
@@ -87,6 +91,8 @@ export interface Publico {
   area: string
   subArea?: string
   estado: string
+  disparaCaldera?: boolean
+  notaDisparo?: string
   ubicacionTexto: string
   fotosUbicacion: { url: string | null; miniaturaUrl: string | null; pie: string; esPortada: boolean }[]
 }

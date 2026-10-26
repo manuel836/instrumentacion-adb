@@ -9,6 +9,7 @@ import {
   useInstrumento,
 } from '../lib/instrumentos'
 import { useSubareas } from '../lib/subareas'
+import { Icono } from '../components/Icono'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type InstrumentoNuevo } from '../types'
 
@@ -68,7 +69,7 @@ export function FormInstrumento() {
         setError(`Ya existe ${tagISA} en ${dondeEsta(datos)}. El mismo tag solo se puede repetir en otra área o sub área.`)
         return
       }
-      const limpio = { ...datos, tagISA, servicio: datos.servicio.trim() }
+      const limpio = { ...datos, tagISA, servicio: datos.servicio.trim(), notaDisparo: datos.disparaCaldera ? datos.notaDisparo.trim() : '' }
       if (id) {
         const { nfcToken: _t, docs: _d, portadaMiniatura: _p, ...editables } = limpio
         actualizarInstrumento(id, editables)
@@ -146,6 +147,37 @@ export function FormInstrumento() {
             opciones.length === 0 && 'El administrador las agrega.'
           )}
         </p>
+      </div>
+      <div className={`rounded-lg border p-3 ${datos.disparaCaldera ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 size-5 accent-red-700"
+            checked={datos.disparaCaldera}
+            onChange={(e) => set('disparaCaldera', e.target.checked)}
+          />
+          <span>
+            <span className="flex items-center gap-1.5 font-semibold">
+              <Icono nombre="rayo" className="size-4 text-red-700" /> Puede disparar la caldera
+            </span>
+            <span className="block text-xs text-slate-600">
+              Medición o retroaviso de válvula de corte o de control que, al intervenirlo, puede disparar la caldera. Se verá un aviso
+              rojo en su ficha.
+            </span>
+          </span>
+        </label>
+        {datos.disparaCaldera && (
+          <label className="mt-3 block">
+            <span className="etiqueta">Precauciones antes de intervenir (opcional)</span>
+            <textarea
+              className="campo min-h-16"
+              maxLength={300}
+              placeholder="Avisar a operación y poner en bypass el disparo por bajo nivel antes de desconectar."
+              value={datos.notaDisparo}
+              onChange={(e) => set('notaDisparo', e.target.value)}
+            />
+          </label>
+        )}
       </div>
       <Campo label="Servicio *">
         <input className="campo" required placeholder="Presión de vapor a cabezal" value={datos.servicio} onChange={(e) => set('servicio', e.target.value)} />

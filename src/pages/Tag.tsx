@@ -10,6 +10,7 @@ import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
 import { ordenarConPortada } from '../components/Galeria'
 import { Icono } from '../components/Icono'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 /** Destino de la URL grabada en el tag: ficha completa con sesión, vista de invitado sin ella. */
 export function Tag() {
@@ -57,6 +58,7 @@ function VistaInvitado({ token }: { token: string }) {
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl space-y-3 p-3">
+      {pub.disparaCaldera && <AvisoDisparo nota={pub.notaDisparo} />}
       <section className="tarjeta">
         <div className="flex items-start justify-between">
           <div>

@@ -79,6 +79,8 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
       i.senal,
       i.alimentacion,
       i.estado,
+      i.disparaCaldera ? 'Sí' : 'No',
+      i.notaDisparo,
       fecha(i.proximaCalibracion),
       i.nfcToken ? 'Sí' : 'No',
     ])
@@ -104,6 +106,8 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
           c('Señal'),
           c('Alimentación'),
           c('Estado', 16),
+          c('Dispara caldera', 10),
+          c('Precauciones de disparo', 30),
           c('Próxima calibración', 14),
           c('Tag NFC', 8),
         ],

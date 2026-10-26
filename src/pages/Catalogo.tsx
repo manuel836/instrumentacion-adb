@@ -21,6 +21,7 @@ export const OTROS_FILTROS = {
   vencidas: { titulo: 'Calibración vencida', cumple: (i: Instrumento) => vencimiento(i.proximaCalibracion) === 'vencida' },
   'por-vencer': { titulo: 'Calibración vence en 30 días', cumple: (i: Instrumento) => vencimiento(i.proximaCalibracion) === 'pronto' },
   'sin-calibracion': { titulo: 'Sin calibración programada', cumple: (i: Instrumento) => !i.proximaCalibracion },
+  'dispara-caldera': { titulo: 'Pueden disparar la caldera', cumple: (i: Instrumento) => i.disparaCaldera },
 } as const
 export type OtroFiltro = keyof typeof OTROS_FILTROS
 
@@ -216,7 +217,14 @@ function Fila({ i, alto, y }: { i: ConPendiente<Instrumento>; alto: number; y: n
       className="absolute inset-x-0 flex items-center gap-3 border-b border-slate-100 bg-white px-3 active:bg-slate-50"
       style={{ height: alto, transform: `translateY(${y}px)` }}
     >
-      <FotoImg url={i.portadaMiniatura} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+      <span className="relative shrink-0">
+        <FotoImg url={i.portadaMiniatura} alt="" className="h-14 w-14 rounded-lg object-cover" />
+        {i.disparaCaldera && (
+          <span className="absolute -top-1 -left-1 rounded-full border-2 border-white bg-red-600 p-0.5 text-white" title="Puede disparar la caldera">
+            <Icono nombre="rayo" className="size-3.5" />
+          </span>
+        )}
+      </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="font-mono font-bold">{i.tagISA}</span>
@@ -226,6 +234,7 @@ function Fila({ i, alto, y }: { i: ConPendiente<Instrumento>; alto: number; y: n
         </div>
         <p className="truncate text-sm text-slate-600">{i.servicio}</p>
         <p className="truncate text-xs text-slate-400">
+          {i.disparaCaldera && <span className="font-semibold text-red-700">Dispara caldera · </span>}
           {i.area}
           {!i.nfcToken && ' · sin tag'}
           {v === 'vencida' && <span className="text-red-700"> · calibración vencida</span>}

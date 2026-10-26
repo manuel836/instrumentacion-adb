@@ -93,6 +93,13 @@ describe('sub áreas', () => {
     await assertSucceeds(deleteDoc(doc(como('admin'), 'subareas/s1')))
   })
 
+  it('la marca de disparo de caldera es sí/no con una nota corta', async () => {
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { disparaCaldera: true, notaDisparo: 'Bypass del disparo por bajo nivel' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { disparaCaldera: 'sí' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { notaDisparo: 'x'.repeat(301) }))
+    await assertFails(updateDoc(doc(como('operador'), 'instrumentos/i1'), { disparaCaldera: false }))
+  })
+
   it('el instrumento guarda su sub área como texto corto', async () => {
     await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 'Caldera 2' }))
     await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 2 }))

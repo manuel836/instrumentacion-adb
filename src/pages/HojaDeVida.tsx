@@ -9,6 +9,7 @@ import { errorPct, vencimiento } from '../lib/tolerancia'
 import { fechaDia } from '../components/Calibracion'
 import { FotoImg } from '../components/FotoImg'
 import type { Calibracion, Falla } from '../types'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 const HORA = 3_600_000
 const cuantas = (n: number, una: string, varias: string) => `${n} ${n === 1 ? una : varias}`
@@ -118,6 +119,8 @@ export function HojaDeVida() {
             {user ? <><br />por {user.displayName || user.email}</> : null}
           </p>
         </header>
+
+        {inst.disparaCaldera && <AvisoDisparo nota={inst.notaDisparo} className="mt-3 print:break-inside-avoid" />}
 
         <div className="mt-4 flex flex-col gap-4 sm:flex-row print:flex-row">
           {portada && (
