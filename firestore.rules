@@ -46,9 +46,12 @@ service cloud.firestore {
       allow read: if admin() || (conSesion() && request.auth.uid == uid);
       // Cada usuario solo registra sus tokens de notificación y, después de cambiar una
       // contraseña temporal, quita el aviso (nunca lo pone). El resto lo escriben las Functions.
-      allow update: if conSesion() && request.auth.uid == uid
-        && cambian().hasOnly(['tokensFCM', 'cambiarContrasena'])
-        && (!cambian().hasAny(['cambiarContrasena']) || request.resource.data.cambiarContrasena == false);
+      allow update: if (conSesion() && request.auth.uid == uid
+          && cambian().hasOnly(['tokensFCM', 'cambiarContrasena'])
+          && (!cambian().hasAny(['cambiarContrasena']) || request.resource.data.cambiarContrasena == false))
+        // El admin asigna el área de cada usuario (define qué avisos de fallas le llegan).
+        || (admin() && cambian().hasOnly(['area'])
+          && request.resource.data.area in ['', 'Generación de vapor', 'Almacenamiento de amoniaco', 'Tratamiento de agua']);
     }
 
     match /instrumentos/{id} {

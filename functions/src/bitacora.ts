@@ -174,3 +174,21 @@ export const auditarFalla = onDocumentWrittenWithAuthContext('fallas/{id}', (ev)
   const d = ev.data?.after.data() ?? ev.data?.before.data()
   return auditar(ev, 'fallas', (d?.instrumentoId as string | undefined) ?? null, async () => (d?.tagISA as string | undefined) ?? '')
 })
+
+/** El admin cambia el área de un usuario directo en Firestore (sin función): se anota aquí. */
+export const auditarAreaUsuario = onDocumentWrittenWithAuthContext('usuarios/{uid}', async (ev) => {
+  const antes = ev.data?.before.data()
+  const despues = ev.data?.after.data()
+  if (!antes || !despues || (antes.area ?? '') === (despues.area ?? '')) return
+  await registrar({
+    usuario: await quien(ev, null),
+    coleccion: 'usuarios',
+    docId: ev.params.uid,
+    ruta: ev.document,
+    instrumentoId: null,
+    etiqueta: String(despues.nombre ?? despues.email ?? ev.params.uid),
+    accion: 'editar',
+    antes: { area: antes.area || 'Todas' },
+    despues: { area: despues.area || 'Todas' },
+  })
+})

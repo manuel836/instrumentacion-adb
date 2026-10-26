@@ -10,7 +10,7 @@ import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWrit
 import { logger } from 'firebase-functions/v2'
 import { enBorrado, registrar } from './bitacora.js'
 
-export { auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento } from './bitacora.js'
+export { auditarAreaUsuario, auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento } from './bitacora.js'
 
 initializeApp()
 setGlobalOptions({ region: 'us-central1', maxInstances: 5 })
@@ -374,9 +374,13 @@ async function avisar(uids: string[], aviso: Aviso) {
   }
 }
 
-async function tecnicos(): Promise<string[]> {
+/**
+ * Técnicos y admins activos que atienden esa área: los que tienen esa área asignada
+ * y los que no tienen ninguna (ven todas). Sin área, todos.
+ */
+export async function tecnicos(area?: string): Promise<string[]> {
   const snap = await db.collection('usuarios').where('rol', 'in', ['tecnico', 'admin']).where('activo', '==', true).get()
-  return snap.docs.map((d) => d.id)
+  return snap.docs.filter((d) => !area || !d.get('area') || d.get('area') === area).map((d) => d.id)
 }
 
 /** Con alguna falla abierta o en proceso el instrumento queda "Con falla"; al cerrarse todas vuelve a "Operando". */
@@ -399,7 +403,8 @@ export const alCrearFalla = onDocumentCreated('fallas/{id}', async (ev) => {
   await actualizarEstadoInstrumento(f.instrumentoId)
   // Sale cuando el teléfono que reportó sincroniza, aunque haya reportado sin señal.
   const reporta = f.reportadoPor?.uid as string | undefined
-  const uids = (await tecnicos()).filter((u) => u !== reporta)
+  // Solo a quienes atienden el área de la falla (o todas).
+  const uids = (await tecnicos(f.area)).filter((u) => u !== reporta)
   await avisar(uids, {
     titulo: `Falla en ${f.tagISA}`,
     cuerpo: `${f.reportadoPor?.nombre ?? 'Alguien'}: ${String(f.descripcion).slice(0, 140)}`,
@@ -442,7 +447,7 @@ export const alCrearMensaje = onDocumentCreated('fallas/{fallaId}/mensajes/{msgI
     falla.get('reportadoPor.uid'),
     falla.get('tecnicoAsignado.uid'),
     ...autores.docs.map((d) => d.get('autor.uid')),
-    ...(falla.get('tecnicoAsignado') ? [] : await tecnicos()),
+    ...(falla.get('tecnicoAsignado') ? [] : await tecnicos(falla.get('area'))),
   ])
   uids.delete(m.autor?.uid)
   await avisar(

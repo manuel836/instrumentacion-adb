@@ -113,6 +113,14 @@ describe('usuarios y bitácora', () => {
     await assertFails(updateDoc(ref, { cambiarContrasena: true }))
     await assertFails(updateDoc(doc(como('operador', 'u-otro'), 'usuarios/u-operador'), { cambiarContrasena: false }))
   })
+  it('solo el admin asigna el área de un usuario, y solo áreas válidas', async () => {
+    await assertSucceeds(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: 'Tratamiento de agua' }))
+    await assertSucceeds(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: '' }))
+    await assertFails(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: 'Cocina' }))
+    await assertFails(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: 'Tratamiento de agua', rol: 'admin' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'usuarios/u-operador'), { area: 'Tratamiento de agua' }))
+    await assertFails(updateDoc(doc(como('operador'), 'usuarios/u-operador'), { area: 'Tratamiento de agua' }))
+  })
   it('la bitácora no la edita nadie y el operador no la ve', async () => {
     await assertSucceeds(getDoc(doc(como('tecnico'), 'auditoria/a1')))
     await assertFails(getDoc(doc(como('operador'), 'auditoria/a1')))

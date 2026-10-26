@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
+import { collection, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../firebase'
 import { useAuth } from '../auth/AuthContext'
@@ -22,6 +22,12 @@ function contrasenaTemporal(): string {
   const azar = crypto.getRandomValues(new Uint32Array(8))
   const s = Array.from(azar, (n) => letras[n % letras.length]).join('')
   return `${s.slice(0, 4)}-${s.slice(4)}`
+}
+
+/** Qué avisos de fallas le llegan según su rol y su área. */
+function textoAvisos(u: Usuario): string {
+  if (u.rol === 'operador') return 'Le llegan avisos solo de las fallas que reporta. Su inicio abre en esta área.'
+  return u.area ? `Le llegan avisos de fallas nuevas solo de ${u.area}.` : 'Le llegan avisos de fallas nuevas de todas las áreas.'
 }
 
 const ROLES: { v: Rol; t: string }[] = [
@@ -111,6 +117,10 @@ export function Usuarios() {
             ))}
           </select>
         </div>
+        <p className="text-xs text-slate-500">
+          El área define de qué fallas le llegan avisos a técnicos y admins, y qué resumen ve primero en el inicio. Con “Todas las áreas”
+          recibe todo.
+        </p>
         <button className="btn-primario w-full" disabled={!online || enviando}>
           Crear usuario
         </button>
@@ -138,6 +148,24 @@ export function Usuarios() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="space-y-1">
+              <select
+                className="campo py-1.5 text-sm"
+                aria-label={`Área de ${u.nombre}`}
+                value={u.area ?? ''}
+                disabled={!online}
+                onChange={(e) => {
+                  const area = e.target.value
+                  void accion(() => updateDoc(doc(db, 'usuarios', u.uid), { area }), `Área de ${u.nombre}: ${area || 'todas las áreas'}.`)
+                }}
+              >
+                <option value="">Todas las áreas</option>
+                {AREAS.map((a) => (
+                  <option key={a}>{a}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">{textoAvisos(u)}</p>
             </div>
             {u.uid !== user?.uid && (
               <div className="grid grid-cols-2 gap-2 text-sm">
