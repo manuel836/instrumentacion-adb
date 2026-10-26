@@ -89,6 +89,14 @@ export async function descartarRuta(ruta: string): Promise<void> {
   await avisar()
 }
 
+/** Quita de la cola todo lo que va dentro de una carpeta (una falla eliminada con su chat). */
+export async function descartarDePrefijo(prefijo: string): Promise<void> {
+  const d = await abrir()
+  const todas = await d.getAll('subidas')
+  await Promise.all(todas.filter((s) => s.ruta.startsWith(prefijo)).map((s) => d.delete('subidas', s.id)))
+  await avisar()
+}
+
 async function aplicarDestino(s: Subida, url: string) {
   const ref_ = doc(db, s.destino.docPath)
   if (s.destino.tipo === 'campo') {

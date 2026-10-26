@@ -15,7 +15,8 @@ Firebase (Auth, Firestore con caché persistente, Storage, Cloud Functions, Host
 | 3. Chat y calibraciones | Chat por falla (con fotos) y canal general con push; calibraciones As-Found / As-Left con tolerancia y próxima calibración | En producción |
 | 4. Bitácora y exportes | Bitácora de cambios (quién, qué, cuándo, antes y después) escrita por Functions; Excel (3 reportes) y vista de impresión a PDF | En producción |
 | 5. Mejoras | Contraseña temporal puesta por el admin; borrar instrumentos con todo lo suyo; el catálogo recuerda búsqueda, filtros y posición; revisar el tag antes de grabarlo; importar desde Excel o CSV; pantalla de inicio con resumen; avisos de fallas por área; aviso semanal de calibraciones; hoja de vida en PDF; app más ligera e íconos propios; refacciones con kardex | En producción |
-| 6. Orden y seguridad | Canal general que empieza en blanco cada día, con historial por día y chats privados; el chat de una falla se cierra con ella y conserva lo hablado; próxima calibración opcional; sub áreas editables (el mismo tag puede repetirse en otra caldera); marca "Puede disparar la caldera" con aviso rojo antes de intervenir | Lista para prueba en campo |
+| 6. Orden y seguridad | Canal general que empieza en blanco cada día, con historial por día y chats privados; el chat de una falla se cierra con ella y conserva lo hablado; próxima calibración opcional; sub áreas editables (el mismo tag puede repetirse en otra caldera); marca "Puede disparar la caldera" con aviso rojo antes de intervenir | En producción |
+| 7. Correcciones | El admin elimina una falla reportada por error (abierta, en proceso o cerrada) con su chat y sus fotos; el instrumento vuelve a "Operando" si no le queda otra pendiente | Lista para prueba en campo |
 
 ## Desarrollo local con emuladores
 
@@ -59,6 +60,8 @@ Pruebas:
   admin lo elimina (ya no puede entrar y queda en la bitácora). Solo necesita el admin de prueba.
 - `node e2e/restablecer.cjs`: el admin pone una contraseña temporal; al entrar, la app pide cambiarla.
 - `node e2e/borrar.cjs`: borrar un instrumento con fotos, documentos, calibraciones y fallas (con chat).
+- `node e2e/borrar-falla.cjs`: el admin elimina fallas abiertas, en proceso y cerradas; se borran su chat y
+  sus fotos, el instrumento vuelve a "Operando" y la bitácora lo anota; el técnico no ve el botón.
 - `node e2e/catalogo.cjs`: búsqueda en más campos, filtros extra y regresar al mismo lugar de la lista.
 - `node e2e/tags.cjs`: grabar un tag en blanco, uno de otro instrumento (pasarlo) y uno con otra URL.
 - `node e2e/areas.cjs`: el admin asigna el área de cada usuario y los avisos de fallas siguen el área.
@@ -81,7 +84,7 @@ Pruebas:
 - `node e2e/inicio.cjs`: cada número del inicio coincide con la lista a la que lleva. Va al final.
 
 Con los emuladores recién arrancados y el admin creado, el orden que funciona es: fase1, fase2, fase3,
-fase4, usuarios, restablecer, borrar, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,
+fase4, usuarios, restablecer, borrar, borrar-falla, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,
 ligera, refacciones, chat, falla-cerrada, calibracion-opcional, subareas, dispara-caldera, importar e inicio.
 
 Para correr las pruebas de punta a punta, compila apuntando a los emuladores con
@@ -123,7 +126,8 @@ cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL 
   con un token aleatorio de 18 caracteres (unos 50 de los 144 bytes del NTAG213). No se usa `makeReadOnly()`.
 - `functions/src/index.ts`: alta de usuarios y roles (custom claim `rol`), baja y cierre de sesiones,
   el documento `publico/{token}` que alimenta la vista de invitado y, en fallas, el push a técnicos y
-  el estado del instrumento ("Con falla" mientras haya fallas abiertas o en proceso).
+  el estado del instrumento ("Con falla" mientras haya fallas abiertas o en proceso). Cuando el admin
+  elimina una falla, `alBorrarFalla` borra su chat y sus fotos (las del reporte y las del chat).
 - `src/sw.ts`: service worker propio (Workbox + Firebase Messaging) para el app shell, la caché de fotos
   y los avisos push con la app cerrada.
 - `firestore.rules` y `storage.rules`: los permisos de la tabla de roles se aplican en el servidor.

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { useFallas } from '../lib/fallas'
 import { AREAS, ESTADOS_FALLA, type EstadoFalla } from '../types'
 import { ListaFallas } from '../components/ListaFallas'
@@ -7,6 +7,8 @@ import { Icono } from '../components/Icono'
 
 export function Fallas() {
   const fallas = useFallas()
+  // Al eliminar una falla se llega aquí con el aviso.
+  const aviso = (useLocation().state as { aviso?: string } | null)?.aviso
   // Estado y área en la dirección: al volver de una falla la lista queda igual, y el inicio enlaza aquí.
   const [params, setParams] = useSearchParams()
   const estado = (ESTADOS_FALLA as readonly string[]).includes(params.get('estado') ?? '') ? (params.get('estado') as EstadoFalla) : 'Abierta'
@@ -52,6 +54,7 @@ export function Fallas() {
             <option key={a}>{a}</option>
           ))}
         </select>
+        {aviso && <p className="rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">{aviso}</p>}
       </div>
       <div className="px-3">
         {fallas === null ? (

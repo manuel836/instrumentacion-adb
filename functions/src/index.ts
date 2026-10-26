@@ -446,6 +446,20 @@ export const alActualizarFalla = onDocumentUpdated('fallas/{id}', async (ev) => 
   }
 })
 
+/**
+ * El admin eliminó una falla (por ejemplo, reportada por error): se borran su chat y todas
+ * sus fotos, también las del chat, y el instrumento vuelve a "Operando" si ya no le queda
+ * otra pendiente. La bitácora la anota auditarFalla con lo que decía.
+ */
+export const alBorrarFalla = onDocumentDeleted('fallas/{id}', async (ev) => {
+  const id = ev.params.id
+  await db.recursiveDelete(db.collection(`fallas/${id}/mensajes`))
+  await borrarArchivos(`fallas/${id}/`)
+  const instrumentoId = ev.data?.get('instrumentoId') as string | undefined
+  // Si se está borrando el instrumento completo, ya no hay estado que actualizar.
+  if (instrumentoId && !(await enBorrado(instrumentoId))) await actualizarEstadoInstrumento(instrumentoId)
+})
+
 // ---------- Chat ----------
 
 const resumen = (m: FirebaseFirestore.DocumentData) =>
