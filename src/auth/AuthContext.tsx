@@ -18,6 +18,26 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null)
 
+function aRol(claim: unknown): Rol | null {
+  return claim === 'admin' || claim === 'tecnico' || claim === 'operador' ? claim : null
+}
+
+/**
+ * El token dura una hora y sin señal Firebase no lo puede renovar ni entregar, pero el último
+ * sigue guardado en el teléfono: de ahí se lee el rol para seguir trabajando sin señal. Solo
+ * decide qué pantallas se ven; el servidor revisa el token nuevo cuando el teléfono sincroniza.
+ */
+function rolDelUltimoToken(u: User): Rol | null {
+  try {
+    const { stsTokenManager } = u.toJSON() as { stsTokenManager?: { accessToken?: string } }
+    const datos = stsTokenManager?.accessToken?.split('.')[1]
+    if (!datos) return null
+    return aRol((JSON.parse(atob(datos.replace(/-/g, '+').replace(/_/g, '/'))) as { rol?: unknown }).rol)
+  } catch {
+    return null
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true)
   const [user, setUser] = useState<User | null>(null)
@@ -25,22 +45,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [cambiarContrasena, setCambiarContrasena] = useState(false)
   const [area, setArea] = useState('')
 
-  useEffect(
-    () =>
-      onIdTokenChanged(auth, async (u) => {
-        setUser(u)
-        if (u) {
-          // Sin señal se usa el token guardado; el rol viaja como custom claim.
-          const token = await u.getIdTokenResult().catch(() => null)
-          const claim = token?.claims.rol
-          setRol(claim === 'admin' || claim === 'tecnico' || claim === 'operador' ? claim : null)
-        } else {
-          setRol(null)
-        }
-        setCargando(false)
-      }),
-    [],
-  )
+  useEffect(() => {
+    let vuelta = 0
+    return onIdTokenChanged(auth, async (u) => {
+      const esta = ++vuelta
+      let r: Rol | null = null
+      if (u) {
+        // El rol viaja como custom claim. Si el token venció y no hay señal para renovarlo,
+        // se usa el último que quedó en el teléfono.
+        const token = await u.getIdTokenResult().catch(() => null)
+        r = token ? aRol(token.claims.rol) : rolDelUltimoToken(u)
+      }
+      // Otro cambio llegó mientras se leía este token: manda el más nuevo.
+      if (esta !== vuelta) return
+      setUser(u)
+      setRol(r)
+      setCargando(false)
+    })
+  }, [])
+
+  // Al volver la señal se renueva el token si ya venció, y onIdTokenChanged trae el rol vigente.
+  useEffect(() => {
+    if (!user) return
+    const alVolver = () => void user.getIdToken().catch(() => undefined)
+    window.addEventListener('online', alVolver)
+    return () => window.removeEventListener('online', alVolver)
+  }, [user])
 
   // Cuando el Admin cambia el rol, la Function marca rolActualizado y aquí se renueva el token.
   useEffect(() => {
