@@ -219,6 +219,75 @@ describe('chat', () => {
   })
 })
 
+describe('chats privados', () => {
+  // uids en orden: el id del chat es "u-operador_u-tecnico".
+  const chatId = 'u-operador_u-tecnico'
+  const msg = (uid: string, extra: Record<string, unknown> = {}) => ({
+    autor: { uid, nombre: 'X' },
+    texto: 'Te marco al rato',
+    fotos: [],
+    fecha: serverTimestamp(),
+    ...extra,
+  })
+  const resumen = (uid: string, extra: Record<string, unknown> = {}) => ({
+    miembros: ['u-operador', 'u-tecnico'],
+    nombres: { 'u-operador': 'Op', 'u-tecnico': 'Téc' },
+    ultimo: { texto: 'Te marco al rato', autor: uid, fecha: serverTimestamp() },
+    leido: { [uid]: serverTimestamp() },
+    ...extra,
+  })
+
+  /** Mensaje y resumen en un lote, como lo hace la app. */
+  async function enviar(db: ReturnType<typeof como>, uid: string, msgId: string) {
+    const { writeBatch } = await import('firebase/firestore')
+    const lote = writeBatch(db)
+    lote.set(doc(db, `chats_privados/${chatId}/mensajes/${msgId}`), msg(uid))
+    lote.set(doc(db, `chats_privados/${chatId}`), resumen(uid), { merge: true })
+    return lote.commit()
+  }
+
+  it('solo las dos personas escriben y leen; ni el admin entra', async () => {
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    await assertSucceeds(enviar(como('tecnico'), 'u-tecnico', 'm2'))
+    await assertSucceeds(getDocs(collection(como('tecnico'), `chats_privados/${chatId}/mensajes`)))
+    await assertSucceeds(getDoc(doc(como('operador'), `chats_privados/${chatId}`)))
+    await assertFails(getDocs(collection(como('admin'), `chats_privados/${chatId}/mensajes`)))
+    await assertFails(getDoc(doc(como('admin'), `chats_privados/${chatId}`)))
+    await assertFails(setDoc(doc(como('admin'), `chats_privados/${chatId}/mensajes/m3`), msg('u-admin')))
+    await assertFails(setDoc(doc(como('operador'), `chats_privados/${chatId}/mensajes/m4`), msg('u-tecnico')))
+  })
+
+  it('la lista de chats solo trae los míos', async () => {
+    const { query: q, where: w } = await import('firebase/firestore')
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    await assertSucceeds(getDocs(q(collection(como('tecnico'), 'chats_privados'), w('miembros', 'array-contains', 'u-tecnico'))))
+    await assertFails(getDocs(collection(como('tecnico'), 'chats_privados')))
+    await assertFails(getDocs(q(collection(como('admin'), 'chats_privados'), w('miembros', 'array-contains', 'u-tecnico'))))
+  })
+
+  it('el id tiene que ser de sus miembros y cada quien solo marca lo que él leyó', async () => {
+    await assertFails(setDoc(doc(como('operador'), 'chats_privados/u-admin_u-operador'), resumen('u-operador')))
+    await assertFails(setDoc(doc(como('operador'), `chats_privados/${chatId}`), resumen('u-tecnico')))
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    const { serverTimestamp: ahora } = await import('firebase/firestore')
+    await assertSucceeds(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { 'leido.u-tecnico': ahora() }))
+    await assertFails(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { 'leido.u-operador': ahora() }))
+    await assertFails(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { miembros: ['u-admin', 'u-tecnico'] }))
+    await assertFails(deleteDoc(doc(como('operador'), `chats_privados/${chatId}`)))
+  })
+
+  it('el directorio lo leen todos; cada quien solo se anota a sí mismo con su rol', async () => {
+    const yo = { nombre: 'Op', rol: 'operador', area: '', activo: true }
+    await assertFails(setDoc(doc(como('operador'), 'directorio/u-otro'), yo))
+    await assertFails(setDoc(doc(como('operador'), 'directorio/u-operador'), { ...yo, rol: 'admin' }))
+    await assertFails(setDoc(doc(como('operador'), 'directorio/u-operador'), { ...yo, email: 'x@y.z' }))
+    await assertSucceeds(setDoc(doc(como('operador'), 'directorio/u-operador'), yo))
+    await assertFails(updateDoc(doc(como('operador'), 'directorio/u-operador'), { nombre: 'Otro' }))
+    await assertSucceeds(getDocs(collection(como('tecnico'), 'directorio')))
+    await assertFails(getDocs(collection(como(null), 'directorio')))
+  })
+})
+
 describe('calibraciones', () => {
   const cal = (uid: string, extra: Record<string, unknown> = {}) => ({
     fecha: Timestamp.now(),

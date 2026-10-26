@@ -125,12 +125,61 @@ service cloud.firestore {
       }
     }
 
-    // Canal general del equipo (solo texto).
+    // Canal general del equipo (solo texto). La app muestra solo los de hoy;
+    // los de días anteriores quedan como historial.
     match /chat_general/{msgId} {
       allow read: if conRol();
       allow create: if conRol() && mensajeValido(request.resource.data, 0);
       allow update: if false;
       allow delete: if admin();
+    }
+
+    // Chats privados entre dos personas. El id es "uidA_uidB" (en orden), así que basta
+    // con el id para saber quién puede entrar. Nadie más los lee, ni el admin.
+    function enChat(chatId) { return conRol() && request.auth.uid in chatId.split('_'); }
+
+    function chatValido(chatId, d) {
+      return d.miembros is list && d.miembros.size() == 2
+        && d.miembros[0] < d.miembros[1]
+        && chatId == d.miembros[0] + '_' + d.miembros[1]
+        && d.nombres is map && d.leido is map
+        && (d.ultimo == null || (d.ultimo.texto is string && d.ultimo.texto.size() <= 200));
+    }
+
+    match /chats_privados/{chatId} {
+      allow get: if enChat(chatId);
+      allow list: if conRol() && request.auth.uid in resource.data.miembros;
+      // El último mensaje lo escribe quien lo manda, y cada quien solo marca lo que él ya leyó.
+      allow create: if enChat(chatId) && chatValido(chatId, request.resource.data)
+        && (request.resource.data.ultimo == null || request.resource.data.ultimo.autor == request.auth.uid)
+        && request.resource.data.leido.keys().hasOnly([request.auth.uid]);
+      allow update: if enChat(chatId) && chatValido(chatId, request.resource.data)
+        && cambian().hasOnly(['ultimo', 'nombres', 'leido'])
+        && (!cambian().hasAny(['ultimo']) || request.resource.data.ultimo.autor == request.auth.uid)
+        && request.resource.data.leido.diff(resource.data.leido).affectedKeys().hasOnly([request.auth.uid]);
+      allow delete: if false;
+
+      match /mensajes/{msgId} {
+        allow read: if enChat(chatId);
+        allow create: if enChat(chatId) && mensajeValido(request.resource.data, 4);
+        allow update: if enChat(chatId) && resource.data.autor.uid == request.auth.uid
+          && cambian().hasOnly(['fotos'])
+          && request.resource.data.fotos.size() == resource.data.fotos.size();
+        allow delete: if false;
+      }
+    }
+
+    // Directorio para elegir con quién chatear: nombre, rol y área, sin correos ni tokens.
+    // Lo mantiene una Function; quien ya tenía cuenta se anota solo al abrir la app.
+    match /directorio/{uid} {
+      allow read: if conRol();
+      allow create: if conRol() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nombre', 'rol', 'area', 'activo'])
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 100
+        && request.resource.data.rol == rol()
+        && request.resource.data.area is string && request.resource.data.area.size() <= 60
+        && request.resource.data.activo == true;
+      allow update, delete: if false;
     }
 
     function cambioDeFallaValido() {

@@ -473,6 +473,30 @@ export const alCrearMensajeGeneral = onDocumentCreated('chat_general/{msgId}', a
   )
 })
 
+/** Avisa a la otra persona de un chat privado. */
+export const alCrearMensajePrivado = onDocumentCreated('chats_privados/{chatId}/mensajes/{msgId}', async (ev) => {
+  const m = ev.data?.data()
+  const autor = m?.autor?.uid as string | undefined
+  if (!m || !autor) return
+  const otro = ev.params.chatId.split('_').find((u) => u !== autor)
+  if (!otro) return
+  await avisar([otro], { titulo: `${m.autor?.nombre ?? 'Mensaje'} (privado)`, cuerpo: resumen(m), ruta: `/chat/privado/${autor}` })
+})
+
+/**
+ * Copia el nombre, rol, área y si está activo de cada usuario al directorio, que todos
+ * pueden leer para elegir con quién chatear (la ficha de usuarios tiene correos y tokens).
+ */
+export const alEscribirUsuario = onDocumentWritten('usuarios/{uid}', async (ev) => {
+  const d = ev.data?.after.data()
+  const ref = db.doc(`directorio/${ev.params.uid}`)
+  if (!d || !ROLES.includes(d.rol)) {
+    await ref.delete()
+    return
+  }
+  await ref.set({ nombre: String(d.nombre ?? d.email ?? ''), rol: d.rol, area: String(d.area ?? ''), activo: d.activo !== false })
+})
+
 // ---------- Calibraciones ----------
 
 /**
