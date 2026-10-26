@@ -5,24 +5,33 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
 import { precargarMiniaturas } from './lib/instrumentos'
-import { Bitacora } from './pages/Bitacora'
 import { Catalogo } from './pages/Catalogo'
-import { Exportar } from './pages/Exportar'
-import { Imprimir } from './pages/Imprimir'
-import { DetalleCalibracion } from './pages/DetalleCalibracion'
-import { NuevaCalibracion } from './pages/NuevaCalibracion'
+import { Inicio } from './pages/Inicio'
 import { ChatGeneral } from './pages/ChatGeneral'
-import { Cuenta } from './pages/Cuenta'
 import { DetalleFalla } from './pages/DetalleFalla'
 import { Escanear } from './pages/Escanear'
 import { Fallas } from './pages/Fallas'
 import { NuevaFalla } from './pages/NuevaFalla'
 import { Ficha } from './pages/Ficha'
-import { FormInstrumento } from './pages/FormInstrumento'
 import { Login } from './pages/Login'
 import { Tag } from './pages/Tag'
-import { Usuarios } from './pages/Usuarios'
-import { Vincular } from './pages/Vincular'
+import { ConCarga, diferida } from './components/Diferida'
+
+// Pantallas que se usan poco: se descargan al abrirlas.
+const Bitacora = diferida(() => import('./pages/Bitacora'), 'Bitacora')
+const Exportar = diferida(() => import('./pages/Exportar'), 'Exportar')
+const Imprimir = diferida(() => import('./pages/Imprimir'), 'Imprimir')
+const HojaDeVida = diferida(() => import('./pages/HojaDeVida'), 'HojaDeVida')
+const Importar = diferida(() => import('./pages/Importar'), 'Importar')
+const DetalleCalibracion = diferida(() => import('./pages/DetalleCalibracion'), 'DetalleCalibracion')
+const NuevaCalibracion = diferida(() => import('./pages/NuevaCalibracion'), 'NuevaCalibracion')
+const Cuenta = diferida(() => import('./pages/Cuenta'), 'Cuenta')
+const FormInstrumento = diferida(() => import('./pages/FormInstrumento'), 'FormInstrumento')
+const Usuarios = diferida(() => import('./pages/Usuarios'), 'Usuarios')
+const Vincular = diferida(() => import('./pages/Vincular'), 'Vincular')
+const Refacciones = diferida(() => import('./pages/Refacciones'), 'Refacciones')
+const DetalleRefaccion = diferida(() => import('./pages/DetalleRefaccion'), 'DetalleRefaccion')
+const FormRefaccion = diferida(() => import('./pages/FormRefaccion'), 'FormRefaccion')
 
 function ConSesion({ children }: { children: ReactNode }) {
   const { cargando, user, rol, salir } = useAuth()
@@ -102,9 +111,11 @@ function Rutas() {
           </ConSesion>
         }
       >
-        <Route index element={<Catalogo />} />
+        <Route index element={<Inicio />} />
+        <Route path="catalogo" element={<Catalogo />} />
         <Route path="escanear" element={<Escanear />} />
         <Route path="instrumentos/nuevo" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />
+        <Route path="instrumentos/importar" element={<SoloSi permitido={p.editarInstrumentos}><Importar /></SoloSi>} />
         <Route path="instrumentos/:id" element={<Ficha />} />
         <Route path="instrumentos/:id/editar" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />
         <Route path="instrumentos/:id/vincular" element={<SoloSi permitido={p.grabarTags}><Vincular /></SoloSi>} />
@@ -118,14 +129,30 @@ function Rutas() {
         <Route path="bitacora" element={<SoloSi permitido={p.verBitacora}><Bitacora /></SoloSi>} />
         <Route path="exportar" element={<SoloSi permitido={p.exportar}><Exportar /></SoloSi>} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
+        <Route path="refacciones" element={<Refacciones />} />
+        <Route path="refacciones/nueva" element={<SoloSi permitido={p.refacciones}><FormRefaccion /></SoloSi>} />
+        <Route path="refacciones/:id" element={<DetalleRefaccion />} />
+        <Route path="refacciones/:id/editar" element={<SoloSi permitido={p.refacciones}><FormRefaccion /></SoloSi>} />
       </Route>
       <Route
         path="/imprimir"
         element={
           <ConSesion>
             <SoloSi permitido={p.exportar}>
-              <Imprimir />
+              <ConCarga>
+                <Imprimir />
+              </ConCarga>
             </SoloSi>
+          </ConSesion>
+        }
+      />
+      <Route
+        path="/instrumentos/:id/hoja-de-vida"
+        element={
+          <ConSesion>
+            <ConCarga>
+              <HojaDeVida />
+            </ConCarga>
           </ConSesion>
         }
       />

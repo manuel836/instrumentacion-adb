@@ -105,6 +105,22 @@ describe('usuarios y bitácora', () => {
     await assertFails(updateDoc(doc(como('operador'), 'usuarios/u-operador'), { rol: 'admin' }))
     await assertFails(getDoc(doc(como('tecnico'), 'usuarios/u-operador')))
   })
+  it('quien tiene contraseña temporal solo puede quitarse el aviso, no ponérselo', async () => {
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'usuarios/u-operador'), { cambiarContrasena: true }))
+    const ref = doc(como('operador'), 'usuarios/u-operador')
+    await assertSucceeds(updateDoc(ref, { tokensFCM: ['t'] }))
+    await assertSucceeds(updateDoc(ref, { cambiarContrasena: false }))
+    await assertFails(updateDoc(ref, { cambiarContrasena: true }))
+    await assertFails(updateDoc(doc(como('operador', 'u-otro'), 'usuarios/u-operador'), { cambiarContrasena: false }))
+  })
+  it('solo el admin asigna el área de un usuario, y solo áreas válidas', async () => {
+    await assertSucceeds(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: 'Tratamiento de agua' }))
+    await assertSucceeds(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: '' }))
+    await assertFails(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: 'Cocina' }))
+    await assertFails(updateDoc(doc(como('admin'), 'usuarios/u-operador'), { area: 'Tratamiento de agua', rol: 'admin' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'usuarios/u-operador'), { area: 'Tratamiento de agua' }))
+    await assertFails(updateDoc(doc(como('operador'), 'usuarios/u-operador'), { area: 'Tratamiento de agua' }))
+  })
   it('la bitácora no la edita nadie y el operador no la ve', async () => {
     await assertSucceeds(getDoc(doc(como('tecnico'), 'auditoria/a1')))
     await assertFails(getDoc(doc(como('operador'), 'auditoria/a1')))
@@ -253,5 +269,96 @@ describe('bitácora y reportes', () => {
     await assertFails(setDoc(doc(como('admin'), 'auditoria/a2'), { accion: 'crear' }))
     await assertFails(deleteDoc(doc(como('admin'), 'auditoria/a1')))
     await assertFails(getDocs(collection(como('operador'), 'auditoria')))
+  })
+})
+
+describe('refacciones', () => {
+  const refaccion = (extra: Record<string, unknown> = {}) => ({
+    nombre: 'Sello de diafragma',
+    numeroParte: '03031-1045',
+    marca: 'Rosemount',
+    ubicacion: 'Almacén A, anaquel 3',
+    unidad: 'pza',
+    existencia: 0,
+    minimo: 2,
+    instrumentos: ['i1'],
+    notas: '',
+    ultimoMovimiento: null,
+    ...extra,
+  })
+  const mov = (uid: string, cantidad: number, extra: Record<string, unknown> = {}) => ({
+    refaccionId: 'r1',
+    refaccionNombre: 'Sello de diafragma',
+    tipo: cantidad > 0 ? 'entrada' : 'salida',
+    cantidad,
+    nota: '',
+    quien: { uid, nombre: 'Téc' },
+    fecha: serverTimestamp(),
+    fallaId: null,
+    instrumentoId: null,
+    tagISA: null,
+    ...extra,
+  })
+
+  /** Movimiento y cambio de existencia en un mismo lote, como lo hace la app. */
+  async function mover(db: ReturnType<typeof como>, movId: string, cantidad: number, opciones: { movimiento?: Record<string, unknown>; existencia?: unknown } = {}) {
+    const { writeBatch, increment } = await import('firebase/firestore')
+    const lote = writeBatch(db)
+    lote.set(doc(db, `movimientos/${movId}`), mov(`u-${movId.split('-')[0]}`, cantidad, opciones.movimiento))
+    lote.update(doc(db, 'refacciones/r1'), { existencia: opciones.existencia ?? increment(cantidad), ultimoMovimiento: movId })
+    return lote.commit()
+  }
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'refacciones/r1'), refaccion({ existencia: 5 }))
+      await setDoc(doc(ctx.firestore(), 'movimientos/viejo'), mov('u-tecnico', 5, { fecha: Timestamp.now() }))
+    })
+  })
+
+  it('el técnico da de alta (con o sin existencia inicial); el operador solo consulta', async () => {
+    const { writeBatch } = await import('firebase/firestore')
+    await assertSucceeds(setDoc(doc(como('tecnico'), 'refacciones/r2'), refaccion()))
+    await assertSucceeds(getDoc(doc(como('operador'), 'refacciones/r1')))
+    await assertFails(setDoc(doc(como('operador'), 'refacciones/r3'), refaccion()))
+    // Existencia inicial sin su movimiento: no.
+    await assertFails(setDoc(doc(como('tecnico'), 'refacciones/r4'), refaccion({ existencia: 3 })))
+    const db = como('tecnico')
+    const lote = writeBatch(db)
+    lote.set(doc(db, 'movimientos/inicial'), mov('u-tecnico', 3, { refaccionId: 'r5', nota: 'Existencia inicial' }))
+    lote.set(doc(db, 'refacciones/r5'), refaccion({ existencia: 3, ultimoMovimiento: 'inicial' }))
+    await assertSucceeds(lote.commit())
+    await assertFails(setDoc(doc(como('tecnico'), 'refacciones/r6'), refaccion({ minimo: -1 })))
+  })
+
+  it('la existencia solo cambia con un movimiento nuevo y por su cantidad exacta', async () => {
+    await assertSucceeds(mover(como('tecnico'), 'tecnico-1', -2))
+    await assertSucceeds(mover(como('admin'), 'admin-1', 4))
+    const r = await getDoc(doc(como('tecnico'), 'refacciones/r1'))
+    if (r.get('existencia') !== 7) throw new Error(`existencia ${r.get('existencia')}`)
+    // Sin movimiento, con otra cantidad, reusando uno viejo o con el signo al revés: no.
+    await assertFails(updateDoc(doc(como('tecnico'), 'refacciones/r1'), { existencia: 100 }))
+    await assertFails(mover(como('tecnico'), 'tecnico-2', -1, { existencia: 1 }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'refacciones/r1'), { existencia: 12, ultimoMovimiento: 'viejo' }))
+    await assertFails(mover(como('tecnico'), 'tecnico-3', 2, { movimiento: { tipo: 'salida' } }))
+    await assertFails(mover(como('tecnico'), 'tecnico-4', -1, { movimiento: { quien: { uid: 'otro', nombre: 'X' } } }))
+    await assertFails(mover(como('operador'), 'operador-1', -1))
+    // Un movimiento suelto, sin cambiar la existencia: no.
+    await assertFails(setDoc(doc(como('tecnico'), 'movimientos/suelto'), mov('u-tecnico', -1)))
+  })
+
+  it('puede quedar en negativo (dos teléfonos sin señal sacaron la última)', async () => {
+    await assertSucceeds(mover(como('tecnico'), 'tecnico-1', -5))
+    await assertSucceeds(mover(como('tecnico'), 'tecnico-2', -1))
+  })
+
+  it('los datos se editan sin tocar la existencia; el kardex no se edita; solo el admin borra', async () => {
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'refacciones/r1'), { minimo: 4, ubicacion: 'Anaquel 5' }))
+    await assertFails(updateDoc(doc(como('operador'), 'refacciones/r1'), { minimo: 1 }))
+    await assertFails(updateDoc(doc(como('admin'), 'movimientos/viejo'), { cantidad: 50 }))
+    await assertFails(deleteDoc(doc(como('admin'), 'movimientos/viejo')))
+    await assertSucceeds(getDoc(doc(como('operador'), 'movimientos/viejo')))
+    await assertFails(deleteDoc(doc(como('tecnico'), 'refacciones/r1')))
+    await assertSucceeds(deleteDoc(doc(como('admin'), 'refacciones/r1')))
   })
 })

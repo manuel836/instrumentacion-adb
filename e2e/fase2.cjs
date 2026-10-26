@@ -18,18 +18,27 @@ async function entrar(browser, email, pass) {
   await page.fill('#email', email)
   await page.fill('#pass', pass)
   await page.click('button:has-text("Entrar")')
-  await page.waitForSelector('text=instrumentos')
+  await page.waitForSelector('text=Menú')
+  // Después de entrar se abre el inicio; las pruebas trabajan desde el catálogo.
+  await page.goto(`${BASE}/catalogo`)
+  await page.waitForSelector('text=/de \\d+ instrumentos/')
   return { ctx, page }
 }
 
 /** Espera a que el catálogo muestre el estado esperado (la caché local puede ir un paso atrás). */
 async function esperarEstado(page, tag, estado) {
-  await page.goto(BASE)
+  await page.goto(`${BASE}/catalogo`)
   const fila = page.locator('a', { hasText: tag }).first()
   await fila.locator('span.rounded-full', { hasText: estado }).first().waitFor({ timeout: 20000 })
   return estado
 }
 
+
+/** Abre PT-101 desde el catálogo (con cientos de instrumentos ya no cabe en pantalla: se busca). */
+async function abrirPT101(page) {
+  await page.fill('input[type=search]', 'PT-101')
+  await page.locator('a', { hasText: 'PT-101' }).first().click()
+}
 ;(async () => {
   const browser = await chromium.launch()
 
@@ -53,9 +62,9 @@ async function esperarEstado(page, tag, estado) {
   const op = await entrar(browser, `op-${sufijo}@adb.test`, 'Prueba1234')
   await op.page.waitForSelector('text=PT-101')
   await op.page.evaluate(() => navigator.serviceWorker.ready)
-  const alta = await op.page.locator('nav >> text=Alta').count()
+  const alta = await op.page.locator('a[href="/instrumentos/nuevo"]').count()
   console.log('operador sin botón de alta:', alta === 0)
-  await op.page.click('text=PT-101')
+  await abrirPT101(op.page)
   await op.page.waitForSelector('text=Historial de fallas')
   await op.ctx.setOffline(true)
   await op.page.click('text=Reportar falla')
@@ -101,8 +110,8 @@ async function esperarEstado(page, tag, estado) {
   await op.page.waitForSelector('text=Toma de impulso tapada')
   console.log('el operador ve el cierre ok')
 
-  await admin.page.goto(BASE)
-  await admin.page.click('text=PT-101')
+  await admin.page.goto(`${BASE}/catalogo`)
+  await abrirPT101(admin.page)
   await admin.page.waitForSelector('text=Lectura congelada')
   await shot(admin.page, '14-ficha-historial')
   console.log('historial en la ficha ok')

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { Icono } from './Icono'
 
 export interface FotoNueva {
   archivo: File
@@ -63,7 +64,7 @@ export function SelectorFotos({
       {fotos.length < max && (
         <>
           <button type="button" className="btn-secundario w-full" onClick={() => input.current?.click()}>
-            📷 {fotos.length === 0 ? 'Tomar foto' : 'Agregar otra foto'} ({fotos.length}/{max})
+            <Icono nombre="camara" /> {fotos.length === 0 ? 'Tomar foto' : 'Agregar otra foto'} ({fotos.length}/{max})
           </button>
           <input
             ref={input}

@@ -31,7 +31,8 @@ export function puntosDelRango(min: number, max: number): number[] {
 export function vencimiento(proxima: { toDate(): Date } | null | undefined, hoy = new Date()): 'vencida' | 'pronto' | 'ok' | 'sin' {
   if (!proxima) return 'sin'
   const inicioDeHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
-  const dias = (proxima.toDate().getTime() - inicioDeHoy.getTime()) / 86_400_000
+  // Días completos: la fecha se guarda a mediodía, así el día 30 también cuenta como "pronto".
+  const dias = Math.floor((proxima.toDate().getTime() - inicioDeHoy.getTime()) / 86_400_000)
   if (dias < 0) return 'vencida'
   if (dias <= 30) return 'pronto'
   return 'ok'

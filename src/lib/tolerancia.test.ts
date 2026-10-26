@@ -29,5 +29,8 @@ describe('tolerancia', () => {
     expect(vencimiento(f(new Date(2026, 9, 25, 12)), hoy)).toBe('pronto')
     expect(vencimiento(f(new Date(2026, 9, 24, 12)), hoy)).toBe('vencida')
     expect(vencimiento(f(new Date(2027, 0, 1, 12)), hoy)).toBe('ok')
+    // El día 30 todavía es "pronto"; el 31 ya no.
+    expect(vencimiento(f(new Date(2026, 10, 24, 12)), hoy)).toBe('pronto')
+    expect(vencimiento(f(new Date(2026, 10, 25, 12)), hoy)).toBe('ok')
   })
 })

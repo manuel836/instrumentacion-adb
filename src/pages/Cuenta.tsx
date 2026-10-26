@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
+import { doc, updateDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 import { useAuth } from '../auth/AuthContext'
 import { useOnline } from '../hooks/useOnline'
 
@@ -13,7 +15,7 @@ const mensajes: Record<string, string> = {
 }
 
 export function Cuenta() {
-  const { user } = useAuth()
+  const { user, cambiarContrasena } = useAuth()
   const online = useOnline()
   const [form, setForm] = useState({ actual: '', nueva: '', repetir: '' })
   const [mensaje, setMensaje] = useState<{ ok: boolean; texto: string } | null>(null)
@@ -30,6 +32,7 @@ export function Cuenta() {
       // Firebase pide confirmar la contraseña actual antes de cambiarla.
       await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, form.actual))
       await updatePassword(user, form.nueva)
+      if (cambiarContrasena) await updateDoc(doc(db, 'usuarios', user.uid), { cambiarContrasena: false }).catch(() => undefined)
       setForm({ actual: '', nueva: '', repetir: '' })
       setMensaje({ ok: true, texto: 'Listo: tu contraseña cambió. Úsala la próxima vez que entres.' })
     } catch (err) {
@@ -45,6 +48,11 @@ export function Cuenta() {
         <p className="font-semibold">{user?.displayName ?? 'Mi cuenta'}</p>
         <p className="text-sm text-slate-500">{user?.email}</p>
       </div>
+      {cambiarContrasena && (
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          El administrador te puso una contraseña temporal. Escríbela en “Contraseña actual” y elige una nueva que solo tú conozcas.
+        </p>
+      )}
       {!online && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Cambiar la contraseña necesita señal.</p>}
       <form onSubmit={onSubmit} className="tarjeta space-y-3">
         <h2 className="font-semibold">Cambiar contraseña</h2>

@@ -18,7 +18,10 @@ async function entrar(browser, email, pass) {
   await page.fill('#email', email)
   await page.fill('#pass', pass)
   await page.click('button:has-text("Entrar")')
-  await page.waitForSelector('text=instrumentos')
+  await page.waitForSelector('text=Menú')
+  // Después de entrar se abre el inicio; las pruebas trabajan desde el catálogo.
+  await page.goto(`${BASE}/catalogo`)
+  await page.waitForSelector('text=/de \\d+ instrumentos/')
   return { ctx, page }
 }
 
@@ -27,6 +30,12 @@ async function escribir(page, texto) {
   await page.click('button:has-text("Enviar")')
 }
 
+
+/** Abre PT-101 desde el catálogo (con cientos de instrumentos ya no cabe en pantalla: se busca). */
+async function abrirPT101(page) {
+  await page.fill('input[type=search]', 'PT-101')
+  await page.locator('a', { hasText: 'PT-101' }).first().click()
+}
 ;(async () => {
   const browser = await chromium.launch()
 
@@ -47,7 +56,7 @@ async function escribir(page, texto) {
 
   // ---------- Chat de la falla ----------
   const op = await entrar(browser, `op-${sufijo}@adb.test`, 'Prueba1234')
-  await op.page.click('text=PT-101')
+  await abrirPT101(op.page)
   await op.page.click('text=Reportar falla')
   await op.page.fill('textarea', 'Indicador local marca diferente al DCS')
   await op.page.click('button:has-text("Reportar")')
@@ -69,14 +78,16 @@ async function escribir(page, texto) {
   await tec.page.waitForSelector('text=Difieren como 0.5')
   await tec.page.setInputFiles('input[type=file][multiple]', [path.join(REPO, 'public/icons/icon-192.png')])
   await escribir(tec.page, 'Voy con el calibrador')
-  await op.page.waitForSelector('text=Voy con el calibrador', { timeout: 20000 })
+  // El teléfono del operador estuvo sin señal: Firestore reconecta su escucha con espera
+  // creciente, así que puede tardar unos segundos más en llegar.
+  await op.page.waitForSelector('text=Voy con el calibrador', { timeout: 45000 })
   await op.page.waitForSelector('text=Tomás Técnico')
   await tec.page.waitForFunction(() => document.querySelectorAll('ol img').length > 0, null, { timeout: 30000 })
   await shot(op.page, '21-chat-falla')
   console.log('el operador recibe la respuesta del técnico con foto en vivo ok')
 
   // ---------- Canal general ----------
-  await op.page.goto(BASE)
+  await op.page.goto(`${BASE}/catalogo`)
   await tec.page.click('nav >> text=Chat')
   await tec.page.waitForSelector('text=Canal general')
   await escribir(tec.page, 'Mañana paro de caldera B a las 7:00')
@@ -86,18 +97,18 @@ async function escribir(page, texto) {
   await op.page.waitForSelector('text=Mañana paro de caldera B')
   await shot(op.page, '22-canal-general')
   await op.page.locator('nav a[href="/chat"] span.bg-red-600').waitFor({ state: 'detached' })
-  await op.page.goto(BASE)
+  await op.page.goto(`${BASE}/catalogo`)
   await op.page.waitForSelector('text=instrumentos')
   const globo = await op.page.locator('nav a[href="/chat"] span.bg-red-600').count()
   console.log('el globo se apaga al leer:', globo === 0)
 
   // ---------- Calibraciones ----------
-  await op.page.click('text=PT-101')
+  await abrirPT101(op.page)
   await op.page.waitForSelector('text=Calibraciones')
   console.log('operador sin botón de registrar calibración:', (await op.page.locator('text=+ Registrar').count()) === 0)
 
-  await tec.page.goto(BASE)
-  await tec.page.click('text=PT-101')
+  await tec.page.goto(`${BASE}/catalogo`)
+  await abrirPT101(tec.page)
   await tec.page.click('text=+ Registrar')
   await tec.page.waitForSelector('text=Registrar calibración')
   await tec.page.fill('input[placeholder="Fluke 754"]', 'Fluke 754 S/N 1234')
@@ -137,8 +148,8 @@ async function escribir(page, texto) {
   if (/sin programar/.test(proxima)) throw new Error('la ficha no muestra la próxima calibración')
   await shot(tec.page, '24-ficha-calibraciones')
 
-  await op.page.goto(BASE)
-  await op.page.click('text=PT-101')
+  await op.page.goto(`${BASE}/catalogo`)
+  await abrirPT101(op.page)
   await op.page.click('li >> text=Ajustada')
   await op.page.waitForSelector('text=As-Found')
   await op.page.waitForSelector('text=Fluke 754 S/N 1234')

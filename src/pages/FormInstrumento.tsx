@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { Timestamp } from 'firebase/firestore'
 import {
   actualizarInstrumento,
@@ -86,7 +86,10 @@ export function FormInstrumento() {
       <h1 className="text-xl font-bold">{id ? `Editar ${datos.tagISA}` : 'Alta de instrumento'}</h1>
       {!id && (
         <p className="text-sm text-slate-500">
-          Solo el tag, el área y el servicio son obligatorios. El tag NFC, las fotos y lo demás se pueden agregar después desde la ficha.
+          Solo el tag, el área y el servicio son obligatorios. El tag NFC, las fotos y lo demás se pueden agregar después desde la ficha.{' '}
+          <Link to="/instrumentos/importar" className="font-semibold text-marca-700">
+            ¿Son muchos? Impórtalos desde Excel.
+          </Link>
         </p>
       )}
 

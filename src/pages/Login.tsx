@@ -55,6 +55,9 @@ export function Login() {
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">
+          ¿Olvidaste tu contraseña? Pídele al administrador que te ponga una temporal desde Usuarios.
+        </p>
+        <p className="mt-3 text-center text-sm text-slate-500">
           ¿Solo quieres ver un instrumento? Acerca el teléfono a su tag NFC.
         </p>
       </div>

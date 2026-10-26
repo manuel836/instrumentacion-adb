@@ -143,3 +143,45 @@ export interface Calibracion {
   observaciones: string
   proxima: Timestamp | null
 }
+
+/** Refacción del almacén: cuántas hay, cuándo pedir y para qué instrumentos sirve. */
+export interface Refaccion {
+  id: string
+  nombre: string
+  numeroParte: string
+  marca: string
+  /** Dónde está en el almacén (anaquel, gaveta…). */
+  ubicacion: string
+  unidad: string
+  /** Solo la cambian los movimientos (entradas, salidas y ajustes). */
+  existencia: number
+  /** Al llegar a esta cantidad hay que pedir más. 0 = no se tiene en existencia. */
+  minimo: number
+  /** Instrumentos compatibles (ids). */
+  instrumentos: string[]
+  notas: string
+  ultimoMovimiento: string | null
+  actualizado?: Timestamp
+}
+
+export type RefaccionNueva = Omit<Refaccion, 'id' | 'existencia' | 'ultimoMovimiento' | 'actualizado'>
+
+export const TIPOS_MOVIMIENTO = { entrada: 'Entrada', salida: 'Salida', ajuste: 'Ajuste por conteo' } as const
+export type TipoMovimiento = keyof typeof TIPOS_MOVIMIENTO
+
+/** Kardex: cada entrada o salida queda registrada y no se edita. */
+export interface Movimiento {
+  id: string
+  refaccionId: string
+  refaccionNombre: string
+  tipo: TipoMovimiento
+  /** Positiva entra, negativa sale. */
+  cantidad: number
+  nota: string
+  quien: Persona
+  fecha: Timestamp | null
+  /** En qué falla e instrumento se usó (salidas). */
+  fallaId: string | null
+  instrumentoId: string | null
+  tagISA: string | null
+}

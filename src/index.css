@@ -20,6 +20,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Hojas impresas (reportes y hoja de vida): sin el gris de fondo de la app. */
+@media print {
+  body {
+    background: white;
+  }
+}
+
 @utility campo {
   @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none focus:border-marca-600 focus:ring-2 focus:ring-marca-100;
 }

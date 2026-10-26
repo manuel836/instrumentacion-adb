@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  Timestamp,
   collection,
   collectionGroup,
   deleteDoc,
@@ -16,10 +17,12 @@ import {
   writeBatch,
   type DocumentData,
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '../firebase'
 import type { DocAdjunto, FotoUbicacion, Instrumento, InstrumentoNuevo } from '../types'
+import type { Analisis, InstrumentoImportado } from './importar'
 import { comprimirFoto } from './images'
-import { descartarDeDocumento, encolar } from './uploadQueue'
+import { descartarDeDocumento, descartarRuta, encolar } from './uploadQueue'
 
 export type ConPendiente<T> = T & { sinSincronizar: boolean }
 
@@ -112,8 +115,13 @@ export function precargarMiniaturas(): () => void {
 }
 
 export async function buscarPorToken(token: string): Promise<string | null> {
+  return (await instrumentoPorToken(token))?.id ?? null
+}
+
+/** El instrumento que tiene vinculado ese token (sin señal busca en la caché del teléfono). */
+export async function instrumentoPorToken(token: string): Promise<Instrumento | null> {
   const snap = await getDocs(query(colInstrumentos, where('nfcToken', '==', token), limit(1)))
-  return snap.empty ? null : snap.docs[0].id
+  return snap.empty ? null : aInstrumento(snap.docs[0].id, snap.docs[0].data())
 }
 
 export async function tagISAExiste(tagISA: string, exceptoId?: string): Promise<boolean> {
@@ -137,6 +145,11 @@ export function actualizarInstrumento(id: string, cambios: Partial<InstrumentoNu
 
 export function asignarToken(id: string, token: string) {
   actualizarInstrumento(id, { nfcToken: token })
+}
+
+/** El tag físico se regrabó para otro instrumento: este se queda sin tag. */
+export function quitarToken(id: string) {
+  actualizarInstrumento(id, { nfcToken: null })
 }
 
 // ---------- Galería de ubicación ----------
@@ -228,6 +241,51 @@ export async function adjuntarDocumento(inst: Instrumento, archivo: File) {
   ])
 }
 
+/** Quita el documento de la ficha; el archivo en Storage lo borra una Cloud Function. */
 export function quitarDocumento(inst: Instrumento, ruta: string) {
+  void descartarRuta(ruta)
   actualizarInstrumento(inst.id, { docs: inst.docs.filter((d) => d.ruta !== ruta) })
+}
+
+const fnBorrarInstrumento = httpsCallable<{ id: string }, { fallas: number }>(functions, 'borrarInstrumento')
+
+/** Borra el instrumento con sus fotos, calibraciones, documentos y fallas (solo admin, con señal). */
+export async function borrarInstrumento(id: string): Promise<void> {
+  await fnBorrarInstrumento({ id })
+}
+
+// ---------- Importación desde Excel ----------
+
+const aFirestore = (d: Partial<InstrumentoImportado>) => {
+  const { proximaCalibracion, ...resto } = d
+  return proximaCalibracion === undefined ? resto : { ...resto, proximaCalibracion: proximaCalibracion && Timestamp.fromDate(proximaCalibracion) }
+}
+
+/**
+ * Guarda lo analizado en lotes de 400 escrituras (el máximo de Firestore es 500) y espera
+ * la confirmación del servidor de cada lote: se usa con señal y avisa el avance.
+ */
+export async function guardarImportacion(a: Analisis, alAvanzar: (hechos: number, total: number) => void): Promise<void> {
+  const ops = [
+    ...a.nuevos.map((n) => (b: ReturnType<typeof writeBatch>) =>
+      b.set(doc(colInstrumentos), {
+        ...instrumentoVacio(),
+        ...aFirestore(n.datos),
+        nfcToken: null,
+        docs: [],
+        portadaMiniatura: null,
+        actualizado: serverTimestamp(),
+      }),
+    ),
+    ...a.actualizar.map((u) => (b: ReturnType<typeof writeBatch>) =>
+      b.update(doc(colInstrumentos, u.id), { ...aFirestore(u.cambios), actualizado: serverTimestamp() }),
+    ),
+  ]
+  alAvanzar(0, ops.length)
+  for (let i = 0; i < ops.length; i += 400) {
+    const lote = writeBatch(db)
+    ops.slice(i, i + 400).forEach((op) => op(lote))
+    await lote.commit()
+    alAvanzar(Math.min(i + 400, ops.length), ops.length)
+  }
 }

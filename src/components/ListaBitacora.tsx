@@ -8,6 +8,7 @@ function enlace(e: EntradaBitacora): string | null {
   if (e.coleccion === 'calibraciones' && e.instrumentoId) return `/instrumentos/${e.instrumentoId}/calibraciones/${e.docId}`
   if (e.instrumentoId) return `/instrumentos/${e.instrumentoId}`
   if (e.coleccion === 'usuarios') return '/usuarios'
+  if (e.coleccion === 'refacciones') return `/refacciones/${e.docId}`
   return null
 }
 

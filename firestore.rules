@@ -44,8 +44,14 @@ service cloud.firestore {
 
     match /usuarios/{uid} {
       allow read: if admin() || (conSesion() && request.auth.uid == uid);
-      // Cada usuario solo registra sus tokens de notificación; el resto lo escriben las Functions.
-      allow update: if conSesion() && request.auth.uid == uid && cambian().hasOnly(['tokensFCM']);
+      // Cada usuario solo registra sus tokens de notificación y, después de cambiar una
+      // contraseña temporal, quita el aviso (nunca lo pone). El resto lo escriben las Functions.
+      allow update: if (conSesion() && request.auth.uid == uid
+          && cambian().hasOnly(['tokensFCM', 'cambiarContrasena'])
+          && (!cambian().hasAny(['cambiarContrasena']) || request.resource.data.cambiarContrasena == false))
+        // El admin asigna el área de cada usuario (define qué avisos de fallas le llegan).
+        || (admin() && cambian().hasOnly(['area'])
+          && request.resource.data.area in ['', 'Generación de vapor', 'Almacenamiento de amoniaco', 'Tratamiento de agua']);
     }
 
     match /instrumentos/{id} {
@@ -141,6 +147,63 @@ service cloud.firestore {
         || (antes.estado == 'Abierta' && despues.estado == 'En proceso' && despues.tecnicoAsignado != null)
         || (antes.estado in ['Abierta', 'En proceso'] && cerrada)
       );
+    }
+
+    // Refacciones del almacén. La existencia solo cambia junto con un movimiento nuevo
+    // (en el mismo lote) y exactamente en la cantidad del movimiento.
+    function refaccionValida(d) {
+      return d.nombre is string && d.nombre.size() >= 2 && d.nombre.size() <= 120
+        && d.numeroParte is string && d.numeroParte.size() <= 60
+        && d.marca is string && d.marca.size() <= 60
+        && d.ubicacion is string && d.ubicacion.size() <= 120
+        && d.unidad is string && d.unidad.size() >= 1 && d.unidad.size() <= 20
+        && d.minimo is int && d.minimo >= 0 && d.minimo <= 100000
+        && d.existencia is int
+        && d.instrumentos is list && d.instrumentos.size() <= 200
+        && d.notas is string && d.notas.size() <= 1000
+        && (d.ultimoMovimiento == null || d.ultimoMovimiento is string);
+    }
+
+    function movimientoDelLote(refId, antes) {
+      let movId = request.resource.data.ultimoMovimiento;
+      let ruta = /databases/$(database)/documents/movimientos/$(movId);
+      return movId is string && !exists(ruta) && existsAfter(ruta)
+        && getAfter(ruta).data.refaccionId == refId
+        && request.resource.data.existencia == antes + getAfter(ruta).data.cantidad;
+    }
+
+    match /refacciones/{id} {
+      allow read: if conRol();
+      allow create: if tecnico() && refaccionValida(request.resource.data)
+        && ((request.resource.data.existencia == 0 && request.resource.data.ultimoMovimiento == null)
+          || movimientoDelLote(id, 0));
+      allow update: if tecnico() && refaccionValida(request.resource.data)
+        && (!cambian().hasAny(['existencia', 'ultimoMovimiento'])
+          || (cambian().hasOnly(['existencia', 'ultimoMovimiento', 'actualizado']) && movimientoDelLote(id, resource.data.existencia)));
+      allow delete: if admin();
+    }
+
+    function movimientoValido(d) {
+      return d.refaccionId is string
+        && d.refaccionNombre is string && d.refaccionNombre.size() <= 120
+        && d.tipo in ['entrada', 'salida', 'ajuste']
+        && d.cantidad is int && d.cantidad != 0 && d.cantidad >= -100000 && d.cantidad <= 100000
+        && (d.tipo != 'entrada' || d.cantidad > 0)
+        && (d.tipo != 'salida' || d.cantidad < 0)
+        && d.nota is string && d.nota.size() <= 300
+        && d.quien.uid == request.auth.uid && d.quien.nombre is string
+        && d.fecha == request.time
+        && (d.fallaId == null || d.fallaId is string)
+        && (d.instrumentoId == null || d.instrumentoId is string)
+        && (d.tagISA == null || d.tagISA is string);
+    }
+
+    // Kardex: los movimientos no se editan ni se borran.
+    match /movimientos/{movId} {
+      allow read: if conRol();
+      allow create: if tecnico() && movimientoValido(request.resource.data)
+        && getAfter(/databases/$(database)/documents/refacciones/$(request.resource.data.refaccionId)).data.ultimoMovimiento == movId;
+      allow update, delete: if false;
     }
 
     // Vista de invitado: solo se lee un documento por su token exacto; no se puede listar.

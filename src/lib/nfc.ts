@@ -39,6 +39,56 @@ export async function grabarUrl(url: string, signal?: AbortSignal): Promise<void
   vibrar([80, 60, 80])
 }
 
+/** Lo que ya traía el tag antes de grabarlo. */
+export type Revision = { grabar: true } | { grabar: false; motivo: string; otroId?: string; otroTag?: string }
+
+/**
+ * Lee el tag que se acerca y, si `revisar` lo permite, lo graba en ese mismo toque.
+ * Así no se sobrescribe sin aviso un tag que ya pertenece a otro instrumento.
+ * `revisar` recibe la URL que traía el tag (null si estaba vacío o no se pudo leer).
+ */
+export function leerYGrabar(url: string, signal: AbortSignal, revisar: (anterior: string | null) => Promise<Revision>): Promise<Revision> {
+  return new Promise((resolve, reject) => {
+    const r = lector()
+    let ocupado = false
+    const decoder = new TextDecoder()
+    const terminar = async (anterior: string | null) => {
+      if (ocupado) return
+      ocupado = true
+      cleanup()
+      try {
+        const revision = await revisar(anterior)
+        if (revision.grabar) {
+          await r.write({ records: [{ recordType: 'url', data: url }] }, { overwrite: true, signal })
+          vibrar([80, 60, 80])
+        } else {
+          vibrar([200])
+        }
+        resolve(revision)
+      } catch (err) {
+        reject(err)
+      }
+    }
+    const onReading = (ev: Event) => {
+      const e = ev as NDEFReadingEventLike
+      const rec = e.message.records.find((x) => (x.recordType === 'url' || x.recordType === 'absolute-url') && x.data)
+      void terminar(rec?.data ? decoder.decode(rec.data) : null)
+    }
+    // Un tag nuevo de fábrica puede no tener formato NDEF: se graba directo.
+    const onError = () => void terminar(null)
+    const cleanup = () => {
+      r.removeEventListener('reading', onReading)
+      r.removeEventListener('readingerror', onError)
+    }
+    r.addEventListener('reading', onReading)
+    r.addEventListener('readingerror', onError)
+    r.scan({ signal }).catch((err) => {
+      cleanup()
+      reject(err)
+    })
+  })
+}
+
 /** Espera un tag y devuelve la primera URL que contenga. */
 export function escanearUrl(signal: AbortSignal): Promise<string> {
   return new Promise((resolve, reject) => {

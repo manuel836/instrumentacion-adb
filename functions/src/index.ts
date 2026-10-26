@@ -1,16 +1,18 @@
 import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
-import { FieldValue, getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
 import { setGlobalOptions } from 'firebase-functions/v2'
 import { defineString } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { logger } from 'firebase-functions/v2'
-import { registrar } from './bitacora.js'
+import { enBorrado, registrar } from './bitacora.js'
+import { avisoCalibraciones, limitePorVencer, resumenCalibraciones, type InstrumentoCal } from './calibraciones.js'
 
-export { auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento } from './bitacora.js'
+export { auditarAreaUsuario, auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento, auditarRefaccion } from './bitacora.js'
 
 initializeApp()
 setGlobalOptions({ region: 'us-central1', maxInstances: 5 })
@@ -170,6 +172,29 @@ export const eliminarUsuario = onCall(PUBLICA, async (req) => {
   return {}
 })
 
+/**
+ * Pone una contraseña temporal a quien olvidó la suya. Se cierran sus sesiones abiertas
+ * y, al entrar, la app le pide elegir una nueva. La contraseña no queda en la bitácora.
+ */
+export const restablecerContrasena = onCall(PUBLICA, async (req) => {
+  exigirAdmin(req)
+  const uid = exigirTexto(req.data?.uid, 'el usuario')
+  const password = exigirTexto(req.data?.password, 'la contraseña')
+  if (uid === req.auth?.uid) throw new HttpsError('failed-precondition', 'Tu propia contraseña se cambia en Menú > Cambiar contraseña.')
+  if (password.length < 8) throw new HttpsError('invalid-argument', 'La contraseña debe tener al menos 8 caracteres.')
+  await getAuth()
+    .updateUser(uid, { password })
+    .catch((e: { code?: string }) => {
+      if (e.code === 'auth/user-not-found') throw new HttpsError('not-found', 'Ese usuario ya no existe.')
+      if (e.code === 'auth/invalid-password') throw new HttpsError('invalid-argument', 'La contraseña no es válida.')
+      throw e
+    })
+  await getAuth().revokeRefreshTokens(uid)
+  await db.doc(`usuarios/${uid}`).set({ cambiarContrasena: true }, { merge: true })
+  await auditarUsuario(req, uid, 'editar', { contrasena: 'anterior' }, { contrasena: 'temporal (puesta por el admin)' })
+  return {}
+})
+
 export const revocarSesiones = onCall(PUBLICA, async (req) => {
   exigirAdmin(req)
   const uid = exigirTexto(req.data?.uid, 'el usuario')
@@ -193,10 +218,15 @@ interface Foto {
  */
 async function reconstruir(instrumentoId: string, tokenAnterior?: string | null) {
   const instRef = db.doc(`instrumentos/${instrumentoId}`)
-  const [inst, fotosSnap] = await Promise.all([instRef.get(), instRef.collection('ubicacion').orderBy('orden').get()])
+  const [inst, fotosSnap, borrando] = await Promise.all([
+    instRef.get(),
+    instRef.collection('ubicacion').orderBy('orden').get(),
+    enBorrado(instrumentoId),
+  ])
 
   if (tokenAnterior) await db.doc(`publico/${tokenAnterior}`).delete()
-  if (!inst.exists) return
+  // Mientras se borra el instrumento no se vuelve a crear su vista pública.
+  if (!inst.exists || borrando) return
 
   const fotos = fotosSnap.docs.map((d) => d.data() as Foto)
   const portada = fotos.find((f) => f.esPortada) ?? fotos[0]
@@ -222,6 +252,13 @@ const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'estado', 'ubicacionTexto
 export const alEscribirInstrumento = onDocumentWritten('instrumentos/{id}', async (ev) => {
   const antes = ev.data?.before.data()
   const despues = ev.data?.after.data()
+  // Documentos (hojas de datos, manuales) que se quitaron de la ficha: se borra el archivo.
+  const quedan = new Set(((despues?.docs as { ruta?: string }[] | undefined) ?? []).map((d) => d.ruta))
+  const quitados = ((antes?.docs as { ruta?: string }[] | undefined) ?? []).map((d) => d.ruta).filter((r): r is string => !!r && !quedan.has(r))
+  if (quitados.length > 0) {
+    const bucket = getStorage().bucket()
+    await Promise.all(quitados.map((r) => bucket.file(r).delete({ ignoreNotFound: true })))
+  }
   const tokenAntes = (antes?.nfcToken as string | null | undefined) ?? null
   const tokenDespues = (despues?.nfcToken as string | null | undefined) ?? null
   const cambioPublico = !antes || !despues || CAMPOS_PUBLICOS.some((k) => antes[k] !== despues[k])
@@ -243,6 +280,65 @@ export const alBorrarFotoUbicacion = onDocumentDeleted('instrumentos/{id}/ubicac
       .filter((r): r is string => typeof r === 'string')
       .map((r) => bucket.file(r).delete({ ignoreNotFound: true })),
   )
+})
+
+// ---------- Borrar instrumentos ----------
+
+/**
+ * Borra un instrumento con todo lo suyo: fotos de ubicación, calibraciones, documentos,
+ * fallas (con su chat) y los archivos en Storage. Su tag deja de abrir la vista pública
+ * y las refacciones dejan de listarlo como compatible.
+ * La bitácora guarda una sola entrada con lo que se borró y quién lo pidió.
+ */
+export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, async (req) => {
+  exigirAdmin(req)
+  const id = exigirTexto(req.data?.id, 'el instrumento')
+  const ref = db.doc(`instrumentos/${id}`)
+  const inst = await ref.get()
+  if (!inst.exists) throw new HttpsError('not-found', 'Ese instrumento ya no existe.')
+
+  const [fallas, fotos, calibraciones] = await Promise.all([
+    db.collection('fallas').where('instrumentoId', '==', id).get(),
+    ref.collection('ubicacion').count().get(),
+    ref.collection('calibraciones').count().get(),
+  ])
+  const docs = (inst.get('docs') as unknown[] | undefined)?.length ?? 0
+
+  // La marca hace que los triggers no anoten cada foto, calibración y falla por separado.
+  await db.doc(`borrados/${id}`).set({ tagISA: inst.get('tagISA') ?? '', por: adminDe(req), fecha: FieldValue.serverTimestamp() })
+  await registrar({
+    usuario: adminDe(req),
+    coleccion: 'instrumentos',
+    docId: id,
+    ruta: ref.path,
+    instrumentoId: id,
+    etiqueta: String(inst.get('tagISA') ?? id),
+    accion: 'borrar',
+    antes: {
+      tagISA: inst.get('tagISA') ?? null,
+      servicio: inst.get('servicio') ?? null,
+      area: inst.get('area') ?? null,
+      fotos: `${fotos.data().count}`,
+      calibraciones: `${calibraciones.data().count}`,
+      fallasBorradas: `${fallas.size}`,
+      docs: `${docs}`,
+    },
+    despues: {},
+  })
+
+  const bucket = getStorage().bucket()
+  for (const f of fallas.docs) {
+    await db.recursiveDelete(f.ref)
+    await bucket.deleteFiles({ prefix: `fallas/${f.id}/` })
+  }
+  await db.recursiveDelete(ref)
+  await bucket.deleteFiles({ prefix: `instrumentos/${id}/` })
+  const token = inst.get('nfcToken') as string | null
+  if (token) await db.doc(`publico/${token}`).delete()
+  // Las refacciones ya no lo listan como compatible (su kardex conserva el tag).
+  const refacciones = await db.collection('refacciones').where('instrumentos', 'array-contains', id).get()
+  await Promise.all(refacciones.docs.map((r) => r.ref.update({ instrumentos: FieldValue.arrayRemove(id) })))
+  return { fallas: fallas.size }
 })
 
 // ---------- Fallas ----------
@@ -284,9 +380,13 @@ async function avisar(uids: string[], aviso: Aviso) {
   }
 }
 
-async function tecnicos(): Promise<string[]> {
+/**
+ * Técnicos y admins activos que atienden esa área: los que tienen esa área asignada
+ * y los que no tienen ninguna (ven todas). Sin área, todos.
+ */
+export async function tecnicos(area?: string): Promise<string[]> {
   const snap = await db.collection('usuarios').where('rol', 'in', ['tecnico', 'admin']).where('activo', '==', true).get()
-  return snap.docs.map((d) => d.id)
+  return snap.docs.filter((d) => !area || !d.get('area') || d.get('area') === area).map((d) => d.id)
 }
 
 /** Con alguna falla abierta o en proceso el instrumento queda "Con falla"; al cerrarse todas vuelve a "Operando". */
@@ -309,7 +409,8 @@ export const alCrearFalla = onDocumentCreated('fallas/{id}', async (ev) => {
   await actualizarEstadoInstrumento(f.instrumentoId)
   // Sale cuando el teléfono que reportó sincroniza, aunque haya reportado sin señal.
   const reporta = f.reportadoPor?.uid as string | undefined
-  const uids = (await tecnicos()).filter((u) => u !== reporta)
+  // Solo a quienes atienden el área de la falla (o todas).
+  const uids = (await tecnicos(f.area)).filter((u) => u !== reporta)
   await avisar(uids, {
     titulo: `Falla en ${f.tagISA}`,
     cuerpo: `${f.reportadoPor?.nombre ?? 'Alguien'}: ${String(f.descripcion).slice(0, 140)}`,
@@ -352,7 +453,7 @@ export const alCrearMensaje = onDocumentCreated('fallas/{fallaId}/mensajes/{msgI
     falla.get('reportadoPor.uid'),
     falla.get('tecnicoAsignado.uid'),
     ...autores.docs.map((d) => d.get('autor.uid')),
-    ...(falla.get('tecnicoAsignado') ? [] : await tecnicos()),
+    ...(falla.get('tecnicoAsignado') ? [] : await tecnicos(falla.get('area'))),
   ])
   uids.delete(m.autor?.uid)
   await avisar(
@@ -371,3 +472,40 @@ export const alCrearMensajeGeneral = onDocumentCreated('chat_general/{msgId}', a
     { titulo: `Canal general · ${m.autor?.nombre ?? 'Mensaje'}`, cuerpo: resumen(m), ruta: '/chat' },
   )
 })
+
+// ---------- Calibraciones ----------
+
+/**
+ * Qué aviso le toca a cada grupo de técnicos y admins activos: los de un área reciben
+ * solo su área; los que no tienen área, todas. Sin nada pendiente no hay aviso.
+ */
+export async function avisosDeCalibracion(ahora: Date) {
+  const [insts, personas] = await Promise.all([
+    db.collection('instrumentos').where('proximaCalibracion', '<', Timestamp.fromDate(limitePorVencer(ahora))).get(),
+    db.collection('usuarios').where('rol', 'in', ['tecnico', 'admin']).where('activo', '==', true).get(),
+  ])
+  const lista: InstrumentoCal[] = insts.docs.map((d) => ({
+    tagISA: String(d.get('tagISA')),
+    area: String(d.get('area')),
+    proxima: (d.get('proximaCalibracion') as Timestamp | null)?.toDate() ?? null,
+  }))
+  const porArea = new Map<string, string[]>()
+  for (const p of personas.docs) {
+    const area = (p.get('area') as string | undefined) || ''
+    porArea.set(area, [...(porArea.get(area) ?? []), p.id])
+  }
+  return [...porArea].flatMap(([area, uids]) => {
+    const aviso = avisoCalibraciones(resumenCalibraciones(lista, area, ahora), area)
+    return aviso ? [{ area, uids, aviso }] : []
+  })
+}
+
+/** Cada lunes a las 7:00 (hora de la planta) avisa de calibraciones vencidas y por vencer. */
+export const avisoSemanalCalibraciones = onSchedule(
+  { schedule: 'every monday 07:00', timeZone: 'America/Mexico_City', retryCount: 1 },
+  async () => {
+    const avisos = await avisosDeCalibracion(new Date())
+    for (const { uids, aviso } of avisos) await avisar(uids, aviso)
+    logger.info(`Aviso de calibraciones: ${avisos.length} grupos`, avisos.map((a) => ({ area: a.area || 'Todas', personas: a.uids.length })))
+  },
+)

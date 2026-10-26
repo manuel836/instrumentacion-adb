@@ -38,7 +38,7 @@ const nfcMock = () => {
   const errores = []
   page.on('pageerror', (e) => errores.push(e.message))
 
-  await page.goto(BASE)
+  await page.goto(`${BASE}/catalogo`)
   await page.waitForURL('**/login')
   await shot(page, '01-login')
   await page.fill('#email', 'manuel@adb.test')
@@ -48,7 +48,7 @@ const nfcMock = () => {
   console.log('login ok')
 
   // Alta rápida
-  await page.click('nav >> text=Alta')
+  await page.click('a[href="/instrumentos/nuevo"]')
   await page.fill('input[placeholder="PT-101"]', 'pt-101')
   await page.fill('input[placeholder="Presión de vapor a cabezal"]', 'Presión de vapor a cabezal')
   await page.fill('input[placeholder="Caldera B, nivel 2"]', 'Caldera B, nivel 2')
@@ -96,7 +96,7 @@ const nfcMock = () => {
   console.log('escaneo con sesión abre ficha ok')
 
   // Modo avión: catálogo, búsqueda, ficha y fotos
-  await page.goto(BASE)
+  await page.goto(`${BASE}/catalogo`)
   await page.waitForSelector('text=PT-101')
   await page.evaluate(() => navigator.serviceWorker.ready)
   await page.reload()
@@ -113,8 +113,10 @@ const nfcMock = () => {
   await shot(page, '07-offline-ficha')
   console.log('offline: ficha abierta, imágenes rotas =', rotas)
 
-  // Alta sin señal queda pendiente y se sincroniza al volver
-  await page.click('nav >> text=Alta')
+  // Alta sin señal queda pendiente y se sincroniza al volver (el botón Alta está en el catálogo;
+  // el formulario se descarga aparte y sin señal lo da el service worker).
+  await page.goBack()
+  await page.click('a[href="/instrumentos/nuevo"]')
   await page.fill('input[placeholder="PT-101"]', 'TT-202')
   await page.selectOption('select', 'Tratamiento de agua')
   await page.fill('input[placeholder="Presión de vapor a cabezal"]', 'Temperatura agua de alimentación')

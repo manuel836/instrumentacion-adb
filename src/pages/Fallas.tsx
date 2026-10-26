@@ -1,13 +1,28 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { useFallas } from '../lib/fallas'
 import { AREAS, ESTADOS_FALLA, type EstadoFalla } from '../types'
 import { ListaFallas } from '../components/ListaFallas'
+import { Icono } from '../components/Icono'
 
 export function Fallas() {
   const fallas = useFallas()
-  const [estado, setEstado] = useState<EstadoFalla>('Abierta')
-  const [area, setArea] = useState('')
+  // Estado y área en la dirección: al volver de una falla la lista queda igual, y el inicio enlaza aquí.
+  const [params, setParams] = useSearchParams()
+  const estado = (ESTADOS_FALLA as readonly string[]).includes(params.get('estado') ?? '') ? (params.get('estado') as EstadoFalla) : 'Abierta'
+  const area = params.get('area') ?? ''
+  const cambiar = (clave: string, valor: string) =>
+    setParams(
+      (prev) => {
+        const p = new URLSearchParams(prev)
+        if (valor) p.set(clave, valor)
+        else p.delete(clave)
+        return p
+      },
+      { replace: true },
+    )
+  const setEstado = (e: EstadoFalla) => cambiar('estado', e)
+  const setArea = (a: string) => cambiar('area', a)
 
   const conteo = useMemo(() => {
     const c: Record<string, number> = {}
@@ -51,7 +66,7 @@ export function Fallas() {
         to="/fallas/nueva"
         className="btn-primario fixed right-4 bottom-24 z-10 rounded-full px-5 py-3.5 shadow-lg"
       >
-        ⚠ Reportar falla
+        <Icono nombre="falla" /> Reportar falla
       </Link>
     </div>
   )

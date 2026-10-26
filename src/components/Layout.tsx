@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
 import { useFallas } from '../lib/fallas'
 import { useNoLeidosGeneral } from '../lib/chat'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
+import { ConCarga } from './Diferida'
+import { Icono } from './Icono'
 
 export function BarraConexion() {
   const online = useOnline()
@@ -19,7 +21,31 @@ export function BarraConexion() {
   )
 }
 
-function Menu({ bitacora, exportar, onSalir }: { bitacora: boolean; exportar: boolean; onSalir: () => void }) {
+/** Después de que el admin le pone una contraseña temporal, se le pide elegir la suya. */
+function AvisoContrasena() {
+  const { cambiarContrasena } = useAuth()
+  const { pathname } = useLocation()
+  if (!cambiarContrasena || pathname === '/cuenta') return null
+  return (
+    <Link to="/cuenta" className="block bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900">
+      Entraste con una contraseña temporal. Toca aquí para elegir la tuya.
+    </Link>
+  )
+}
+
+function Menu({
+  bitacora,
+  exportar,
+  importar,
+  usuarios,
+  onSalir,
+}: {
+  bitacora: boolean
+  exportar: boolean
+  importar: boolean
+  usuarios: boolean
+  onSalir: () => void
+}) {
   const [abierto, setAbierto] = useState(false)
   const { pathname } = useLocation()
   useEffect(() => setAbierto(false), [pathname])
@@ -27,18 +53,33 @@ function Menu({ bitacora, exportar, onSalir }: { bitacora: boolean; exportar: bo
   return (
     <div className="relative">
       <button className="rounded-lg px-2 py-1 text-sm font-medium text-white/90" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
-        Menú ▾
+        <span className="flex items-center gap-1">
+          Menú <Icono nombre="abajo" className="size-4" />
+        </span>
       </button>
       {abierto && (
         <>
           <button className="fixed inset-0 z-30 cursor-default" aria-label="Cerrar menú" onClick={() => setAbierto(false)} />
           <div className="absolute right-0 z-40 mt-2 w-48 divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-lg">
+            {usuarios && (
+              <Link to="/usuarios" className={clase}>
+                Usuarios
+              </Link>
+            )}
+            <Link to="/refacciones" className={clase}>
+              Refacciones
+            </Link>
             <Link to="/cuenta" className={clase}>
               Cambiar contraseña
             </Link>
             {bitacora && (
               <Link to="/bitacora" className={clase}>
                 Bitácora de cambios
+              </Link>
+            )}
+            {importar && (
+              <Link to="/instrumentos/importar" className={clase}>
+                Importar desde Excel
               </Link>
             )}
             {exportar && (
@@ -67,6 +108,16 @@ function Globo({ n }: { n: number }) {
 const claseNav = ({ isActive }: { isActive: boolean }) =>
   `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${isActive ? 'text-marca-700' : 'text-slate-500'}`
 
+/** Cada pantalla nueva abre desde arriba; al regresar (Atrás) cada una decide. */
+function ArribaAlNavegar() {
+  const { pathname } = useLocation()
+  const tipo = useNavigationType()
+  useEffect(() => {
+    if (tipo === 'PUSH') window.scrollTo(0, 0)
+  }, [pathname, tipo])
+  return null
+}
+
 export function Layout() {
   const { user, rol, salir } = useAuth()
   const p = permisos(rol)
@@ -77,48 +128,48 @@ export function Layout() {
   const sinLeer = pathname === '/chat' ? 0 : noLeidos
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
+      <ArribaAlNavegar />
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
         <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <span className="text-lg font-bold">Instrumentación ADB</span>
-          <Menu bitacora={p.verBitacora} exportar={p.exportar} onSalir={() => void salir()} />
+          <Menu bitacora={p.verBitacora} exportar={p.exportar} importar={p.editarInstrumentos} usuarios={p.gestionarUsuarios} onSalir={() => void salir()} />
         </div>
         <BarraConexion />
+        <AvisoContrasena />
         <AvisoNotificaciones />
       </header>
       <main className="flex-1 pb-24">
-        <Outlet />
+        <ConCarga key={pathname}>
+          <Outlet />
+        </ConCarga>
       </main>
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-2xl border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <NavLink to="/" end className={claseNav}>
-          <span className="text-xl">☰</span>Catálogo
+          <Icono nombre="inicio" className="size-6" />
+          Inicio
+        </NavLink>
+        <NavLink to="/catalogo" className={claseNav}>
+          <Icono nombre="catalogo" className="size-6" />
+          Catálogo
         </NavLink>
         <NavLink to="/fallas" className={claseNav}>
-          <span className="relative text-xl">
-            ⚠
+          <span className="relative">
+            <Icono nombre="falla" className="size-6" />
             {abiertas > 0 && <Globo n={abiertas} />}
           </span>
           Fallas
         </NavLink>
         <NavLink to="/chat" className={claseNav}>
-          <span className="relative text-xl">
-            💬
+          <span className="relative">
+            <Icono nombre="chat" className="size-6" />
             {sinLeer > 0 && <Globo n={sinLeer} />}
           </span>
           Chat
         </NavLink>
         <NavLink to="/escanear" className={claseNav}>
-          <span className="text-xl">⌁</span>Escanear
+          <Icono nombre="escanear" className="size-6" />
+          Escanear
         </NavLink>
-        {p.editarInstrumentos && (
-          <NavLink to="/instrumentos/nuevo" className={claseNav}>
-            <span className="text-xl">＋</span>Alta
-          </NavLink>
-        )}
-        {p.gestionarUsuarios && (
-          <NavLink to="/usuarios" className={claseNav}>
-            <span className="text-xl">👤</span>Usuarios
-          </NavLink>
-        )}
       </nav>
     </div>
   )

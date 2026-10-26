@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { enviarMensaje, MAX_FOTOS_MENSAJE, useMensajes } from '../lib/chat'
 import { FotoImg } from './FotoImg'
 import { Visor } from './Visor'
+import { Icono } from './Icono'
 
 function dia(d: Date): string {
   const hoy = new Date()
@@ -92,7 +93,13 @@ export function Chat({ ruta, conFotos = false, vacio, alInicioAbajo = false }: {
                     )}
                     {m.texto && <p className="break-words whitespace-pre-wrap">{m.texto}</p>}
                     <p className={`mt-0.5 text-right text-[11px] ${mio ? 'text-white/70' : 'text-slate-400'}`}>
-                      {m.sinSincronizar ? '🕓 por enviar' : fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                      {m.sinSincronizar ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Icono nombre="reloj" className="size-3" /> por enviar
+                        </span>
+                      ) : (
+                        fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                      )}
                     </p>
                   </div>
                 </div>
@@ -131,7 +138,7 @@ export function Chat({ ruta, conFotos = false, vacio, alInicioAbajo = false }: {
                 disabled={fotos.length >= MAX_FOTOS_MENSAJE}
                 onClick={() => input.current?.click()}
               >
-                📷
+                <Icono nombre="camara" />
               </button>
               <input
                 ref={input}

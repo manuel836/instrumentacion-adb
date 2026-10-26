@@ -12,7 +12,7 @@ export interface Persona {
   nombre: string
 }
 
-type Coleccion = 'instrumentos' | 'ubicacion' | 'calibraciones' | 'fallas' | 'usuarios'
+type Coleccion = 'instrumentos' | 'ubicacion' | 'calibraciones' | 'fallas' | 'usuarios' | 'refacciones'
 type Accion = 'crear' | 'editar' | 'borrar'
 
 interface Entrada {
@@ -25,6 +25,12 @@ interface Entrada {
   accion: Accion
   antes: Record<string, unknown>
   despues: Record<string, unknown>
+}
+
+/** true si el instrumento se está borrando completo (lo marca la función borrarInstrumento). */
+export async function enBorrado(instrumentoId: string | null): Promise<boolean> {
+  if (!instrumentoId) return false
+  return (await db().doc(`borrados/${instrumentoId}`).get()).exists
 }
 
 export async function registrar(e: Entrada) {
@@ -45,6 +51,9 @@ const IGNORADOS = new Set([
   'miniatura',
   'ruta',
   'instrumentoId',
+  // La existencia de las refacciones queda en su kardex (movimientos), no aquí.
+  'existencia',
+  'ultimoMovimiento',
 ])
 
 const esPersona = (v: unknown): v is Persona =>
@@ -58,6 +67,7 @@ function resumir(campo: string, v: unknown): unknown {
   if (Array.isArray(v)) {
     if (campo === 'docs') return v.map((d) => (d as { nombre?: string }).nombre ?? '').join(', ')
     if (campo === 'fotos') return v.length === 0 ? '' : `${v.length} ${v.length === 1 ? 'foto' : 'fotos'}`
+    if (campo === 'instrumentos') return v.length === 0 ? '' : `${v.length} ${v.length === 1 ? 'instrumento' : 'instrumentos'}`
     if (campo === 'puntos')
       return v
         .map((p) => {
@@ -135,6 +145,8 @@ async function auditar(
   if (!antes && !despues) return
   const cambios = diferencias(antes, despues)
   const accion: Accion = !antes ? 'crear' : !despues ? 'borrar' : 'editar'
+  // Al borrar un instrumento completo, borrarInstrumento deja una sola entrada con el resumen.
+  if (accion === 'borrar' && (await enBorrado(instrumentoId))) return
   if (accion === 'editar' && Object.keys(cambios.despues).length === 0) return
   const d = despues ?? antes
   const pista = d?.tecnico ?? (accion === 'crear' ? d?.reportadoPor : despues?.tecnicoAsignado)
@@ -166,3 +178,25 @@ export const auditarFalla = onDocumentWrittenWithAuthContext('fallas/{id}', (ev)
   const d = ev.data?.after.data() ?? ev.data?.before.data()
   return auditar(ev, 'fallas', (d?.instrumentoId as string | undefined) ?? null, async () => (d?.tagISA as string | undefined) ?? '')
 })
+
+/** El admin cambia el área de un usuario directo en Firestore (sin función): se anota aquí. */
+export const auditarAreaUsuario = onDocumentWrittenWithAuthContext('usuarios/{uid}', async (ev) => {
+  const antes = ev.data?.before.data()
+  const despues = ev.data?.after.data()
+  if (!antes || !despues || (antes.area ?? '') === (despues.area ?? '')) return
+  await registrar({
+    usuario: await quien(ev, null),
+    coleccion: 'usuarios',
+    docId: ev.params.uid,
+    ruta: ev.document,
+    instrumentoId: null,
+    etiqueta: String(despues.nombre ?? despues.email ?? ev.params.uid),
+    accion: 'editar',
+    antes: { area: antes.area || 'Todas' },
+    despues: { area: despues.area || 'Todas' },
+  })
+})
+
+export const auditarRefaccion = onDocumentWrittenWithAuthContext('refacciones/{id}', (ev) =>
+  auditar(ev, 'refacciones', null, async (a, d) => String((d ?? a)?.nombre ?? '')),
+)

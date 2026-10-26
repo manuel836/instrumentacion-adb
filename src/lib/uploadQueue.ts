@@ -81,6 +81,14 @@ export async function descartarDeDocumento(docPath: string): Promise<void> {
   await avisar()
 }
 
+/** Quita de la cola un archivo que ya no hace falta subir. */
+export async function descartarRuta(ruta: string): Promise<void> {
+  const d = await abrir()
+  const keys = await d.getAllKeysFromIndex('subidas', 'ruta', ruta)
+  await Promise.all(keys.map((k) => d.delete('subidas', k)))
+  await avisar()
+}
+
 async function aplicarDestino(s: Subida, url: string) {
   const ref_ = doc(db, s.destino.docPath)
   if (s.destino.tipo === 'campo') {
@@ -99,10 +107,33 @@ async function aplicarDestino(s: Subida, url: string) {
 }
 
 let vaciando: Promise<void> | null = null
+let reintento: ReturnType<typeof setTimeout> | null = null
+let fallasSeguidas = 0
+/** Algo se encoló mientras se subía lo anterior: hay que dar otra vuelta al terminar. */
+let otraVuelta = false
+
+/**
+ * Si algo no se pudo subir (señal débil, o el documento cambió justo al anotar la URL),
+ * se vuelve a intentar solo: a los 5 s, 10 s, 20 s… hasta cada 2 minutos.
+ */
+function programarReintento() {
+  if (reintento) return
+  const espera = Math.min(120_000, 5_000 * 2 ** fallasSeguidas)
+  fallasSeguidas++
+  reintento = setTimeout(() => {
+    reintento = null
+    void vaciarCola()
+  }, espera)
+}
 
 export function vaciarCola(): Promise<void> {
   if (!navigator.onLine) return Promise.resolve()
-  vaciando ??= (async () => {
+  if (vaciando) {
+    otraVuelta = true
+    return vaciando
+  }
+  vaciando = (async () => {
+    let fallaron = 0
     try {
       const d = await abrir()
       const todas = await d.getAll('subidas')
@@ -125,12 +156,19 @@ export function vaciarCola(): Promise<void> {
             await d.delete('subidas', s.id)
             continue
           }
+          fallaron++
           await d.put('subidas', { ...s, intentos: s.intentos + 1, error: String(err) })
         }
         await avisar()
       }
     } finally {
       vaciando = null
+    }
+    if (fallaron > 0) programarReintento()
+    else fallasSeguidas = 0
+    if (otraVuelta) {
+      otraVuelta = false
+      await vaciarCola()
     }
   })()
   return vaciando
