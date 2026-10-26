@@ -103,6 +103,7 @@ function Rutas() {
         }
       >
         <Route index element={<Catalogo />} />
+        <Route path="catalogo" element={<Catalogo />} />
         <Route path="escanear" element={<Escanear />} />
         <Route path="instrumentos/nuevo" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />
         <Route path="instrumentos/:id" element={<Ficha />} />

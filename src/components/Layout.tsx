@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
 import { useFallas } from '../lib/fallas'
@@ -79,6 +79,16 @@ function Globo({ n }: { n: number }) {
 const claseNav = ({ isActive }: { isActive: boolean }) =>
   `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${isActive ? 'text-marca-700' : 'text-slate-500'}`
 
+/** Cada pantalla nueva abre desde arriba; al regresar (Atrás) cada una decide. */
+function ArribaAlNavegar() {
+  const { pathname } = useLocation()
+  const tipo = useNavigationType()
+  useEffect(() => {
+    if (tipo === 'PUSH') window.scrollTo(0, 0)
+  }, [pathname, tipo])
+  return null
+}
+
 export function Layout() {
   const { user, rol, salir } = useAuth()
   const p = permisos(rol)
@@ -89,6 +99,7 @@ export function Layout() {
   const sinLeer = pathname === '/chat' ? 0 : noLeidos
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
+      <ArribaAlNavegar />
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
         <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <span className="text-lg font-bold">Instrumentación ADB</span>
