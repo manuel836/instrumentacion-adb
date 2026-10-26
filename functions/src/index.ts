@@ -294,6 +294,15 @@ export const alBorrarFotoUbicacion = onDocumentDeleted('instrumentos/{id}/ubicac
  * y las refacciones dejan de listarlo como compatible.
  * La bitácora guarda una sola entrada con lo que se borró y quién lo pidió.
  */
+/**
+ * Borra los archivos de una carpeta de Storage. Al borrar el instrumento, alEscribirInstrumento
+ * quita sus documentos al mismo tiempo: un archivo que ya no está no es un error.
+ */
+async function borrarArchivos(prefijo: string) {
+  const [archivos] = await getStorage().bucket().getFiles({ prefix: prefijo })
+  await Promise.all(archivos.map((a) => a.delete({ ignoreNotFound: true })))
+}
+
 export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, async (req) => {
   exigirAdmin(req)
   const id = exigirTexto(req.data?.id, 'el instrumento')
@@ -330,13 +339,12 @@ export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, asy
     despues: {},
   })
 
-  const bucket = getStorage().bucket()
   for (const f of fallas.docs) {
     await db.recursiveDelete(f.ref)
-    await bucket.deleteFiles({ prefix: `fallas/${f.id}/` })
+    await borrarArchivos(`fallas/${f.id}/`)
   }
   await db.recursiveDelete(ref)
-  await bucket.deleteFiles({ prefix: `instrumentos/${id}/` })
+  await borrarArchivos(`instrumentos/${id}/`)
   const token = inst.get('nfcToken') as string | null
   if (token) await db.doc(`publico/${token}`).delete()
   // Las refacciones ya no lo listan como compatible (su kardex conserva el tag).
