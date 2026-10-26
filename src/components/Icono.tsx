@@ -65,6 +65,13 @@ const TRAZOS = {
       <path d="M14 3v5h5M9 13h6M9 17h6" />
     </>
   ),
+  imagen: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="m21 16-5-5-9 9" />
+    </>
+  ),
   rayo: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
   candado: (
     <>

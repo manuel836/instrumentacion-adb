@@ -1,7 +1,6 @@
-import { useRef } from 'react'
 import { Link, useParams } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
-import { adjuntarDocumento, quitarDocumento, useInstrumento } from '../lib/instrumentos'
+import { useInstrumento } from '../lib/instrumentos'
 import { Estado, Pendiente } from '../components/Estado'
 import { Galeria } from '../components/Galeria'
 import { ListaFallas } from '../components/ListaFallas'
@@ -13,6 +12,7 @@ import { RefaccionesDelInstrumento } from '../components/RefaccionesUsadas'
 import { Icono } from '../components/Icono'
 import { dondeEsta } from '../types'
 import { AvisoDisparo } from '../components/AvisoDisparo'
+import { Documentos } from '../components/Documentos'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -28,7 +28,6 @@ export function Ficha() {
   const inst = useInstrumento(id)
   const { rol } = useAuth()
   const p = permisos(rol)
-  const archivo = useRef<HTMLInputElement>(null)
   const fallas = useFallasDeInstrumento(id)
   const calibraciones = useCalibraciones(id)
 
@@ -91,44 +90,7 @@ export function Ficha() {
         </dl>
       </section>
 
-      <section className="tarjeta space-y-2">
-        <h2 className="font-semibold">Documentos</h2>
-        {inst.docs.length === 0 && <p className="text-sm text-slate-500">Sin hojas de datos ni manuales.</p>}
-        {inst.docs.map((d) => (
-          <div key={d.ruta} className="flex items-center justify-between gap-2 text-sm">
-            {d.url ? (
-              <a href={d.url} target="_blank" rel="noreferrer" className="truncate text-marca-700 underline">
-                {d.nombre}
-              </a>
-            ) : (
-              <span className="truncate text-slate-500">{d.nombre} (por subir)</span>
-            )}
-            {p.editarInstrumentos && (
-              <button className="shrink-0 text-red-700" onClick={() => quitarDocumento(inst, d.ruta)}>
-                Quitar
-              </button>
-            )}
-          </div>
-        ))}
-        {p.editarInstrumentos && (
-          <>
-            <button className="btn-secundario w-full" onClick={() => archivo.current?.click()}>
-              Adjuntar documento
-            </button>
-            <input
-              ref={archivo}
-              type="file"
-              hidden
-              accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) void adjuntarDocumento(inst, f)
-                e.target.value = ''
-              }}
-            />
-          </>
-        )}
-      </section>
+      <Documentos inst={inst} editable={p.editarInstrumentos} />
 
       <section className="tarjeta">
         <div className="flex items-center justify-between">

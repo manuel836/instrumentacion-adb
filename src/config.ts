@@ -10,3 +10,5 @@ export const MINIATURA_LADO_MAYOR = 320
 export const MAX_FOTOS_UBICACION = 6
 /** Storage rechaza fotos de este tamaño o más (storage.rules). */
 export const MAX_BYTES_FOTO = 3 * 1024 * 1024
+/** Storage rechaza documentos de este tamaño o más (storage.rules). */
+export const MAX_BYTES_DOCUMENTO = 25 * 1024 * 1024

@@ -162,7 +162,9 @@ async function aplicarDestino(s: Subida, url: string) {
  */
 async function prepararFoto(d: IDBPDatabase<ColaDB>, s: Subida): Promise<Subida> {
   const esFoto = s.contentType === 'image/webp' || s.contentType === 'image/jpeg'
-  if (!esFoto || (s.blob.type === s.contentType && s.blob.size < MAX_BYTES_FOTO)) return s
+  // Las fotos adjuntas como documento (placas, hojas de datos) se suben tal cual, hasta 25 MB.
+  const esDocumento = /^instrumentos\/[^/]+\/docs\//.test(s.ruta)
+  if (!esFoto || esDocumento || (s.blob.type === s.contentType && s.blob.size < MAX_BYTES_FOTO)) return s
   const { blob, tipo } = await recodificar(s.blob)
   const lista = { ...s, blob, contentType: tipo }
   await guardarSiSigue(d, lista)
