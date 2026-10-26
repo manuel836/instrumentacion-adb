@@ -34,6 +34,7 @@ export function instrumentoVacio(): InstrumentoNuevo {
     lazo: '',
     servicio: '',
     area: 'Generación de vapor',
+    subArea: '',
     ubicacionTexto: '',
     pid: '',
     marca: '',
@@ -46,6 +47,8 @@ export function instrumentoVacio(): InstrumentoNuevo {
     alimentacion: '',
     nfcToken: null,
     estado: 'Operando',
+    disparaCaldera: false,
+    notaDisparo: '',
     proximaCalibracion: null,
     docs: [],
     portadaMiniatura: null,
@@ -124,9 +127,13 @@ export async function instrumentoPorToken(token: string): Promise<Instrumento | 
   return snap.empty ? null : aInstrumento(snap.docs[0].id, snap.docs[0].data())
 }
 
-export async function tagISAExiste(tagISA: string, exceptoId?: string): Promise<boolean> {
-  const snap = await getDocs(query(colInstrumentos, where('tagISA', '==', tagISA), limit(2)))
-  return snap.docs.some((d) => d.id !== exceptoId)
+/**
+ * El mismo tag se puede repetir en otra área o sub área (cada caldera tiene su PT-101),
+ * pero no dentro de la misma.
+ */
+export async function tagISAExiste(tagISA: string, area: string, subArea: string, exceptoId?: string): Promise<boolean> {
+  const snap = await getDocs(query(colInstrumentos, where('tagISA', '==', tagISA), limit(50)))
+  return snap.docs.some((d) => d.id !== exceptoId && d.get('area') === area && ((d.get('subArea') as string | undefined) ?? '') === subArea)
 }
 
 /**

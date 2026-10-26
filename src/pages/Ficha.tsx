@@ -11,6 +11,8 @@ import { fechaDia, ProximaCalibracion, ResultadoCal } from '../components/Calibr
 import { BorrarInstrumento } from '../components/BorrarInstrumento'
 import { RefaccionesDelInstrumento } from '../components/RefaccionesUsadas'
 import { Icono } from '../components/Icono'
+import { dondeEsta } from '../types'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -39,11 +41,12 @@ export function Ficha() {
   return (
     <div className="space-y-3 p-3">
       <section className="tarjeta">
+        {inst.disparaCaldera && <AvisoDisparo nota={inst.notaDisparo} className="mb-3" />}
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="font-mono text-2xl font-bold">{inst.tagISA}</h1>
             <p className="text-slate-700">{inst.servicio}</p>
-            <p className="text-sm text-slate-500">{inst.area}</p>
+            <p className="text-sm text-slate-500">{dondeEsta(inst)}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
             <Estado estado={inst.estado} />

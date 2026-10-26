@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigationType, useSearchParams } from 'react-rou
 import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useInstrumentos, type ConPendiente } from '../lib/instrumentos'
+import { useSubareas } from '../lib/subareas'
 import { AREAS, ESTADOS_INSTRUMENTO, type Instrumento } from '../types'
 import { Estado, Pendiente } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
@@ -20,17 +21,21 @@ export const OTROS_FILTROS = {
   vencidas: { titulo: 'Calibración vencida', cumple: (i: Instrumento) => vencimiento(i.proximaCalibracion) === 'vencida' },
   'por-vencer': { titulo: 'Calibración vence en 30 días', cumple: (i: Instrumento) => vencimiento(i.proximaCalibracion) === 'pronto' },
   'sin-calibracion': { titulo: 'Sin calibración programada', cumple: (i: Instrumento) => !i.proximaCalibracion },
+  'dispara-caldera': { titulo: 'Pueden disparar la caldera', cumple: (i: Instrumento) => i.disparaCaldera },
 } as const
 export type OtroFiltro = keyof typeof OTROS_FILTROS
 
 /** Texto en el que busca el buscador: todo lo que alguien podría recordar del instrumento. */
 const textoBuscable = (i: Instrumento) =>
-  normalizar([i.tagISA, i.servicio, i.area, i.lazo, i.ubicacionTexto, i.pid, i.marca, i.modelo, i.serie].join(' '))
+  normalizar([i.tagISA, i.servicio, i.area, i.subArea, i.lazo, i.ubicacionTexto, i.pid, i.marca, i.modelo, i.serie].join(' '))
 
 const CLAVE_SCROLL = 'catalogo-scroll'
+/** Valor del filtro de sub área para los instrumentos que no tienen. */
+const SIN_SUB = '-'
 
 export function Catalogo() {
   const lista = useInstrumentos()
+  const subareas = useSubareas()
   const { rol } = useAuth()
   const p = permisos(rol)
   const location = useLocation()
@@ -42,6 +47,7 @@ export function Catalogo() {
   const [params, setParams] = useSearchParams()
   const texto = params.get('q') ?? ''
   const area = params.get('area') ?? ''
+  const sub = area ? (params.get('sub') ?? '') : ''
   const estado = params.get('estado') ?? ''
   const filtro = (params.get('filtro') ?? '') as OtroFiltro | ''
   const cambiar = (clave: string, valor: string) =>
@@ -55,6 +61,7 @@ export function Catalogo() {
       { replace: true },
     )
   const hayFiltros = !!(texto || area || estado || filtro)
+  const subsDelArea = (subareas ?? []).filter((s) => s.area === area).map((s) => s.nombre)
 
   const q = useDeferredValue(normalizar(texto.trim()))
   const buscables = useMemo(() => new Map((lista ?? []).map((i) => [i.id, textoBuscable(i)])), [lista])
@@ -65,11 +72,12 @@ export function Catalogo() {
     return lista.filter(
       (i) =>
         (!area || i.area === area) &&
+        (!sub || i.subArea === (sub === SIN_SUB ? '' : sub)) &&
         (!estado || i.estado === estado) &&
         (!extra || extra(i)) &&
         (!q || (buscables.get(i.id) ?? '').includes(q)),
     )
-  }, [lista, buscables, q, area, estado, filtro])
+  }, [lista, buscables, q, area, sub, estado, filtro])
 
   const contenedor = useRef<HTMLDivElement>(null)
   const virtual = useWindowVirtualizer({
@@ -119,7 +127,24 @@ export function Catalogo() {
           aria-label="Buscar"
         />
         <div className="flex gap-2">
-          <select className="campo py-2 text-sm" value={area} onChange={(e) => cambiar('area', e.target.value)} aria-label="Área">
+          <select
+            className="campo py-2 text-sm"
+            value={area}
+            onChange={(e) =>
+              setParams(
+                (prev) => {
+                  // Cada área tiene sus propias sub áreas: al cambiarla se quita la elegida.
+                  const p = new URLSearchParams(prev)
+                  if (e.target.value) p.set('area', e.target.value)
+                  else p.delete('area')
+                  p.delete('sub')
+                  return p
+                },
+                { replace: true },
+              )
+            }
+            aria-label="Área"
+          >
             <option value="">Todas las áreas</option>
             {AREAS.map((a) => (
               <option key={a}>{a}</option>
@@ -132,6 +157,15 @@ export function Catalogo() {
             ))}
           </select>
         </div>
+        {area && subsDelArea.length > 0 && (
+          <select className="campo py-2 text-sm" value={sub} onChange={(e) => cambiar('sub', e.target.value)} aria-label="Sub área">
+            <option value="">Todas las sub áreas</option>
+            {subsDelArea.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+            <option value={SIN_SUB}>Sin sub área</option>
+          </select>
+        )}
         <select className="campo py-2 text-sm" value={filtro} onChange={(e) => cambiar('filtro', e.target.value)} aria-label="Otros filtros">
           <option value="">Sin otros filtros</option>
           {(Object.keys(OTROS_FILTROS) as OtroFiltro[]).map((k) => (
@@ -183,15 +217,24 @@ function Fila({ i, alto, y }: { i: ConPendiente<Instrumento>; alto: number; y: n
       className="absolute inset-x-0 flex items-center gap-3 border-b border-slate-100 bg-white px-3 active:bg-slate-50"
       style={{ height: alto, transform: `translateY(${y}px)` }}
     >
-      <FotoImg url={i.portadaMiniatura} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+      <span className="relative shrink-0">
+        <FotoImg url={i.portadaMiniatura} alt="" className="h-14 w-14 rounded-lg object-cover" />
+        {i.disparaCaldera && (
+          <span className="absolute -top-1 -left-1 rounded-full border-2 border-white bg-red-600 p-0.5 text-white" title="Puede disparar la caldera">
+            <Icono nombre="rayo" className="size-3.5" />
+          </span>
+        )}
+      </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="font-mono font-bold">{i.tagISA}</span>
+          {i.subArea && <span className="truncate rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700">{i.subArea}</span>}
           <Estado estado={i.estado} />
           {i.sinSincronizar && <Pendiente />}
         </div>
         <p className="truncate text-sm text-slate-600">{i.servicio}</p>
         <p className="truncate text-xs text-slate-400">
+          {i.disparaCaldera && <span className="font-semibold text-red-700">Dispara caldera · </span>}
           {i.area}
           {!i.nfcToken && ' · sin tag'}
           {v === 'vencida' && <span className="text-red-700"> · calibración vencida</span>}

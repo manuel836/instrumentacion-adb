@@ -5,6 +5,16 @@ export type Rol = 'admin' | 'tecnico' | 'operador'
 export const AREAS = ['Generación de vapor', 'Almacenamiento de amoniaco', 'Tratamiento de agua'] as const
 export type Area = (typeof AREAS)[number]
 
+/** Sub área dentro de un área (la da de alta el admin). */
+export interface Subarea {
+  id: string
+  area: Area
+  nombre: string
+}
+
+/** "Generación de vapor · Caldera 2" */
+export const dondeEsta = (x: { area: string; subArea?: string }) => (x.subArea ? `${x.area} · ${x.subArea}` : x.area)
+
 export const ESTADOS_INSTRUMENTO = ['Operando', 'Con falla', 'Fuera de servicio'] as const
 export type EstadoInstrumento = (typeof ESTADOS_INSTRUMENTO)[number]
 
@@ -23,6 +33,8 @@ export interface Instrumento {
   lazo: string
   servicio: string
   area: Area
+  /** Caldera, tanque o sección dentro del área ('' = sin sub área). El tag se puede repetir en otra sub área. */
+  subArea: string
   ubicacionTexto: string
   pid: string
   marca: string
@@ -35,6 +47,10 @@ export interface Instrumento {
   alimentacion: string
   nfcToken: string | null
   estado: EstadoInstrumento
+  /** Medición o retroaviso que, al intervenirlo, puede disparar la caldera. */
+  disparaCaldera: boolean
+  /** Qué cuidar antes de intervenirlo (bypass, avisar a operación…). */
+  notaDisparo: string
   proximaCalibracion: Timestamp | null
   docs: DocAdjunto[]
   /** Ruta y URL de la miniatura de portada, copiadas aquí para listas y precarga offline. */
@@ -73,7 +89,10 @@ export interface Publico {
   tagISA: string
   servicio: string
   area: string
+  subArea?: string
   estado: string
+  disparaCaldera?: boolean
+  notaDisparo?: string
   ubicacionTexto: string
   fotosUbicacion: { url: string | null; miniaturaUrl: string | null; pie: string; esPortada: boolean }[]
 }
@@ -98,6 +117,8 @@ export interface Falla {
   instrumentoId: string
   tagISA: string
   area: string
+  /** La sub área del instrumento cuando se reportó. */
+  subArea?: string
   estado: EstadoFalla
   reportadoPor: Persona
   tecnicoAsignado: Persona | null

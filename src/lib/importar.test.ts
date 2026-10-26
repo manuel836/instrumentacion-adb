@@ -108,3 +108,78 @@ describe('análisis de la importación', () => {
     expect(() => analizar([{ nombre: 'x', filas: [['Nombre', 'Otro']] }], [], true)).toThrow(/Tag ISA/)
   })
 })
+
+describe('sub áreas', () => {
+  const hojas = (filas: (string | number | null)[][]) => [{ nombre: 'Instrumentos', filas: [['Tag ISA', 'Servicio', 'Área', 'Sub área', 'Marca'], ...filas] }]
+  const subareas = [
+    { area: 'Generación de vapor', nombre: 'Caldera 1' },
+    { area: 'Generación de vapor', nombre: 'Caldera 2' },
+  ]
+  const existentes: Existente[] = [
+    { id: 'c1', tagISA: 'PT-101', datos: { area: 'Generación de vapor', subArea: 'Caldera 1', servicio: 'Presión C1' } },
+    { id: 'c2', tagISA: 'PT-101', datos: { area: 'Generación de vapor', subArea: 'Caldera 2', servicio: 'Presión C2' } },
+    { id: 's1', tagISA: 'LT-200', datos: { area: 'Generación de vapor', subArea: '', servicio: 'Nivel' } },
+  ]
+
+  it('el mismo tag en otra sub área es otro instrumento', () => {
+    const a = analizar(
+      hojas([
+        ['PT-101', null, 'vapor', 'caldera 2', 'Yokogawa'],
+        ['PT-101', 'Presión C3', 'vapor', 'Caldera 3', null],
+        ['PT-101', null, null, null, 'Endress'],
+        ['LT-200', null, 'vapor', 'Caldera 1', null],
+        ['LT-200', 'Nivel C2', 'vapor', 'Caldera 2', null],
+        ['FT-300', 'Flujo', 'vapor', 'Caldera 1', null],
+        ['FT-300', 'Flujo', 'vapor', 'Caldera 1', null],
+        ['TT-400', 'Temperatura', null, 'Caldera 1', null],
+      ]),
+      existentes,
+      true,
+      subareas,
+    )
+    expect(a.actualizar).toEqual([
+      { fila: 2, id: 'c2', tagISA: 'PT-101', cambios: { marca: 'Yokogawa' } },
+      // El que no tenía sub área la recibe en lugar de duplicarse.
+      { fila: 5, id: 's1', tagISA: 'LT-200', cambios: { subArea: 'Caldera 1' } },
+    ])
+    expect(a.nuevos.map((n) => [n.datos.tagISA, n.datos.subArea])).toEqual([
+      ['LT-200', 'Caldera 2'],
+      ['FT-300', 'Caldera 1'],
+    ])
+    expect(a.errores.map((e) => e.fila)).toEqual([3, 4, 8, 9])
+    expect(a.errores[0].mensaje).toMatch(/Sub área "Caldera 3" no existe en Generación de vapor/)
+    expect(a.errores[1].mensaje).toMatch(/PT-101 está en 2 lugares .*Caldera 1.*Caldera 2/)
+    expect(a.errores[2].mensaje).toMatch(/repetido.*fila 7/)
+    expect(a.errores[3].mensaje).toMatch(/pon también el Área/)
+  })
+
+  it('"Sin sub área" la quita', () => {
+    const a = analizar(hojas([['PT-101', null, 'vapor', 'Caldera 1', null], ['LT-200', null, 'vapor', 'sin sub área', 'ABB']]), existentes, true, subareas)
+    expect(a.sinCambios).toBe(1)
+    expect(a.actualizar).toEqual([{ fila: 3, id: 's1', tagISA: 'LT-200', cambios: { marca: 'ABB' } }])
+  })
+})
+
+describe('disparo de caldera', () => {
+  const hojas = (filas: (string | number | null)[][]) => [{ nombre: 'Instrumentos', filas: [['Tag ISA', 'Servicio', 'Área', 'Dispara caldera', 'Precauciones'], ...filas] }]
+  const existentes: Existente[] = [{ id: 'i1', tagISA: 'PT-101', datos: { area: 'Generación de vapor', servicio: 'Presión' } }]
+
+  it('entiende Sí y No; vacío es No; los de antes sin la marca cuentan como No', () => {
+    const a = analizar(
+      hojas([
+        ['PT-101', null, 'vapor', 'no', null],
+        ['LSLL-20', 'Nivel muy bajo domo', 'vapor', 'Sí', 'Bypass antes de desconectar'],
+        ['TT-30', 'Temperatura', 'vapor', null, null],
+        ['PT-40', 'Presión', 'vapor', 'quizá', null],
+      ]),
+      existentes,
+      true,
+    )
+    expect(a.sinCambios).toBe(1)
+    expect(a.nuevos.map((n) => [n.datos.tagISA, n.datos.disparaCaldera, n.datos.notaDisparo])).toEqual([
+      ['LSLL-20', true, 'Bypass antes de desconectar'],
+      ['TT-30', false, ''],
+    ])
+    expect(a.errores.map((e) => e.mensaje)).toEqual(['Dispara caldera "quizá": escribe Sí o No.'])
+  })
+})

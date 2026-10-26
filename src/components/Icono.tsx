@@ -65,6 +65,25 @@ const TRAZOS = {
       <path d="M14 3v5h5M9 13h6M9 17h6" />
     </>
   ),
+  rayo: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
+  candado: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </>
+  ),
+  persona: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </>
+  ),
+  historial: (
+    <>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5M12 7v5l3 2" />
+    </>
+  ),
   refaccion: (
     <>
       <path d="M21 8 12 3 3 8v8l9 5 9-5z" />

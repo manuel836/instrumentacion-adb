@@ -240,14 +240,18 @@ async function reconstruir(instrumentoId: string, tokenAnterior?: string | null)
     tagISA: inst.get('tagISA') ?? '',
     servicio: inst.get('servicio') ?? '',
     area: inst.get('area') ?? '',
+    subArea: inst.get('subArea') ?? '',
     estado: inst.get('estado') ?? '',
+    // Aviso de seguridad: también lo ve quien escanea el tag sin cuenta (contratistas).
+    disparaCaldera: inst.get('disparaCaldera') === true,
+    notaDisparo: inst.get('notaDisparo') ?? '',
     ubicacionTexto: inst.get('ubicacionTexto') ?? '',
     fotosUbicacion: fotos.map((f) => ({ url: f.url ?? null, miniaturaUrl: f.miniaturaUrl ?? null, pie: f.pie ?? '', esPortada: !!f.esPortada })),
     actualizado: FieldValue.serverTimestamp(),
   })
 }
 
-const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'estado', 'ubicacionTexto', 'nfcToken']
+const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'subArea', 'estado', 'disparaCaldera', 'notaDisparo', 'ubicacionTexto', 'nfcToken']
 
 export const alEscribirInstrumento = onDocumentWritten('instrumentos/{id}', async (ev) => {
   const antes = ev.data?.before.data()
@@ -290,6 +294,15 @@ export const alBorrarFotoUbicacion = onDocumentDeleted('instrumentos/{id}/ubicac
  * y las refacciones dejan de listarlo como compatible.
  * La bitácora guarda una sola entrada con lo que se borró y quién lo pidió.
  */
+/**
+ * Borra los archivos de una carpeta de Storage. Al borrar el instrumento, alEscribirInstrumento
+ * quita sus documentos al mismo tiempo: un archivo que ya no está no es un error.
+ */
+async function borrarArchivos(prefijo: string) {
+  const [archivos] = await getStorage().bucket().getFiles({ prefix: prefijo })
+  await Promise.all(archivos.map((a) => a.delete({ ignoreNotFound: true })))
+}
+
 export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, async (req) => {
   exigirAdmin(req)
   const id = exigirTexto(req.data?.id, 'el instrumento')
@@ -326,13 +339,12 @@ export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, asy
     despues: {},
   })
 
-  const bucket = getStorage().bucket()
   for (const f of fallas.docs) {
     await db.recursiveDelete(f.ref)
-    await bucket.deleteFiles({ prefix: `fallas/${f.id}/` })
+    await borrarArchivos(`fallas/${f.id}/`)
   }
   await db.recursiveDelete(ref)
-  await bucket.deleteFiles({ prefix: `instrumentos/${id}/` })
+  await borrarArchivos(`instrumentos/${id}/`)
   const token = inst.get('nfcToken') as string | null
   if (token) await db.doc(`publico/${token}`).delete()
   // Las refacciones ya no lo listan como compatible (su kardex conserva el tag).
@@ -473,6 +485,30 @@ export const alCrearMensajeGeneral = onDocumentCreated('chat_general/{msgId}', a
   )
 })
 
+/** Avisa a la otra persona de un chat privado. */
+export const alCrearMensajePrivado = onDocumentCreated('chats_privados/{chatId}/mensajes/{msgId}', async (ev) => {
+  const m = ev.data?.data()
+  const autor = m?.autor?.uid as string | undefined
+  if (!m || !autor) return
+  const otro = ev.params.chatId.split('_').find((u) => u !== autor)
+  if (!otro) return
+  await avisar([otro], { titulo: `${m.autor?.nombre ?? 'Mensaje'} (privado)`, cuerpo: resumen(m), ruta: `/chat/privado/${autor}` })
+})
+
+/**
+ * Copia el nombre, rol, área y si está activo de cada usuario al directorio, que todos
+ * pueden leer para elegir con quién chatear (la ficha de usuarios tiene correos y tokens).
+ */
+export const alEscribirUsuario = onDocumentWritten('usuarios/{uid}', async (ev) => {
+  const d = ev.data?.after.data()
+  const ref = db.doc(`directorio/${ev.params.uid}`)
+  if (!d || !ROLES.includes(d.rol)) {
+    await ref.delete()
+    return
+  }
+  await ref.set({ nombre: String(d.nombre ?? d.email ?? ''), rol: d.rol, area: String(d.area ?? ''), activo: d.activo !== false })
+})
+
 // ---------- Calibraciones ----------
 
 /**
@@ -485,7 +521,8 @@ export async function avisosDeCalibracion(ahora: Date) {
     db.collection('usuarios').where('rol', 'in', ['tecnico', 'admin']).where('activo', '==', true).get(),
   ])
   const lista: InstrumentoCal[] = insts.docs.map((d) => ({
-    tagISA: String(d.get('tagISA')),
+    // Con sub área el tag se puede repetir: "PT-101 (Caldera 2)".
+    tagISA: d.get('subArea') ? `${d.get('tagISA')} (${d.get('subArea')})` : String(d.get('tagISA')),
     area: String(d.get('area')),
     proxima: (d.get('proximaCalibracion') as Timestamp | null)?.toDate() ?? null,
   }))

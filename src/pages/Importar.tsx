@@ -5,6 +5,8 @@ import { analizar, COLUMNAS, type Analisis, type Existente } from '../lib/import
 import { guardarImportacion, useInstrumentos } from '../lib/instrumentos'
 import { leerArchivo, type HojaLeida } from '../lib/xlsx'
 import { nombreCampo } from '../lib/bitacora'
+import { useSubareas } from '../lib/subareas'
+import { dondeEsta } from '../types'
 
 /** Plantilla con una hoja para llenar y otra con instrucciones (la librería se carga solo aquí). */
 async function descargarPlantilla() {
@@ -36,6 +38,14 @@ async function descargarPlantilla() {
           [negrita('Cómo llenar la plantilla'), null, null],
           [{ value: 'Una fila por instrumento. Borra las dos filas de ejemplo antes de importar (o cámbialas por tus datos).' }, null, null],
           [{ value: 'Si un tag ya existe en la app, puedes elegir actualizar sus datos: las celdas vacías no borran nada.' }, null, null],
+          [
+            {
+              value:
+                'El mismo tag puede estar en varias sub áreas (cada caldera con su PT-101): pon el Área y la Sub área para saber cuál es. Con otra área o sub área se da de alta como otro instrumento.',
+            },
+            null,
+            null,
+          ],
           [{ value: 'El tag NFC y las fotos no van en el Excel: se agregan después desde la ficha de cada instrumento.' }, null, null],
           [null, null, null],
           [negrita('Columna'), negrita('Qué poner'), negrita('Ejemplo')],
@@ -56,6 +66,7 @@ function valorCorto(v: unknown): string {
 
 export function Importar() {
   const instrumentos = useInstrumentos()
+  const subareas = useSubareas()
   const online = useOnline()
   const input = useRef<HTMLInputElement>(null)
   const [archivo, setArchivo] = useState<{ nombre: string; hojas: HojaLeida[] } | null>(null)
@@ -72,13 +83,13 @@ export function Importar() {
   )
 
   const analisis = useMemo((): Analisis | string | null => {
-    if (!archivo || !instrumentos) return null
+    if (!archivo || !instrumentos || !subareas) return null
     try {
-      return analizar(archivo.hojas, existentes, actualizar)
+      return analizar(archivo.hojas, existentes, actualizar, subareas)
     } catch (err) {
       return (err as Error).message
     }
-  }, [archivo, instrumentos, existentes, actualizar])
+  }, [archivo, instrumentos, subareas, existentes, actualizar])
 
   async function elegir(f: File) {
     setError('')
@@ -227,7 +238,7 @@ export function Importar() {
                 {a.nuevos.map((n) => (
                   <li key={n.fila} className="py-1.5">
                     <span className="font-mono font-bold">{n.datos.tagISA}</span> {n.datos.servicio}
-                    <span className="block text-xs text-slate-500">{n.datos.area}</span>
+                    <span className="block text-xs text-slate-500">{dondeEsta(n.datos)}</span>
                   </li>
                 ))}
               </ul>
@@ -240,7 +251,8 @@ export function Importar() {
               <ul className="mt-2 max-h-72 divide-y divide-slate-100 overflow-auto">
                 {a.actualizar.map((u) => (
                   <li key={u.fila} className="py-1.5">
-                    <span className="font-mono font-bold">{u.tagISA}</span>
+                    <span className="font-mono font-bold">{u.tagISA}</span>{' '}
+                    <span className="text-xs text-slate-500">{dondeEsta(existentes.find((e) => e.id === u.id)?.datos as { area: string; subArea?: string })}</span>
                     {Object.entries(u.cambios).map(([k, v]) => (
                       <span key={k} className="block text-xs text-slate-600">
                         {nombreCampo(k)}: {valorCorto(v)}

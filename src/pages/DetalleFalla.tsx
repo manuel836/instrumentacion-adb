@@ -9,10 +9,15 @@ import { EstadoFalla, fechaCorta } from '../components/EstadoFalla'
 import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
 import { RefaccionesUsadas } from '../components/RefaccionesUsadas'
+import { dondeEsta } from '../types'
+import { useInstrumento } from '../lib/instrumentos'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 export function DetalleFalla() {
   const { id } = useParams()
   const falla = useFalla(id)
+  // El aviso de disparo de caldera sale del instrumento (puede marcarse después de reportar).
+  const inst = useInstrumento(falla?.instrumentoId)
   const { user, rol } = useAuth()
   const p = permisos(rol)
   const [visor, setVisor] = useState<number | null>(null)
@@ -39,6 +44,7 @@ export function DetalleFalla() {
 
   return (
     <div className="space-y-3 p-3">
+      {inst?.disparaCaldera && falla.estado !== 'Cerrada' && <AvisoDisparo nota={inst.notaDisparo} />}
       <section className="tarjeta space-y-2">
         <div className="flex items-center gap-2">
           <Link to={`/instrumentos/${falla.instrumentoId}`} className="font-mono text-2xl font-bold text-marca-700 underline">
@@ -47,7 +53,7 @@ export function DetalleFalla() {
           <EstadoFalla estado={falla.estado} />
           {falla.sinSincronizar && <Pendiente />}
         </div>
-        <p className="text-sm text-slate-500">{falla.area}</p>
+        <p className="text-sm text-slate-500">{dondeEsta(falla)}</p>
         <p className="whitespace-pre-wrap">{falla.descripcion}</p>
         {falla.fotos.length > 0 && (
           <div className="grid grid-cols-4 gap-2 pt-1">
@@ -130,8 +136,21 @@ export function DetalleFalla() {
       <RefaccionesUsadas falla={falla} />
 
       <section className="tarjeta space-y-3">
-        <h2 className="font-semibold">Chat de la falla</h2>
-        <Chat ruta={hiloDeFalla(falla.id)} conFotos vacio="Aún no hay mensajes. Escribe para coordinar la atención." />
+        <h2 className="flex items-center gap-2 font-semibold">
+          Chat de la falla
+          {falla.estado === 'Cerrada' && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">Cerrado</span>}
+        </h2>
+        {/* Al cerrar la falla se cierra su chat: lo que se habló y las fotos quedan guardados para consulta. */}
+        <Chat
+          ruta={hiloDeFalla(falla.id)}
+          conFotos
+          vacio={falla.estado === 'Cerrada' ? 'No se escribió nada en el chat de esta falla.' : 'Aún no hay mensajes. Escribe para coordinar la atención.'}
+          cerrado={
+            falla.estado === 'Cerrada'
+              ? `El chat se cerró junto con la falla (${fechaCorta(falla.fechas.cerrada)}). Lo que se habló y las fotos quedan guardados aquí.`
+              : undefined
+          }
+        />
       </section>
 
       {visor !== null && (

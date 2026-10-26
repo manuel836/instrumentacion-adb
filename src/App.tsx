@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
 import { precargarMiniaturas } from './lib/instrumentos'
+import { anotarEnDirectorio } from './lib/privados'
 import { Catalogo } from './pages/Catalogo'
 import { Inicio } from './pages/Inicio'
 import { ChatGeneral } from './pages/ChatGeneral'
@@ -32,14 +33,24 @@ const Vincular = diferida(() => import('./pages/Vincular'), 'Vincular')
 const Refacciones = diferida(() => import('./pages/Refacciones'), 'Refacciones')
 const DetalleRefaccion = diferida(() => import('./pages/DetalleRefaccion'), 'DetalleRefaccion')
 const FormRefaccion = diferida(() => import('./pages/FormRefaccion'), 'FormRefaccion')
+const HistorialChat = diferida(() => import('./pages/HistorialChat'), 'HistorialChat')
+const DiaChat = diferida(() => import('./pages/HistorialChat'), 'DiaChat')
+const ChatsPrivados = diferida(() => import('./pages/ChatsPrivados'), 'ChatsPrivados')
+const Subareas = diferida(() => import('./pages/Subareas'), 'Subareas')
+const ConversacionPrivada = diferida(() => import('./pages/ChatsPrivados'), 'ConversacionPrivada')
 
 function ConSesion({ children }: { children: ReactNode }) {
-  const { cargando, user, rol, salir } = useAuth()
+  const { cargando, user, rol, area, salir } = useAuth()
   const location = useLocation()
 
   useEffect(() => {
     if (rol) return precargarMiniaturas()
   }, [rol])
+
+  // Para que los demás lo encuentren al abrir un chat privado.
+  useEffect(() => {
+    if (user && rol) void anotarEnDirectorio(user.uid, user.displayName || user.email || 'Usuario', rol, area)
+  }, [user, rol, area])
 
   if (cargando) return null
   if (!user) return <Navigate to="/login" replace state={{ desde: location.pathname }} />
@@ -125,10 +136,15 @@ function Rutas() {
         <Route path="fallas/nueva" element={<SoloSi permitido={p.reportarFallas}><NuevaFalla /></SoloSi>} />
         <Route path="fallas/:id" element={<DetalleFalla />} />
         <Route path="chat" element={<ChatGeneral />} />
+        <Route path="chat/historial" element={<HistorialChat />} />
+        <Route path="chat/historial/:dia" element={<DiaChat />} />
+        <Route path="chat/privados" element={<ChatsPrivados />} />
+        <Route path="chat/privado/:uid" element={<ConversacionPrivada />} />
         <Route path="cuenta" element={<Cuenta />} />
         <Route path="bitacora" element={<SoloSi permitido={p.verBitacora}><Bitacora /></SoloSi>} />
         <Route path="exportar" element={<SoloSi permitido={p.exportar}><Exportar /></SoloSi>} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
+        <Route path="subareas" element={<SoloSi permitido={p.gestionarUsuarios}><Subareas /></SoloSi>} />
         <Route path="refacciones" element={<Refacciones />} />
         <Route path="refacciones/nueva" element={<SoloSi permitido={p.refacciones}><FormRefaccion /></SoloSi>} />
         <Route path="refacciones/:id" element={<DetalleRefaccion />} />

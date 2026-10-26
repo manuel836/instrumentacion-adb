@@ -78,6 +78,35 @@ describe('instrumentos', () => {
   })
 })
 
+describe('sub áreas', () => {
+  it('todos las ven; solo el admin las agrega, renombra o quita', async () => {
+    const sub = { area: 'Generación de vapor', nombre: 'Caldera 2' }
+    await assertFails(setDoc(doc(como('tecnico'), 'subareas/s1'), sub))
+    await assertSucceeds(setDoc(doc(como('admin'), 'subareas/s1'), sub))
+    await assertSucceeds(getDocs(collection(como('operador'), 'subareas')))
+    await assertFails(getDocs(collection(como(null), 'subareas')))
+    await assertFails(setDoc(doc(como('admin'), 'subareas/s2'), { ...sub, area: 'Cocina' }))
+    await assertFails(setDoc(doc(como('admin'), 'subareas/s3'), { ...sub, nombre: '' }))
+    await assertFails(setDoc(doc(como('admin'), 'subareas/s4'), { ...sub, orden: 1 }))
+    await assertSucceeds(updateDoc(doc(como('admin'), 'subareas/s1'), { nombre: 'Caldera B' }))
+    await assertFails(deleteDoc(doc(como('tecnico'), 'subareas/s1')))
+    await assertSucceeds(deleteDoc(doc(como('admin'), 'subareas/s1')))
+  })
+
+  it('la marca de disparo de caldera es sí/no con una nota corta', async () => {
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { disparaCaldera: true, notaDisparo: 'Bypass del disparo por bajo nivel' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { disparaCaldera: 'sí' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { notaDisparo: 'x'.repeat(301) }))
+    await assertFails(updateDoc(doc(como('operador'), 'instrumentos/i1'), { disparaCaldera: false }))
+  })
+
+  it('el instrumento guarda su sub área como texto corto', async () => {
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 'Caldera 2' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 2 }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 'x'.repeat(61) }))
+  })
+})
+
 describe('galería de ubicación', () => {
   const foto = { ruta: 'a', miniatura: 'b', pie: 'Nivel 2', orden: 0, esPortada: true, url: null, miniaturaUrl: null }
   it('técnico agrega fotos, operador no', async () => {
@@ -203,6 +232,17 @@ describe('chat', () => {
     await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m5'), msg('u-operador', { texto: '' })))
   })
 
+  it('al cerrar la falla se cierra su chat, pero lo escrito se sigue leyendo', async () => {
+    const foto = { ruta: 'a', miniatura: 'b', url: null, miniaturaUrl: null }
+    await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador', { fotos: [foto] })))
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'fallas/f1'), { estado: 'Cerrada' }))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m2'), msg('u-operador')))
+    await assertFails(setDoc(doc(como('admin'), 'fallas/f1/mensajes/m3'), msg('u-admin')))
+    await assertSucceeds(getDocs(collection(como('operador'), 'fallas/f1/mensajes')))
+    // La foto que se mandó sin señal antes del cierre todavía puede completar su URL.
+    await assertSucceeds(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), { fotos: [{ ...foto, url: 'https://x' }] }))
+  })
+
   it('el autor solo completa las URLs de sus fotos', async () => {
     const foto = { ruta: 'a', miniatura: 'b', url: null, miniaturaUrl: null }
     await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador', { texto: '', fotos: [foto] })))
@@ -216,6 +256,75 @@ describe('chat', () => {
     await assertFails(setDoc(doc(como('operador'), 'chat_general/m2'), msg('u-operador', { fotos: [{ ruta: 'a' }] })))
     await assertFails(updateDoc(doc(como('operador'), 'chat_general/m1'), { texto: 'otro' }))
     await assertFails(getDocs(collection(como(null), 'chat_general')))
+  })
+})
+
+describe('chats privados', () => {
+  // uids en orden: el id del chat es "u-operador_u-tecnico".
+  const chatId = 'u-operador_u-tecnico'
+  const msg = (uid: string, extra: Record<string, unknown> = {}) => ({
+    autor: { uid, nombre: 'X' },
+    texto: 'Te marco al rato',
+    fotos: [],
+    fecha: serverTimestamp(),
+    ...extra,
+  })
+  const resumen = (uid: string, extra: Record<string, unknown> = {}) => ({
+    miembros: ['u-operador', 'u-tecnico'],
+    nombres: { 'u-operador': 'Op', 'u-tecnico': 'Téc' },
+    ultimo: { texto: 'Te marco al rato', autor: uid, fecha: serverTimestamp() },
+    leido: { [uid]: serverTimestamp() },
+    ...extra,
+  })
+
+  /** Mensaje y resumen en un lote, como lo hace la app. */
+  async function enviar(db: ReturnType<typeof como>, uid: string, msgId: string) {
+    const { writeBatch } = await import('firebase/firestore')
+    const lote = writeBatch(db)
+    lote.set(doc(db, `chats_privados/${chatId}/mensajes/${msgId}`), msg(uid))
+    lote.set(doc(db, `chats_privados/${chatId}`), resumen(uid), { merge: true })
+    return lote.commit()
+  }
+
+  it('solo las dos personas escriben y leen; ni el admin entra', async () => {
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    await assertSucceeds(enviar(como('tecnico'), 'u-tecnico', 'm2'))
+    await assertSucceeds(getDocs(collection(como('tecnico'), `chats_privados/${chatId}/mensajes`)))
+    await assertSucceeds(getDoc(doc(como('operador'), `chats_privados/${chatId}`)))
+    await assertFails(getDocs(collection(como('admin'), `chats_privados/${chatId}/mensajes`)))
+    await assertFails(getDoc(doc(como('admin'), `chats_privados/${chatId}`)))
+    await assertFails(setDoc(doc(como('admin'), `chats_privados/${chatId}/mensajes/m3`), msg('u-admin')))
+    await assertFails(setDoc(doc(como('operador'), `chats_privados/${chatId}/mensajes/m4`), msg('u-tecnico')))
+  })
+
+  it('la lista de chats solo trae los míos', async () => {
+    const { query: q, where: w } = await import('firebase/firestore')
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    await assertSucceeds(getDocs(q(collection(como('tecnico'), 'chats_privados'), w('miembros', 'array-contains', 'u-tecnico'))))
+    await assertFails(getDocs(collection(como('tecnico'), 'chats_privados')))
+    await assertFails(getDocs(q(collection(como('admin'), 'chats_privados'), w('miembros', 'array-contains', 'u-tecnico'))))
+  })
+
+  it('el id tiene que ser de sus miembros y cada quien solo marca lo que él leyó', async () => {
+    await assertFails(setDoc(doc(como('operador'), 'chats_privados/u-admin_u-operador'), resumen('u-operador')))
+    await assertFails(setDoc(doc(como('operador'), `chats_privados/${chatId}`), resumen('u-tecnico')))
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    const { serverTimestamp: ahora } = await import('firebase/firestore')
+    await assertSucceeds(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { 'leido.u-tecnico': ahora() }))
+    await assertFails(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { 'leido.u-operador': ahora() }))
+    await assertFails(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { miembros: ['u-admin', 'u-tecnico'] }))
+    await assertFails(deleteDoc(doc(como('operador'), `chats_privados/${chatId}`)))
+  })
+
+  it('el directorio lo leen todos; cada quien solo se anota a sí mismo con su rol', async () => {
+    const yo = { nombre: 'Op', rol: 'operador', area: '', activo: true }
+    await assertFails(setDoc(doc(como('operador'), 'directorio/u-otro'), yo))
+    await assertFails(setDoc(doc(como('operador'), 'directorio/u-operador'), { ...yo, rol: 'admin' }))
+    await assertFails(setDoc(doc(como('operador'), 'directorio/u-operador'), { ...yo, email: 'x@y.z' }))
+    await assertSucceeds(setDoc(doc(como('operador'), 'directorio/u-operador'), yo))
+    await assertFails(updateDoc(doc(como('operador'), 'directorio/u-operador'), { nombre: 'Otro' }))
+    await assertSucceeds(getDocs(collection(como('tecnico'), 'directorio')))
+    await assertFails(getDocs(collection(como(null), 'directorio')))
   })
 })
 

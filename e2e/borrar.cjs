@@ -39,6 +39,12 @@ async function archivos(prefijo) {
   return (j.items ?? []).map((i) => i.name)
 }
 
+/**
+ * Espera a que el servidor confirme lo escrito (sin marcas de "pendiente") antes de recargar
+ * con goto: si no, el teléfono lo reenvía al abrir y puede llegar después del borrado.
+ */
+const sincronizado = (page) => page.waitForFunction(() => !document.querySelector('[title="Sin sincronizar"]'), null, { timeout: 20000 })
+
 async function esperar(cond, msg, ms = 20000) {
   const fin = Date.now() + ms
   while (Date.now() < fin) {
@@ -98,6 +104,8 @@ async function esperar(cond, msg, ms = 20000) {
   await max.fill('10')
   await page.click('button:has-text("Guardar")')
   await page.waitForURL(new RegExp(`/instrumentos/${id}$`))
+  await page.waitForSelector(`a[href^="/instrumentos/${id}/calibraciones/"]`)
+  await sincronizado(page)
 
   await page.goto(`${BASE}/fallas/nueva?instrumento=${id}`)
   await page.fill('textarea', 'Falla de prueba que se borrará con el instrumento')
@@ -109,6 +117,7 @@ async function esperar(cond, msg, ms = 20000) {
   await page.click('button:has-text("Enviar")')
   await esperar(async () => (await archivos(`fallas/${fallaId}/`)).length >= 2, 'las fotos de la falla no se subieron')
   await esperar(async () => (await archivos(`instrumentos/${id}/ubicacion/`)).length >= 2, 'las fotos de ubicación no se subieron')
+  await sincronizado(page)
   console.log('instrumento con tag, foto, documento, calibración y falla ok')
 
   // Un técnico no ve el botón; el admin sí.

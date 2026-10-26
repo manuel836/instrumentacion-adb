@@ -66,6 +66,7 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
       i.tagISA,
       i.servicio,
       i.area,
+      i.subArea,
       i.ubicacionTexto,
       i.lazo,
       i.pid,
@@ -78,6 +79,8 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
       i.senal,
       i.alimentacion,
       i.estado,
+      i.disparaCaldera ? 'Sí' : 'No',
+      i.notaDisparo,
       fecha(i.proximaCalibracion),
       i.nfcToken ? 'Sí' : 'No',
     ])
@@ -90,6 +93,7 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
           c('Tag ISA', 12),
           c('Servicio', 30),
           c('Área', 24),
+          c('Sub área', 16),
           c('Ubicación', 24),
           c('Lazo', 10),
           c('P&ID', 12),
@@ -102,6 +106,8 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
           c('Señal'),
           c('Alimentación'),
           c('Estado', 16),
+          c('Dispara caldera', 10),
+          c('Precauciones de disparo', 30),
           c('Próxima calibración', 14),
           c('Tag NFC', 8),
         ],
@@ -121,6 +127,7 @@ function reporteFallas(lista: Falla[], f: Filtros): Reporte {
       return [
         x.tagISA,
         x.area,
+        x.subArea ?? '',
         x.estado,
         x.descripcion,
         x.reportadoPor.nombre,
@@ -140,6 +147,7 @@ function reporteFallas(lista: Falla[], f: Filtros): Reporte {
         columnas: [
           c('Tag ISA', 12),
           c('Área', 24),
+          c('Sub área', 16),
           c('Estado', 12),
           c('Descripción', 40),
           c('Reportó', 18),
@@ -180,6 +188,7 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
         columnas: [
           c('Tag ISA', 12),
           c('Área', 24),
+          c('Sub área', 16),
           c('Fecha', 12),
           c('Técnico', 18),
           c('Resultado', 18),
@@ -194,6 +203,7 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
         filas: vista.map(({ cal, inst }): Valor[] => [
           inst!.tagISA,
           inst!.area,
+          inst!.subArea,
           fecha(cal.fecha),
           cal.tecnico.nombre,
           cal.resultado,
@@ -208,10 +218,11 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
       },
       {
         nombre: 'Puntos',
-        columnas: [c('Tag ISA', 12), c('Fecha', 12), c('Entrada', 10), c('As-Found', 10), c('As-Left', 10), c('Error As-Found %', 12), c('Error As-Left %', 12)],
+        columnas: [c('Tag ISA', 12), c('Sub área', 16), c('Fecha', 12), c('Entrada', 10), c('As-Found', 10), c('As-Left', 10), c('Error As-Found %', 12), c('Error As-Left %', 12)],
         filas: vista.flatMap(({ cal, inst }) =>
           cal.puntos.map((p): Valor[] => [
             inst!.tagISA,
+            inst!.subArea,
             fecha(cal.fecha),
             p.entrada,
             num(p.asFound),

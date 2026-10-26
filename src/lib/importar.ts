@@ -2,7 +2,7 @@
 // separa nuevos, actualizaciones y errores antes de escribir nada. Sin Firebase para
 // poder probarlo solo; la escritura está en importarInstrumentos.ts.
 
-import { AREAS, ESTADOS_INSTRUMENTO, SENALES, type Area, type EstadoInstrumento, type InstrumentoNuevo } from '../types'
+import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type Area, type EstadoInstrumento, type InstrumentoNuevo } from '../types'
 import type { Celda, HojaLeida } from './xlsx'
 
 /** Datos de un instrumento tal como salen del archivo (la fecha aún como Date). */
@@ -13,7 +13,7 @@ export type Campo = keyof InstrumentoImportado
 
 /** Columnas de la plantilla, en orden, con su explicación. Son las mismas del Excel de Exportar. */
 export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: string | number; alias: string[] }[] = [
-  { campo: 'tagISA', titulo: 'Tag ISA', ayuda: 'Obligatorio. Forma PT-101, FIC-2003 o TT-15A. No se puede repetir.', ejemplo: 'PT-101', alias: ['tag', 'isa', 'etiqueta'] },
+  { campo: 'tagISA', titulo: 'Tag ISA', ayuda: 'Obligatorio. Forma PT-101, FIC-2003 o TT-15A. No se puede repetir dentro de la misma área y sub área.', ejemplo: 'PT-101', alias: ['tag', 'isa', 'etiqueta'] },
   { campo: 'servicio', titulo: 'Servicio', ayuda: 'Obligatorio para instrumentos nuevos. Qué mide o controla.', ejemplo: 'Presión de vapor a cabezal', alias: ['descripcion', 'funcion'] },
   {
     campo: 'area',
@@ -21,6 +21,14 @@ export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: s
     ayuda: `Obligatorio para instrumentos nuevos. Una de: ${AREAS.join(', ')}. Basta con "vapor", "amoniaco" o "agua".`,
     ejemplo: 'Generación de vapor',
     alias: ['planta', 'zona'],
+  },
+  {
+    campo: 'subArea',
+    titulo: 'Sub área',
+    ayuda:
+      'Opcional. Caldera, tanque o sección, como está en Menú > Sub áreas (el admin las agrega). Si la pones, pon también el Área. Escribe "Sin sub área" para quitarla.',
+    ejemplo: 'Caldera 1',
+    alias: ['seccion', 'sector'],
   },
   { campo: 'ubicacionTexto', titulo: 'Ubicación', ayuda: 'Dónde está, en palabras.', ejemplo: 'Caldera B, nivel 2', alias: ['ubicacionencampo', 'localizacion'] },
   { campo: 'lazo', titulo: 'Lazo', ayuda: 'Opcional.', ejemplo: '101', alias: ['loop'] },
@@ -34,6 +42,20 @@ export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: s
   { campo: 'senal', titulo: 'Señal', ayuda: `Opcional. Una de: ${SENALES.join(', ')}.`, ejemplo: '4-20 mA + HART', alias: ['salida', 'tipodesenal'] },
   { campo: 'alimentacion', titulo: 'Alimentación', ayuda: 'Opcional.', ejemplo: '24 VDC lazo', alias: ['voltaje'] },
   { campo: 'estado', titulo: 'Estado', ayuda: `Opcional (si va vacío: Operando). Uno de: ${ESTADOS_INSTRUMENTO.join(', ')}.`, ejemplo: 'Operando', alias: ['estatus', 'status'] },
+  {
+    campo: 'disparaCaldera',
+    titulo: 'Dispara caldera',
+    ayuda: 'Opcional. Sí si al intervenirlo puede disparar la caldera (si va vacío: No).',
+    ejemplo: 'Sí',
+    alias: ['disparo', 'disparacaldera', 'disparodecaldera', 'trip'],
+  },
+  {
+    campo: 'notaDisparo',
+    titulo: 'Precauciones de disparo',
+    ayuda: 'Opcional. Qué cuidar antes de intervenirlo (bypass, avisar a operación…). Máximo 300 letras.',
+    ejemplo: 'Poner en bypass el disparo por baja presión',
+    alias: ['precauciones', 'notadisparo'],
+  },
   {
     campo: 'proximaCalibracion',
     titulo: 'Próxima calibración',
@@ -77,6 +99,14 @@ function estado(v: string): EstadoInstrumento | null {
   if (k.startsWith('fuera') || k === 'baja' || k === 'fs') return 'Fuera de servicio'
   if (k.includes('falla')) return 'Con falla'
   if (['ok', 'operativo', 'enservicio', 'activo', 'funcionando'].includes(k)) return 'Operando'
+  return null
+}
+
+/** Sí / No escrito como sea ("si", "X", "1", "no"…); null si no se entiende. */
+function siNo(v: string): boolean | null {
+  const k = clave(v)
+  if (['si', 's', 'x', '1', 'true', 'verdadero', 'dispara'].includes(k)) return true
+  if (['no', 'n', '0', 'false', 'falso'].includes(k)) return false
   return null
 }
 
@@ -124,6 +154,12 @@ export function limpiarTag(v: Celda): string {
   return texto(v).toUpperCase().replace(/\s+/g, '-')
 }
 
+/** Sub áreas dadas de alta, para reconocer las del archivo. */
+export interface SubareaConocida {
+  area: string
+  nombre: string
+}
+
 export interface Existente {
   id: string
   tagISA: string
@@ -152,6 +188,8 @@ export interface Analisis {
 }
 
 function mismoValor(campo: Campo, a: unknown, b: unknown): boolean {
+  // Los instrumentos de antes no tienen el campo: cuentan como "No".
+  if (campo === 'disparaCaldera') return !!a === !!b
   if (campo === 'proximaCalibracion') {
     const fa = a && typeof (a as { toDate?: () => Date }).toDate === 'function' ? (a as { toDate: () => Date }).toDate() : (a as Date | null)
     const fb = b as Date | null
@@ -175,7 +213,7 @@ function encabezados(hojas: HojaLeida[]): { hoja: HojaLeida; fila: number } | nu
  * Analiza el archivo contra el catálogo actual. Con `actualizarExistentes`, las filas cuyo tag
  * ya existe actualizan sus datos (las celdas vacías no borran nada); si no, se dejan como están.
  */
-export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizarExistentes: boolean): Analisis {
+export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizarExistentes: boolean, subareas: SubareaConocida[] = []): Analisis {
   const enc = encabezados(hojas)
   if (!enc) throw new Error('No encontré la columna "Tag ISA". Usa la plantilla o pon "Tag ISA" como encabezado en la primera fila.')
   const { hoja, fila: filaEnc } = enc
@@ -193,8 +231,13 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
     } else ignoradas.push(t)
   })
 
-  const porTag = new Map(existentes.map((e) => [e.tagISA, e]))
+  // El mismo tag puede estar en varias áreas o sub áreas: se buscan todos y luego se elige.
+  const porTag = new Map<string, Existente[]>()
+  for (const e of existentes) porTag.set(e.tagISA, [...(porTag.get(e.tagISA) ?? []), e])
+  const subDe = (e: Existente) => (e.datos.subArea as string | undefined) ?? ''
   const enArchivo = new Map<string, number>()
+  /** Instrumentos que ya actualiza otra fila (id → fila). */
+  const usados = new Map<string, number>()
   const resultado: Analisis = {
     hoja: hoja.nombre,
     columnas: columnas.map(({ campo, titulo }) => ({ campo, titulo })),
@@ -223,8 +266,6 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
     const aviso = (mensaje: string) => resultado.avisos.push({ fila, tag, mensaje })
     if (!tag) return error('Falta el tag ISA.')
     if (!TAG_ISA.test(tag)) return error(`El tag "${tag}" no tiene la forma PT-101, FIC-2003 o TT-15A.`)
-    if (enArchivo.has(tag)) return error(`Está repetido: ya aparece en la fila ${enArchivo.get(tag)}.`)
-    enArchivo.set(tag, fila)
 
     // Solo los campos que traen algo en esta fila.
     const leido: Partial<InstrumentoImportado> = {}
@@ -257,6 +298,14 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         const f = fecha(v)
         if (f === 'malo') errores.push(`Fecha "${t}" no reconocida (usa día/mes/año).`)
         else leido.proximaCalibracion = f
+      } else if (campo === 'subArea') {
+        leido.subArea = ['sinsubarea', 'ninguna', 'ninguno'].includes(clave(t)) ? '' : t
+      } else if (campo === 'disparaCaldera') {
+        const b = siNo(t)
+        if (b === null) errores.push(`Dispara caldera "${t}": escribe Sí o No.`)
+        else leido.disparaCaldera = b
+      } else if (campo === 'notaDisparo') {
+        leido.notaDisparo = t.slice(0, 300)
       } else if (campo === 'servicio') {
         if (t.length > 200) errores.push('El servicio pasa de 200 letras.')
         else leido.servicio = t
@@ -264,9 +313,38 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         leido[campo] = t.slice(0, 200)
       }
     }
+    // La sub área se escribe como está dada de alta en esa área.
+    if (leido.subArea) {
+      if (!leido.area) errores.push('Si pones Sub área, pon también el Área.')
+      else {
+        const conocida = subareas.find((s) => s.area === leido.area && clave(s.nombre) === clave(leido.subArea!))
+        if (conocida) leido.subArea = conocida.nombre
+        else errores.push(`Sub área "${leido.subArea}" no existe en ${leido.area}: agrégala en Menú > Sub áreas.`)
+      }
+    }
     if (errores.length) return error(errores.join(' '))
 
-    const existente = porTag.get(tag)
+    const llave = `${tag}|${leido.area ?? '?'}|${leido.subArea ?? '?'}`
+    if (enArchivo.has(llave)) return error(`Está repetido: ya aparece en la fila ${enArchivo.get(llave)}.`)
+    enArchivo.set(llave, fila)
+
+    const mismos = porTag.get(tag) ?? []
+    const delArea = leido.area ? mismos.filter((e) => e.datos.area === leido.area) : mismos
+    let existente: Existente | undefined
+    if (leido.subArea !== undefined) {
+      existente =
+        delArea.find((e) => subDe(e) === leido.subArea) ??
+        // Uno que aún no tenía sub área la recibe, en vez de crear otro con el mismo tag.
+        (leido.subArea ? delArea.find((e) => subDe(e) === '' && !usados.has(e.id)) : undefined)
+    } else if (delArea.length > 1) {
+      const lugares = delArea.map((e) => dondeEsta(e.datos as { area: string; subArea?: string })).join('; ')
+      return error(`${tag} está en ${delArea.length} lugares (${lugares}): pon el Área y la Sub área para saber cuál es.`)
+    } else existente = delArea[0]
+    if (existente) {
+      if (usados.has(existente.id)) return error(`Está repetido: ya aparece en la fila ${usados.get(existente.id)}.`)
+      usados.set(existente.id, fila)
+    }
+
     const min = leido.rangoMin ?? (existente?.datos.rangoMin as number | null | undefined) ?? null
     const max = leido.rangoMax ?? (existente?.datos.rangoMax as number | null | undefined) ?? null
     if (min !== null && max !== null && max <= min) return error('El rango máximo debe ser mayor que el mínimo.')
@@ -293,6 +371,7 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         tagISA: tag,
         servicio: leido.servicio,
         area: leido.area,
+        subArea: leido.subArea ?? '',
         ubicacionTexto: leido.ubicacionTexto ?? '',
         lazo: leido.lazo ?? '',
         pid: leido.pid ?? '',
@@ -305,6 +384,8 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         senal: leido.senal ?? '4-20 mA',
         alimentacion: leido.alimentacion ?? '',
         estado: leido.estado ?? 'Operando',
+        disparaCaldera: leido.disparaCaldera ?? false,
+        notaDisparo: leido.notaDisparo ?? '',
         proximaCalibracion: leido.proximaCalibracion ?? null,
       },
     })

@@ -128,10 +128,13 @@ async function quien(ev: FirestoreAuthEvent<unknown>, pista: unknown): Promise<P
   return uid ? { uid, nombre: uid } : null
 }
 
+/** "PT-101", o "PT-101 (Caldera 2)" si tiene sub área (el tag se puede repetir en otra). */
+const etiquetaDe = (d: DocumentData) => (d.subArea ? `${d.tagISA} (${d.subArea})` : String(d.tagISA))
+
 async function tagDe(instrumentoId: string, ...docs: (DocumentData | undefined)[]): Promise<string> {
-  for (const d of docs) if (typeof d?.tagISA === 'string') return d.tagISA
+  for (const d of docs) if (typeof d?.tagISA === 'string') return etiquetaDe(d)
   const inst = await db().doc(`instrumentos/${instrumentoId}`).get()
-  return (inst.get('tagISA') as string | undefined) ?? '(borrado)'
+  return inst.exists ? etiquetaDe(inst.data()!) : '(borrado)'
 }
 
 async function auditar(
@@ -176,7 +179,7 @@ export const auditarCalibracion = onDocumentWrittenWithAuthContext('instrumentos
 
 export const auditarFalla = onDocumentWrittenWithAuthContext('fallas/{id}', (ev) => {
   const d = ev.data?.after.data() ?? ev.data?.before.data()
-  return auditar(ev, 'fallas', (d?.instrumentoId as string | undefined) ?? null, async () => (d?.tagISA as string | undefined) ?? '')
+  return auditar(ev, 'fallas', (d?.instrumentoId as string | undefined) ?? null, async () => (d?.tagISA ? etiquetaDe(d) : ''))
 })
 
 /** El admin cambia el área de un usuario directo en Firestore (sin función): se anota aquí. */

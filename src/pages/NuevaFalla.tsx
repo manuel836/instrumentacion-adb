@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { reportarFalla } from '../lib/fallas'
 import { useInstrumentos } from '../lib/instrumentos'
 import { SelectorFotos, type FotoNueva } from '../components/SelectorFotos'
+import { dondeEsta } from '../types'
 
 export function NuevaFalla() {
   const [params] = useSearchParams()
@@ -21,7 +22,9 @@ export function NuevaFalla() {
   const sugerencias = useMemo(() => {
     const q = busqueda.trim().toUpperCase()
     if (!q || !instrumentos) return []
-    return instrumentos.filter((i) => i.tagISA.includes(q) || i.servicio.toUpperCase().includes(q)).slice(0, 8)
+    return instrumentos
+      .filter((i) => i.tagISA.includes(q) || i.servicio.toUpperCase().includes(q) || i.subArea.toUpperCase().includes(q))
+      .slice(0, 8)
   }, [busqueda, instrumentos])
 
   async function onSubmit(e: FormEvent) {
@@ -57,6 +60,7 @@ export function NuevaFalla() {
             <div>
               <span className="font-mono font-bold">{inst.tagISA}</span>
               <span className="ml-2 text-sm text-slate-600">{inst.servicio}</span>
+              <span className="block text-xs text-slate-500">{dondeEsta(inst)}</span>
             </div>
             {!params.get('instrumento') && (
               <button type="button" className="text-sm text-marca-700" onClick={() => setInstrumentoId('')}>
@@ -80,6 +84,7 @@ export function NuevaFalla() {
                     <button type="button" className="w-full px-3 py-2 text-left" onClick={() => setInstrumentoId(i.id)}>
                       <span className="font-mono font-bold">{i.tagISA}</span>
                       <span className="ml-2 text-sm text-slate-600">{i.servicio}</span>
+                      <span className="block text-xs text-slate-500">{dondeEsta(i)}</span>
                     </button>
                   </li>
                 ))}

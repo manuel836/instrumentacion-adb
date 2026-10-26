@@ -137,7 +137,8 @@ export function DetalleRefaccion() {
                   <option value="">Ninguno en particular</option>
                   {compatibles.map((i) => (
                     <option key={i.id} value={i.id}>
-                      {i.tagISA} · {i.servicio}
+                      {i.tagISA}
+                      {i.subArea && ` (${i.subArea})`} · {i.servicio}
                     </option>
                   ))}
                 </select>
@@ -177,6 +178,7 @@ export function DetalleRefaccion() {
               <li key={i.id}>
                 <Link to={`/instrumentos/${i.id}`} className="block rounded-full bg-marca-50 px-3 py-1 font-mono text-sm font-semibold text-marca-800">
                   {i.tagISA}
+                  {i.subArea && <span className="font-sans text-xs font-medium"> · {i.subArea}</span>}
                 </Link>
               </li>
             ))}

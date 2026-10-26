@@ -4,6 +4,7 @@ import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
 import { useFallas } from '../lib/fallas'
 import { useNoLeidosGeneral } from '../lib/chat'
+import { useNoLeidosPrivados } from '../lib/privados'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
 import { ConCarga } from './Diferida'
 import { Icono } from './Icono'
@@ -66,6 +67,11 @@ function Menu({
                 Usuarios
               </Link>
             )}
+            {usuarios && (
+              <Link to="/subareas" className={clase}>
+                Sub áreas
+              </Link>
+            )}
             <Link to="/refacciones" className={clase}>
               Refacciones
             </Link>
@@ -125,7 +131,8 @@ export function Layout() {
   const abiertas = fallas?.filter((f) => f.estado === 'Abierta').length ?? 0
   const { pathname } = useLocation()
   const noLeidos = useNoLeidosGeneral(user?.uid)
-  const sinLeer = pathname === '/chat' ? 0 : noLeidos
+  const privados = useNoLeidosPrivados(user?.uid)
+  const sinLeer = (pathname === '/chat' ? 0 : noLeidos) + privados
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
       <ArribaAlNavegar />

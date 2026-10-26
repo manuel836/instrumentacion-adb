@@ -4,12 +4,13 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthContext'
 import { buscarPorToken } from '../lib/instrumentos'
-import type { Publico } from '../types'
+import { dondeEsta, type Publico } from '../types'
 import { Estado } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
 import { ordenarConPortada } from '../components/Galeria'
 import { Icono } from '../components/Icono'
+import { AvisoDisparo } from '../components/AvisoDisparo'
 
 /** Destino de la URL grabada en el tag: ficha completa con sesión, vista de invitado sin ella. */
 export function Tag() {
@@ -57,12 +58,13 @@ function VistaInvitado({ token }: { token: string }) {
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl space-y-3 p-3">
+      {pub.disparaCaldera && <AvisoDisparo nota={pub.notaDisparo} />}
       <section className="tarjeta">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="font-mono text-2xl font-bold">{pub.tagISA}</h1>
             <p className="text-slate-700">{pub.servicio}</p>
-            <p className="text-sm text-slate-500">{pub.area}</p>
+            <p className="text-sm text-slate-500">{dondeEsta(pub)}</p>
           </div>
           <Estado estado={pub.estado} />
         </div>

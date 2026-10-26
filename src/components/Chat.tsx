@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
-import { enviarMensaje, MAX_FOTOS_MENSAJE, useMensajes } from '../lib/chat'
+import { enviarMensaje, MAX_FOTOS_MENSAJE, useMensajes, type Tambien } from '../lib/chat'
 import { FotoImg } from './FotoImg'
 import { Visor } from './Visor'
 import { Icono } from './Icono'
@@ -17,8 +17,29 @@ function dia(d: Date): string {
  * Hilo de chat: lista de mensajes y caja para escribir. Funciona sin señal:
  * lo escrito queda en el teléfono y se envía al reconectar.
  */
-export function Chat({ ruta, conFotos = false, vacio, alInicioAbajo = false }: { ruta: string; conFotos?: boolean; vacio: string; alInicioAbajo?: boolean }) {
-  const mensajes = useMensajes(ruta)
+export function Chat({
+  ruta,
+  conFotos = false,
+  vacio,
+  alInicioAbajo = false,
+  desde,
+  hasta,
+  cerrado,
+  tambien,
+}: {
+  ruta: string
+  conFotos?: boolean
+  vacio: string
+  alInicioAbajo?: boolean
+  /** Solo los mensajes desde esta hora; con `hasta`, un día del historial. */
+  desde?: Date
+  hasta?: Date
+  /** Ya no se puede escribir: este aviso va en lugar de la caja de texto. */
+  cerrado?: string
+  /** Escrituras que acompañan a cada mensaje (el resumen de un chat privado). */
+  tambien?: Tambien
+}) {
+  const mensajes = useMensajes(ruta, desde, hasta)
   const { user } = useAuth()
   const [texto, setTexto] = useState('')
   const [fotos, setFotos] = useState<File[]>([])
@@ -46,7 +67,7 @@ export function Chat({ ruta, conFotos = false, vacio, alInicioAbajo = false }: {
     setEnviando(true)
     setError('')
     try {
-      await enviarMensaje(ruta, texto, fotos, { uid: user.uid, nombre: user.displayName || user.email || 'Usuario' })
+      await enviarMensaje(ruta, texto, fotos, { uid: user.uid, nombre: user.displayName || user.email || 'Usuario' }, tambien)
       setTexto('')
       setFotos([])
     } catch (err) {
@@ -110,63 +131,70 @@ export function Chat({ ruta, conFotos = false, vacio, alInicioAbajo = false }: {
       )}
       <div ref={fin} />
 
-      <form onSubmit={onEnviar} className="space-y-2">
-        {fotos.length > 0 && (
-          <div className="flex gap-2">
-            {previews.map((u, i) => (
-              <div key={u} className="relative">
-                <img src={u} alt="" className="h-16 w-16 rounded object-cover" />
+      {cerrado ? (
+        <p className="flex items-start gap-2 rounded-lg bg-slate-100 p-3 text-sm text-slate-600">
+          <Icono nombre="candado" className="mt-0.5 size-4" />
+          {cerrado}
+        </p>
+      ) : (
+        <form onSubmit={onEnviar} className="space-y-2">
+          {fotos.length > 0 && (
+            <div className="flex gap-2">
+              {previews.map((u, i) => (
+                <div key={u} className="relative">
+                  <img src={u} alt="" className="h-16 w-16 rounded object-cover" />
+                  <button
+                    type="button"
+                    aria-label="Quitar foto"
+                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-slate-800 text-xs leading-5 text-white"
+                    onClick={() => setFotos(fotos.filter((_, j) => j !== i))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            {conFotos && (
+              <>
                 <button
                   type="button"
-                  aria-label="Quitar foto"
-                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-slate-800 text-xs leading-5 text-white"
-                  onClick={() => setFotos(fotos.filter((_, j) => j !== i))}
+                  aria-label="Agregar foto"
+                  className="btn-secundario shrink-0 px-3"
+                  disabled={fotos.length >= MAX_FOTOS_MENSAJE}
+                  onClick={() => input.current?.click()}
                 >
-                  ×
+                  <Icono nombre="camara" />
                 </button>
-              </div>
-            ))}
+                <input
+                  ref={input}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    setFotos([...fotos, ...Array.from(e.target.files ?? [])].slice(0, MAX_FOTOS_MENSAJE))
+                    e.target.value = ''
+                  }}
+                />
+              </>
+            )}
+            <textarea
+              className="campo max-h-32 min-h-11 resize-none py-2"
+              rows={1}
+              placeholder="Escribe un mensaje"
+              value={texto}
+              maxLength={2000}
+              onChange={(e) => setTexto(e.target.value)}
+            />
+            <button className="btn-primario shrink-0 px-4" disabled={enviando || (!texto.trim() && fotos.length === 0)}>
+              Enviar
+            </button>
           </div>
-        )}
-        <div className="flex items-end gap-2">
-          {conFotos && (
-            <>
-              <button
-                type="button"
-                aria-label="Agregar foto"
-                className="btn-secundario shrink-0 px-3"
-                disabled={fotos.length >= MAX_FOTOS_MENSAJE}
-                onClick={() => input.current?.click()}
-              >
-                <Icono nombre="camara" />
-              </button>
-              <input
-                ref={input}
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={(e) => {
-                  setFotos([...fotos, ...Array.from(e.target.files ?? [])].slice(0, MAX_FOTOS_MENSAJE))
-                  e.target.value = ''
-                }}
-              />
-            </>
-          )}
-          <textarea
-            className="campo max-h-32 min-h-11 resize-none py-2"
-            rows={1}
-            placeholder="Escribe un mensaje"
-            value={texto}
-            maxLength={2000}
-            onChange={(e) => setTexto(e.target.value)}
-          />
-          <button className="btn-primario shrink-0 px-4" disabled={enviando || (!texto.trim() && fotos.length === 0)}>
-            Enviar
-          </button>
-        </div>
-        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      </form>
+          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        </form>
+      )}
 
       {visor && <Visor fotos={visor.fotos} inicio={visor.i} onCerrar={() => setVisor(null)} />}
     </div>
