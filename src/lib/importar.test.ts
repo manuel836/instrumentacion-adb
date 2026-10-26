@@ -183,3 +183,25 @@ describe('disparo de caldera', () => {
     expect(a.errores.map((e) => e.mensaje)).toEqual(['Dispara caldera "quizá": escribe Sí o No.'])
   })
 })
+
+describe('unidades y alimentación', () => {
+  const hojas = (filas: (string | number | null)[][]) => [{ nombre: 'Instrumentos', filas: [['Tag ISA', 'Servicio', 'Área', 'Unidades', 'Alimentación'], ...filas] }]
+
+  it('las acomoda a las opciones de la lista y avisa la alimentación que no reconoce', () => {
+    const a = analizar(
+      hojas([
+        ['PT-101', 'Presión', 'vapor', 'Kg/cm2', '24 VDC lazo'],
+        ['TT-102', 'Temperatura', 'vapor', 'ºC', '127 VAC'],
+        ['AT-103', 'Conductividad', 'agua', 'galones', '220 VCA'],
+      ]),
+      [],
+      true,
+    )
+    expect(a.nuevos.map((n) => [n.datos.unidades, n.datos.alimentacion])).toEqual([
+      ['kg/cm²', '24 VCD'],
+      ['°C', '120 VCA'],
+      ['galones', '220 VCA'],
+    ])
+    expect(a.avisos.map((x) => [x.tag, x.mensaje])).toEqual([['AT-103', 'Alimentación "220 VCA" no es 24 VCD ni 120 VCA: se guarda tal cual.']])
+  })
+})

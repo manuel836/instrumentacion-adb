@@ -4,6 +4,7 @@
 
 import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type Area, type EstadoInstrumento, type InstrumentoNuevo } from '../types'
 import type { Celda, HojaLeida } from './xlsx'
+import { alimentacionConocida, unidadConocida } from './unidades'
 
 /** Datos de un instrumento tal como salen del archivo (la fecha aún como Date). */
 export type InstrumentoImportado = Omit<InstrumentoNuevo, 'proximaCalibracion' | 'nfcToken' | 'docs' | 'portadaMiniatura' | 'actualizado'> & {
@@ -38,9 +39,9 @@ export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: s
   { campo: 'serie', titulo: 'Serie', ayuda: 'Opcional. Número de serie.', ejemplo: '1234567', alias: ['numerodeserie', 'noserie', 'nserie', 'ns'] },
   { campo: 'rangoMin', titulo: 'Rango mín.', ayuda: 'Opcional. Número (acepta punto o coma decimal).', ejemplo: 0, alias: ['rangominimo', 'minimo', 'min'] },
   { campo: 'rangoMax', titulo: 'Rango máx.', ayuda: 'Opcional. Número mayor que el mínimo.', ejemplo: 20, alias: ['rangomaximo', 'maximo', 'max'] },
-  { campo: 'unidades', titulo: 'Unidades', ayuda: 'Opcional.', ejemplo: 'kg/cm²', alias: ['unidad', 'ue'] },
+  { campo: 'unidades', titulo: 'Unidades', ayuda: 'Opcional. Ej.: kg/cm², psi, °C, %, m³/h.', ejemplo: 'kg/cm²', alias: ['unidad', 'ue'] },
   { campo: 'senal', titulo: 'Señal', ayuda: `Opcional. Una de: ${SENALES.join(', ')}.`, ejemplo: '4-20 mA + HART', alias: ['salida', 'tipodesenal'] },
-  { campo: 'alimentacion', titulo: 'Alimentación', ayuda: 'Opcional.', ejemplo: '24 VDC lazo', alias: ['voltaje'] },
+  { campo: 'alimentacion', titulo: 'Alimentación', ayuda: 'Opcional. 24 VCD o 120 VCA.', ejemplo: '24 VCD', alias: ['voltaje'] },
   { campo: 'estado', titulo: 'Estado', ayuda: `Opcional (si va vacío: Operando). Uno de: ${ESTADOS_INSTRUMENTO.join(', ')}.`, ejemplo: 'Operando', alias: ['estatus', 'status'] },
   {
     campo: 'disparaCaldera',
@@ -289,6 +290,15 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         else {
           leido.senal = 'Otra'
           aviso(`Señal "${t}" no está en la lista: se guarda como "Otra".`)
+        }
+      } else if (campo === 'unidades') {
+        leido.unidades = unidadConocida(t) ?? t.slice(0, 200)
+      } else if (campo === 'alimentacion') {
+        const a = alimentacionConocida(t)
+        if (a) leido.alimentacion = a
+        else {
+          leido.alimentacion = t.slice(0, 200)
+          aviso(`Alimentación "${t}" no es 24 VCD ni 120 VCA: se guarda tal cual.`)
         }
       } else if (campo === 'rangoMin' || campo === 'rangoMax') {
         const n = numero(v)
