@@ -39,14 +39,15 @@ npm run dev
 
 Con `VITE_USE_EMULATORS=true`, los IDs de proyecto vacíos caen en `demo-instrumentacion-adb`.
 No copies `.env.example` tal cual: trae el ID del proyecto real y las Functions del emulador rechazan
-las llamadas (error de CORS).
+las llamadas (error de CORS). Para las pruebas e2e, compila con `--mode emuladores`: con `npm run build`
+el `.env.production` (proyecto real) gana sobre `.env.local`.
 
 Pruebas:
 
 - `npm test`: pruebas unitarias (token del tag, tamaño NDEF, cálculos de calibración, lectura de Excel
   y CSV para importar, y el aviso semanal de calibraciones de las Functions).
 - `npm run test:reglas`: reglas de Firestore contra el emulador.
-- `node e2e/fase1.cjs`: flujo completo con Playwright contra `npm run build && npx vite preview --port 4173`
+- `node e2e/fase1.cjs`: flujo completo con Playwright contra `npx vite build --mode emuladores && npx vite preview --port 4173`
   y los emuladores (alta, grabar tag con NFC simulado, fotos, invitado, modo avión y cola de subida).
 - `node e2e/fase2.cjs`: fallas de punta a punta (alta de usuarios, reporte sin señal, tomar, cerrar y
   estado del instrumento). Correr después de `fase1.cjs`.
@@ -86,6 +87,9 @@ Pruebas:
   falla al momento, fotos viejas atoradas en PNG que se recuperan solas, reintento que no resube lo ya
   subido, foto que llega antes que su mensaje, subida rechazada que se detiene y se descarta, y el admin
   sin señal con el token vencido. Crea sus propios datos: se puede correr en cualquier momento.
+- `node e2e/formulario-instrumento.cjs`: unidades y alimentación de una lista (y las escritas a mano de
+  antes se acomodan), quitar una próxima calibración puesta por error, y documentos con la cámara, de la
+  galería (varias a la vez) o PDF, con la foto subida completa. Crea sus propios datos.
 
 Con los emuladores recién arrancados y el admin creado, el orden que funciona es: fase1, fase2, fase3,
 fase4, usuarios, restablecer, borrar, borrar-falla, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,
