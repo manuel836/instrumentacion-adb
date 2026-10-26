@@ -1,7 +1,9 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { deleteField, doc, runTransaction, updateDoc } from 'firebase/firestore'
+import { deleteField, doc, getDocFromCache, runTransaction, updateDoc } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { MAX_BYTES_FOTO } from '../config'
 import { db, storage } from '../firebase'
+import { recodificar } from './images'
 
 // Firebase Storage no encola subidas sin señal, así que las fotos y documentos
 // esperan aquí (IndexedDB) y se suben al recuperar la conexión.
@@ -24,6 +26,10 @@ export interface Subida {
   creado: number
   intentos: number
   error?: string
+  /** Rechazos seguidos del servidor (permiso, tipo o tamaño), que no se arreglan con señal. */
+  rechazos?: number
+  /** El servidor la rechazó varias veces: ya no se reintenta sola, la persona decide. */
+  detenida?: boolean
 }
 
 interface ColaDB extends DBSchema {
@@ -42,12 +48,19 @@ function abrir() {
   return dbPromise
 }
 
-type Oyente = (pendientes: number) => void
+export interface EstadoCola {
+  /** Todo lo que falta subir, incluidas las detenidas. */
+  pendientes: number
+  detenidas: number
+}
+
+type Oyente = (estado: EstadoCola) => void
 const oyentes = new Set<Oyente>()
 
 async function avisar() {
-  const n = await (await abrir()).count('subidas')
-  oyentes.forEach((o) => o(n))
+  const todas = await (await abrir()).getAll('subidas')
+  const estado = { pendientes: todas.length, detenidas: todas.filter((s) => s.detenida).length }
+  oyentes.forEach((o) => o(estado))
 }
 
 export function suscribirPendientes(o: Oyente): () => void {
@@ -89,6 +102,28 @@ export async function descartarRuta(ruta: string): Promise<void> {
   await avisar()
 }
 
+/** Las subidas que el servidor rechazó, para que la persona las reintente o las descarte. */
+export async function subidasDetenidas(): Promise<Subida[]> {
+  return (await (await abrir()).getAll('subidas')).filter((s) => s.detenida)
+}
+
+/** Descarta una subida detenida: el archivo no llegará a los demás teléfonos. */
+export async function descartarSubida(id: string): Promise<void> {
+  await (await abrir()).delete('subidas', id)
+  await avisar()
+}
+
+/** Vuelve a intentar las subidas detenidas. */
+export async function reintentarDetenidas(): Promise<void> {
+  const d = await abrir()
+  for (const s of await d.getAll('subidas')) {
+    if (s.detenida) await d.put('subidas', { ...s, detenida: false, rechazos: 0 })
+  }
+  await avisar()
+  fallasSeguidas = 0
+  await vaciarCola()
+}
+
 /** Quita de la cola todo lo que va dentro de una carpeta (una falla eliminada con su chat). */
 export async function descartarDePrefijo(prefijo: string): Promise<void> {
   const d = await abrir()
@@ -105,7 +140,13 @@ async function aplicarDestino(s: Subida, url: string) {
     const { campo, clave = 'ruta', campoUrl = 'url' } = s.destino
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(ref_)
-      if (!snap.exists()) return
+      if (!snap.exists()) {
+        // La transacción lee del servidor. Si el mensaje acaba de escribirse (o se escribió sin
+        // señal) puede no haber llegado aún: se reintenta. Si no, se borró y la subida sobra.
+        const local = await getDocFromCache(ref_).catch(() => null)
+        if (local?.metadata.hasPendingWrites) throw new Error('El documento aún no llega al servidor')
+        return
+      }
       const arr = ((snap.get(campo) as Record<string, unknown>[] | undefined) ?? []).map((x) =>
         x[clave] === s.ruta ? { ...x, [campoUrl]: url } : x,
       )
@@ -113,6 +154,36 @@ async function aplicarDestino(s: Subida, url: string) {
     })
   }
 }
+
+/**
+ * Antes de este arreglo el iPhone guardaba las fotos como PNG (Safari no sabe hacer WebP)
+ * y Storage las rechazaba por tipo o por tamaño. Se vuelven a codificar aquí y se guardan
+ * así en la cola, para no repetir el trabajo si la subida falla por señal.
+ */
+async function prepararFoto(d: IDBPDatabase<ColaDB>, s: Subida): Promise<Subida> {
+  const esFoto = s.contentType === 'image/webp' || s.contentType === 'image/jpeg'
+  if (!esFoto || (s.blob.type === s.contentType && s.blob.size < MAX_BYTES_FOTO)) return s
+  const { blob, tipo } = await recodificar(s.blob)
+  const lista = { ...s, blob, contentType: tipo }
+  await guardarSiSigue(d, lista)
+  return lista
+}
+
+/** Guarda los cambios de una subida, salvo que la hayan descartado mientras se subía. */
+async function guardarSiSigue(d: IDBPDatabase<ColaDB>, s: Subida) {
+  const tx = d.transaction('subidas', 'readwrite')
+  if (await tx.store.getKey(s.id)) await tx.store.put(s)
+  await tx.done
+}
+
+/** Errores que no se arreglan reintentando: el servidor no acepta el archivo o el teléfono ya no lo puede leer. */
+function esPermanente(err: unknown): boolean {
+  if (err instanceof DOMException) return true
+  const code = (err as { code?: string }).code ?? ''
+  return ['storage/unauthorized', 'storage/invalid-argument', 'permission-denied', 'invalid-argument'].includes(code)
+}
+/** Con tantos rechazos seguidos del servidor una subida se detiene. */
+const MAX_RECHAZOS = 3
 
 let vaciando: Promise<void> | null = null
 let reintento: ReturnType<typeof setTimeout> | null = null
@@ -148,24 +219,37 @@ export function vaciarCola(): Promise<void> {
       todas.sort((a, b) => a.creado - b.creado)
       for (const s of todas) {
         if (!navigator.onLine) break
+        // Una detenida no frena a las demás: se salta hasta que la persona la reintente.
+        if (s.detenida) continue
+        let actual = s
         try {
-          const r = ref(storage, s.ruta)
-          await uploadBytes(r, s.blob, { contentType: s.contentType, cacheControl: 'public, max-age=31536000' })
-          const url = await getDownloadURL(r)
-          await aplicarDestino(s, url)
-          await d.delete('subidas', s.id)
-          const quedan = await d.countFromIndex('subidas', 'docPath', s.destino.docPath)
-          if (quedan === 0 && s.destino.tipo === 'campo') {
-            await updateDoc(doc(db, s.destino.docPath), { pendiente: deleteField() }).catch(() => undefined)
+          actual = await prepararFoto(d, s)
+          const r = ref(storage, actual.ruta)
+          // Si un intento anterior alcanzó a subir el archivo y falló después (al anotar la URL),
+          // no se vuelve a subir: las reglas no dejan reemplazar las fotos de fallas y chats.
+          let url = actual.intentos > 0 ? await getDownloadURL(r).catch(() => null) : null
+          if (!url) {
+            // Se sube una copia en memoria: en el iPhone, un archivo leído de IndexedDB a veces no se envía.
+            const datos = new Uint8Array(await actual.blob.arrayBuffer())
+            await uploadBytes(r, datos, { contentType: actual.contentType, cacheControl: 'public, max-age=31536000' })
+            url = await getDownloadURL(r)
+          }
+          await aplicarDestino(actual, url)
+          await d.delete('subidas', actual.id)
+          const quedan = await d.countFromIndex('subidas', 'docPath', actual.destino.docPath)
+          if (quedan === 0 && actual.destino.tipo === 'campo') {
+            await updateDoc(doc(db, actual.destino.docPath), { pendiente: deleteField() }).catch(() => undefined)
           }
         } catch (err) {
           // El documento destino ya no existe (se borró la foto): la subida sobra.
           if ((err as { code?: string }).code === 'not-found') {
-            await d.delete('subidas', s.id)
+            await d.delete('subidas', actual.id)
             continue
           }
-          fallaron++
-          await d.put('subidas', { ...s, intentos: s.intentos + 1, error: String(err) })
+          const rechazos = esPermanente(err) ? (actual.rechazos ?? 0) + 1 : 0
+          const detenida = rechazos >= MAX_RECHAZOS
+          if (!detenida) fallaron++
+          await guardarSiSigue(d, { ...actual, intentos: actual.intentos + 1, rechazos, error: String(err), detenida })
         }
         await avisar()
       }

@@ -170,12 +170,12 @@ export async function agregarFotosUbicacion(
 ) {
   const items: Parameters<typeof encolar>[0] = []
   for (const [i, { archivo, pie }] of archivos.entries()) {
-    const { completa, miniatura } = await comprimirFoto(archivo)
+    const { completa, miniatura, tipo, ext } = await comprimirFoto(archivo)
     const fotoRef = doc(collection(db, 'instrumentos', instrumentoId, 'ubicacion'))
     const base = `instrumentos/${instrumentoId}/ubicacion/${fotoRef.id}`
     const foto: Omit<FotoUbicacion, 'id' | 'fecha'> = {
-      ruta: `${base}.webp`,
-      miniatura: `${base}_min.webp`,
+      ruta: `${base}.${ext}`,
+      miniatura: `${base}_min.${ext}`,
       url: null,
       miniaturaUrl: null,
       pie,
@@ -187,11 +187,11 @@ export async function agregarFotosUbicacion(
     void setDoc(fotoRef, { ...foto, fecha: serverTimestamp() })
     const docPath = fotoRef.path
     items.push(
-      { ruta: foto.ruta, blob: completa, contentType: 'image/webp', destino: { tipo: 'campo', docPath, campo: 'url' } },
+      { ruta: foto.ruta, blob: completa, contentType: tipo, destino: { tipo: 'campo', docPath, campo: 'url' } },
       {
         ruta: foto.miniatura,
         blob: miniatura,
-        contentType: 'image/webp',
+        contentType: tipo,
         destino: { tipo: 'campo', docPath, campo: 'miniaturaUrl' },
       },
     )

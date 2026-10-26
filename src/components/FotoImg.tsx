@@ -5,9 +5,11 @@ interface Props extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   url: string | null | undefined
   /** Ruta en Storage; si la foto sigue en la cola local se muestra desde el teléfono. */
   ruta?: string
+  /** Lo que se muestra si la foto aún no se sube y no está en este teléfono (la miniatura). */
+  respaldo?: string | null
 }
 
-export function FotoImg({ url, ruta, className, ...rest }: Props) {
+export function FotoImg({ url, ruta, respaldo, className, ...rest }: Props) {
   const [local, setLocal] = useState<string | null>(null)
   const [fallo, setFallo] = useState(false)
 
@@ -35,7 +37,7 @@ export function FotoImg({ url, ruta, className, ...rest }: Props) {
     }
   }, [url, ruta])
 
-  const src = url ?? local
+  const src = url ?? local ?? respaldo
   if (!src) return <div className={`animate-pulse bg-slate-200 ${className ?? ''}`} aria-label="Foto pendiente" />
   if (fallo) return <div className={`bg-slate-200 ${className ?? ''}`} aria-label="Foto no disponible sin señal" />
   return <img src={src} loading="lazy" decoding="async" className={className} onError={() => setFallo(true)} {...rest} />

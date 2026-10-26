@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { enviarMensaje, MAX_FOTOS_MENSAJE, useMensajes, type Tambien } from '../lib/chat'
 import { FotoImg } from './FotoImg'
-import { Visor } from './Visor'
+import { Visor, type FotoVisor } from './Visor'
 import { Icono } from './Icono'
 
 function dia(d: Date): string {
@@ -45,7 +45,7 @@ export function Chat({
   const [fotos, setFotos] = useState<File[]>([])
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
-  const [visor, setVisor] = useState<{ fotos: { url: string | null; ruta: string; pie: string }[]; i: number } | null>(null)
+  const [visor, setVisor] = useState<{ fotos: FotoVisor[]; i: number } | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const fin = useRef<HTMLDivElement>(null)
   const antes = useRef<number | null>(null)
@@ -105,7 +105,7 @@ export function Chat({
                             key={f.ruta}
                             type="button"
                             className="overflow-hidden rounded-lg"
-                            onClick={() => setVisor({ fotos: m.fotos.map((x) => ({ url: x.url, ruta: x.ruta, pie: '' })), i })}
+                            onClick={() => setVisor({ fotos: m.fotos.map((x) => ({ url: x.url, ruta: x.ruta, miniaturaUrl: x.miniaturaUrl, pie: '' })), i })}
                           >
                             <FotoImg url={f.miniaturaUrl} ruta={f.miniatura} alt="" className="aspect-square w-full min-w-24 object-cover" />
                           </button>

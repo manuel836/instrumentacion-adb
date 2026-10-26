@@ -6,35 +6,32 @@ service firebase.storage {
   match /b/{bucket}/o {
     function conRol() { return request.auth != null && request.auth.token.get('rol', '') in ['admin', 'tecnico', 'operador']; }
     function tecnico() { return request.auth != null && request.auth.token.get('rol', '') in ['admin', 'tecnico']; }
+    // Fotos reducidas en el teléfono: WebP, o JPEG en el iPhone (Safari no sabe hacer WebP).
+    function foto() {
+      return request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType in ['image/webp', 'image/jpeg'];
+    }
 
     match /instrumentos/{id}/ubicacion/{archivo} {
       allow read: if conRol();
-      allow create, update: if tecnico()
-        && request.resource.size < 3 * 1024 * 1024
-        && request.resource.contentType == 'image/webp';
+      allow create, update: if tecnico() && foto();
       allow delete: if tecnico();
     }
 
     match /fallas/{fallaId}/{archivo} {
       allow read: if conRol();
-      allow create: if conRol()
-        && request.resource.size < 3 * 1024 * 1024
-        && request.resource.contentType == 'image/webp';
+      allow create: if conRol() && foto();
     }
 
     match /fallas/{fallaId}/mensajes/{msgId}/{archivo} {
       allow read: if conRol();
-      allow create: if conRol()
-        && request.resource.size < 3 * 1024 * 1024
-        && request.resource.contentType == 'image/webp';
+      allow create: if conRol() && foto();
     }
 
     // Fotos de los chats privados: solo las dos personas de la conversación.
     match /chats_privados/{chatId}/mensajes/{msgId}/{archivo} {
       allow read: if conRol() && request.auth.uid in chatId.split('_');
-      allow create: if conRol() && request.auth.uid in chatId.split('_')
-        && request.resource.size < 3 * 1024 * 1024
-        && request.resource.contentType == 'image/webp';
+      allow create: if conRol() && request.auth.uid in chatId.split('_') && foto();
     }
 
     match /instrumentos/{id}/docs/{archivo} {

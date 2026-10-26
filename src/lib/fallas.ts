@@ -68,9 +68,9 @@ export function useFalla(id: string | undefined) {
 export async function reportarFalla(inst: Instrumento, descripcion: string, archivos: Blob[], quien: Persona): Promise<string> {
   const ref_ = doc(colFallas)
   const comprimidas = await Promise.all(archivos.map((a) => comprimirFoto(a)))
-  const fotos: FotoFalla[] = comprimidas.map((_, i) => ({
-    ruta: `fallas/${ref_.id}/${i}.webp`,
-    miniatura: `fallas/${ref_.id}/${i}_min.webp`,
+  const fotos: FotoFalla[] = comprimidas.map((c, i) => ({
+    ruta: `fallas/${ref_.id}/${i}.${c.ext}`,
+    miniatura: `fallas/${ref_.id}/${i}_min.${c.ext}`,
     url: null,
     miniaturaUrl: null,
   }))
@@ -91,11 +91,11 @@ export async function reportarFalla(inst: Instrumento, descripcion: string, arch
   if (fotos.length > 0) {
     await encolar(
       comprimidas.flatMap((c, i) => [
-        { ruta: fotos[i].ruta, blob: c.completa, contentType: 'image/webp', destino: { tipo: 'arreglo' as const, docPath: ref_.path, campo: 'fotos' } },
+        { ruta: fotos[i].ruta, blob: c.completa, contentType: c.tipo, destino: { tipo: 'arreglo' as const, docPath: ref_.path, campo: 'fotos' } },
         {
           ruta: fotos[i].miniatura,
           blob: c.miniatura,
-          contentType: 'image/webp',
+          contentType: c.tipo,
           destino: { tipo: 'arreglo' as const, docPath: ref_.path, campo: 'fotos', clave: 'miniatura', campoUrl: 'miniaturaUrl' },
         },
       ]),
