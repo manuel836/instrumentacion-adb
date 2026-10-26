@@ -170,6 +170,29 @@ export const eliminarUsuario = onCall(PUBLICA, async (req) => {
   return {}
 })
 
+/**
+ * Pone una contraseña temporal a quien olvidó la suya. Se cierran sus sesiones abiertas
+ * y, al entrar, la app le pide elegir una nueva. La contraseña no queda en la bitácora.
+ */
+export const restablecerContrasena = onCall(PUBLICA, async (req) => {
+  exigirAdmin(req)
+  const uid = exigirTexto(req.data?.uid, 'el usuario')
+  const password = exigirTexto(req.data?.password, 'la contraseña')
+  if (uid === req.auth?.uid) throw new HttpsError('failed-precondition', 'Tu propia contraseña se cambia en Menú > Cambiar contraseña.')
+  if (password.length < 8) throw new HttpsError('invalid-argument', 'La contraseña debe tener al menos 8 caracteres.')
+  await getAuth()
+    .updateUser(uid, { password })
+    .catch((e: { code?: string }) => {
+      if (e.code === 'auth/user-not-found') throw new HttpsError('not-found', 'Ese usuario ya no existe.')
+      if (e.code === 'auth/invalid-password') throw new HttpsError('invalid-argument', 'La contraseña no es válida.')
+      throw e
+    })
+  await getAuth().revokeRefreshTokens(uid)
+  await db.doc(`usuarios/${uid}`).set({ cambiarContrasena: true }, { merge: true })
+  await auditarUsuario(req, uid, 'editar', { contrasena: 'anterior' }, { contrasena: 'temporal (puesta por el admin)' })
+  return {}
+})
+
 export const revocarSesiones = onCall(PUBLICA, async (req) => {
   exigirAdmin(req)
   const uid = exigirTexto(req.data?.uid, 'el usuario')

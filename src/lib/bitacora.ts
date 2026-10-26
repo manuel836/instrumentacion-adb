@@ -142,6 +142,7 @@ const CAMPOS: Record<string, string> = {
   email: 'Correo',
   rol: 'Rol',
   activo: 'Activo',
+  contrasena: 'Contraseña',
 }
 
 export const nombreCampo = (c: string) => CAMPOS[c] ?? c

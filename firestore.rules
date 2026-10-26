@@ -44,8 +44,11 @@ service cloud.firestore {
 
     match /usuarios/{uid} {
       allow read: if admin() || (conSesion() && request.auth.uid == uid);
-      // Cada usuario solo registra sus tokens de notificación; el resto lo escriben las Functions.
-      allow update: if conSesion() && request.auth.uid == uid && cambian().hasOnly(['tokensFCM']);
+      // Cada usuario solo registra sus tokens de notificación y, después de cambiar una
+      // contraseña temporal, quita el aviso (nunca lo pone). El resto lo escriben las Functions.
+      allow update: if conSesion() && request.auth.uid == uid
+        && cambian().hasOnly(['tokensFCM', 'cambiarContrasena'])
+        && (!cambian().hasAny(['cambiarContrasena']) || request.resource.data.cambiarContrasena == false);
     }
 
     match /instrumentos/{id} {

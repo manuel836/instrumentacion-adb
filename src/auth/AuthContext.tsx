@@ -8,6 +8,8 @@ interface AuthState {
   cargando: boolean
   user: User | null
   rol: Rol | null
+  /** El admin le puso una contraseña temporal: hay que pedirle que elija una nueva. */
+  cambiarContrasena: boolean
   entrar: (email: string, password: string) => Promise<void>
   salir: () => Promise<void>
 }
@@ -18,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [cargando, setCargando] = useState(true)
   const [user, setUser] = useState<User | null>(null)
   const [rol, setRol] = useState<Rol | null>(null)
+  const [cambiarContrasena, setCambiarContrasena] = useState(false)
 
   useEffect(
     () =>
@@ -38,11 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Cuando el Admin cambia el rol, la Function marca rolActualizado y aquí se renueva el token.
   useEffect(() => {
+    setCambiarContrasena(false)
     if (!user) return
     let primero = true
     return onSnapshot(
       doc(db, 'usuarios', user.uid),
       (snap) => {
+        setCambiarContrasena(snap.get('cambiarContrasena') === true)
         if (primero) {
           primero = false
           return
@@ -58,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cargando,
     user,
     rol,
+    cambiarContrasena,
     entrar: async (email, password) => {
       await signInWithEmailAndPassword(auth, email.trim(), password)
     },

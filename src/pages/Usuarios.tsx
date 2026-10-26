@@ -14,6 +14,15 @@ const asignarRol = httpsCallable<{ uid: string; rol: Rol }>(functions, 'asignarR
 const cambiarActivo = httpsCallable<{ uid: string; activo: boolean }>(functions, 'cambiarActivo')
 const revocarSesiones = httpsCallable<{ uid: string }>(functions, 'revocarSesiones')
 const eliminarUsuario = httpsCallable<{ uid: string }>(functions, 'eliminarUsuario')
+const restablecerContrasena = httpsCallable<{ uid: string; password: string }>(functions, 'restablecerContrasena')
+
+/** Contraseña temporal fácil de dictar: sin letras que se confunden (l, 1, o, 0). */
+function contrasenaTemporal(): string {
+  const letras = 'abcdefghjkmnpqrstuvwxyz23456789'
+  const azar = crypto.getRandomValues(new Uint32Array(8))
+  const s = Array.from(azar, (n) => letras[n % letras.length]).join('')
+  return `${s.slice(0, 4)}-${s.slice(4)}`
+}
 
 const ROLES: { v: Rol; t: string }[] = [
   { v: 'operador', t: 'Operador' },
@@ -29,6 +38,7 @@ export function Usuarios() {
   const [form, setForm] = useState({ nombre: '', email: '', password: '', rol: 'operador' as Rol, area: '' })
   const [enviando, setEnviando] = useState(false)
   const [porEliminar, setPorEliminar] = useState<string | null>(null)
+  const [nuevaClave, setNuevaClave] = useState<{ uid: string; password: string } | null>(null)
 
   useEffect(
     () =>
@@ -43,6 +53,8 @@ export function Usuarios() {
     try {
       await f()
       setMensaje(ok)
+      // El aviso sale arriba: se sube para que el admin lo vea (lleva la contraseña temporal).
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return true
     } catch (err) {
       const code = (err as { code?: string }).code
@@ -51,6 +63,7 @@ export function Usuarios() {
           ? 'Error: no se pudo contactar al servidor. Revisa tu señal o avisa al administrador del sistema.'
           : `Error: ${(err as Error).message}`,
       )
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return false
     }
   }
@@ -127,16 +140,26 @@ export function Usuarios() {
               </select>
             </div>
             {u.uid !== user?.uid && (
-              <div className="flex gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-2 text-sm">
                 <button
-                  className="btn-secundario flex-1 py-1.5 text-sm"
+                  className="btn-secundario py-1.5 text-sm"
+                  disabled={!online}
+                  onClick={() => {
+                    setPorEliminar(null)
+                    setNuevaClave({ uid: u.uid, password: contrasenaTemporal() })
+                  }}
+                >
+                  Nueva contraseña
+                </button>
+                <button
+                  className="btn-secundario py-1.5 text-sm"
                   disabled={!online}
                   onClick={() => void accion(() => revocarSesiones({ uid: u.uid }), 'Sesiones cerradas en todos sus teléfonos.')}
                 >
                   Cerrar sesiones
                 </button>
                 <button
-                  className={`${u.activo ? 'btn-peligro' : 'btn-secundario'} flex-1 py-1.5 text-sm`}
+                  className={`${u.activo ? 'btn-peligro' : 'btn-secundario'} py-1.5 text-sm`}
                   disabled={!online}
                   onClick={() =>
                     void accion(() => cambiarActivo({ uid: u.uid, activo: !u.activo }), u.activo ? 'Usuario desactivado.' : 'Usuario reactivado.')
@@ -144,10 +167,51 @@ export function Usuarios() {
                 >
                   {u.activo ? 'Dar de baja' : 'Reactivar'}
                 </button>
-                <button className="btn-peligro flex-1 py-1.5 text-sm" disabled={!online} onClick={() => setPorEliminar(u.uid)}>
+                <button
+                  className="btn-peligro py-1.5 text-sm"
+                  disabled={!online}
+                  onClick={() => {
+                    setNuevaClave(null)
+                    setPorEliminar(u.uid)
+                  }}
+                >
                   Eliminar
                 </button>
               </div>
+            )}
+            {nuevaClave?.uid === u.uid && (
+              <form
+                className="space-y-2 rounded-lg bg-slate-50 p-3 text-sm"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const { password } = nuevaClave
+                  setNuevaClave(null)
+                  void accion(
+                    () => restablecerContrasena({ uid: u.uid, password }),
+                    `Listo. Dale a ${u.nombre} esta contraseña temporal: ${password}. Al entrar, la app le pedirá elegir una nueva.`,
+                  )
+                }}
+              >
+                <p>
+                  Contraseña temporal para <b>{u.nombre}</b>. Puedes dejar la que sugerimos o escribir otra. Sus sesiones abiertas se cerrarán.
+                </p>
+                <input
+                  className="campo font-mono"
+                  aria-label="Contraseña temporal"
+                  minLength={8}
+                  required
+                  value={nuevaClave.password}
+                  onChange={(e) => setNuevaClave({ uid: u.uid, password: e.target.value })}
+                />
+                <div className="flex gap-2">
+                  <button type="button" className="btn-secundario flex-1 py-1.5 text-sm" onClick={() => setNuevaClave(null)}>
+                    Cancelar
+                  </button>
+                  <button className="btn-primario flex-1 py-1.5 text-sm" disabled={!online}>
+                    Poner contraseña
+                  </button>
+                </div>
+              </form>
             )}
             {porEliminar === u.uid && (
               <div className="space-y-2 rounded-lg bg-red-50 p-3 text-sm text-red-900">

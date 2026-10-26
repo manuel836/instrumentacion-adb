@@ -19,6 +19,18 @@ export function BarraConexion() {
   )
 }
 
+/** Después de que el admin le pone una contraseña temporal, se le pide elegir la suya. */
+function AvisoContrasena() {
+  const { cambiarContrasena } = useAuth()
+  const { pathname } = useLocation()
+  if (!cambiarContrasena || pathname === '/cuenta') return null
+  return (
+    <Link to="/cuenta" className="block bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900">
+      Entraste con una contraseña temporal. Toca aquí para elegir la tuya.
+    </Link>
+  )
+}
+
 function Menu({ bitacora, exportar, onSalir }: { bitacora: boolean; exportar: boolean; onSalir: () => void }) {
   const [abierto, setAbierto] = useState(false)
   const { pathname } = useLocation()
@@ -83,6 +95,7 @@ export function Layout() {
           <Menu bitacora={p.verBitacora} exportar={p.exportar} onSalir={() => void salir()} />
         </div>
         <BarraConexion />
+        <AvisoContrasena />
         <AvisoNotificaciones />
       </header>
       <main className="flex-1 pb-24">

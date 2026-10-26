@@ -105,6 +105,14 @@ describe('usuarios y bitácora', () => {
     await assertFails(updateDoc(doc(como('operador'), 'usuarios/u-operador'), { rol: 'admin' }))
     await assertFails(getDoc(doc(como('tecnico'), 'usuarios/u-operador')))
   })
+  it('quien tiene contraseña temporal solo puede quitarse el aviso, no ponérselo', async () => {
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'usuarios/u-operador'), { cambiarContrasena: true }))
+    const ref = doc(como('operador'), 'usuarios/u-operador')
+    await assertSucceeds(updateDoc(ref, { tokensFCM: ['t'] }))
+    await assertSucceeds(updateDoc(ref, { cambiarContrasena: false }))
+    await assertFails(updateDoc(ref, { cambiarContrasena: true }))
+    await assertFails(updateDoc(doc(como('operador', 'u-otro'), 'usuarios/u-operador'), { cambiarContrasena: false }))
+  })
   it('la bitácora no la edita nadie y el operador no la ve', async () => {
     await assertSucceeds(getDoc(doc(como('tecnico'), 'auditoria/a1')))
     await assertFails(getDoc(doc(como('operador'), 'auditoria/a1')))
