@@ -20,6 +20,9 @@ async function entrar(browser, email, pass) {
   await page.fill('#pass', pass)
   await page.click('button:has-text("Entrar")')
   await page.waitForSelector('text=instrumentos')
+  // Después de entrar se abre el inicio; las pruebas trabajan desde el catálogo.
+  await page.goto(`${BASE}/catalogo`)
+  await page.waitForSelector('text=/de \\d+ instrumentos/')
   return { ctx, page }
 }
 
@@ -57,7 +60,7 @@ function textoXlsx(archivo) {
   await page.waitForSelector('li:has-text("Falla") >> text=Cerrada')
   console.log('cambios de estado de fallas en la bitácora ok')
 
-  await page.goto(BASE)
+  await page.goto(`${BASE}/catalogo`)
   await page.click('text=PT-101')
   await page.click('text=Ver bitácora de cambios de PT-101')
   await page.waitForSelector('text=Bitácora de')
@@ -82,7 +85,7 @@ function textoXlsx(archivo) {
   console.log('operador redirigido fuera de bitácora y exportes ok')
 
   // ---------- Exportes ----------
-  await page.goto(BASE)
+  await page.goto(`${BASE}/catalogo`)
   await page.click('text=Menú')
   await page.click('text=Exportar Excel / PDF')
   for (const [tipo, busca] of [

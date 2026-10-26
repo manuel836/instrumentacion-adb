@@ -10,6 +10,7 @@ import { Catalogo } from './pages/Catalogo'
 import { Exportar } from './pages/Exportar'
 import { Imprimir } from './pages/Imprimir'
 import { Importar } from './pages/Importar'
+import { Inicio } from './pages/Inicio'
 import { DetalleCalibracion } from './pages/DetalleCalibracion'
 import { NuevaCalibracion } from './pages/NuevaCalibracion'
 import { ChatGeneral } from './pages/ChatGeneral'
@@ -103,7 +104,7 @@ function Rutas() {
           </ConSesion>
         }
       >
-        <Route index element={<Catalogo />} />
+        <Route index element={<Inicio />} />
         <Route path="catalogo" element={<Catalogo />} />
         <Route path="escanear" element={<Escanear />} />
         <Route path="instrumentos/nuevo" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />

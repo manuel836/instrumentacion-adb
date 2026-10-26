@@ -19,12 +19,15 @@ async function entrar(browser, email, pass) {
   await page.fill('#pass', pass)
   await page.click('button:has-text("Entrar")')
   await page.waitForSelector('text=instrumentos')
+  // Después de entrar se abre el inicio; las pruebas trabajan desde el catálogo.
+  await page.goto(`${BASE}/catalogo`)
+  await page.waitForSelector('text=/de \\d+ instrumentos/')
   return { ctx, page }
 }
 
 /** Espera a que el catálogo muestre el estado esperado (la caché local puede ir un paso atrás). */
 async function esperarEstado(page, tag, estado) {
-  await page.goto(BASE)
+  await page.goto(`${BASE}/catalogo`)
   const fila = page.locator('a', { hasText: tag }).first()
   await fila.locator('span.rounded-full', { hasText: estado }).first().waitFor({ timeout: 20000 })
   return estado
@@ -53,7 +56,7 @@ async function esperarEstado(page, tag, estado) {
   const op = await entrar(browser, `op-${sufijo}@adb.test`, 'Prueba1234')
   await op.page.waitForSelector('text=PT-101')
   await op.page.evaluate(() => navigator.serviceWorker.ready)
-  const alta = await op.page.locator('nav >> text=Alta').count()
+  const alta = await op.page.locator('a[href="/instrumentos/nuevo"]').count()
   console.log('operador sin botón de alta:', alta === 0)
   await op.page.click('text=PT-101')
   await op.page.waitForSelector('text=Historial de fallas')
@@ -101,7 +104,7 @@ async function esperarEstado(page, tag, estado) {
   await op.page.waitForSelector('text=Toma de impulso tapada')
   console.log('el operador ve el cierre ok')
 
-  await admin.page.goto(BASE)
+  await admin.page.goto(`${BASE}/catalogo`)
   await admin.page.click('text=PT-101')
   await admin.page.waitForSelector('text=Lectura congelada')
   await shot(admin.page, '14-ficha-historial')

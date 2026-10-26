@@ -159,6 +159,11 @@ export function Catalogo() {
         {lista && lista.length > 0 && filtrados.length === 0 && (
           <p className="p-8 text-center text-slate-500">Ningún instrumento coincide con la búsqueda.</p>
         )}
+        {p.editarInstrumentos && (
+          <Link to="/instrumentos/nuevo" className="btn-primario fixed right-4 bottom-24 z-10 rounded-full px-5 py-3.5 shadow-lg">
+            ＋ Alta
+          </Link>
+        )}
         <div style={{ height: virtual.getTotalSize(), position: 'relative' }}>
           {virtual.getVirtualItems().map((v) => (
             <Fila key={filtrados[v.index].id} i={filtrados[v.index]} alto={v.size} y={v.start - virtual.options.scrollMargin} />

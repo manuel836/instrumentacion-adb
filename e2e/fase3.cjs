@@ -19,6 +19,9 @@ async function entrar(browser, email, pass) {
   await page.fill('#pass', pass)
   await page.click('button:has-text("Entrar")')
   await page.waitForSelector('text=instrumentos')
+  // Después de entrar se abre el inicio; las pruebas trabajan desde el catálogo.
+  await page.goto(`${BASE}/catalogo`)
+  await page.waitForSelector('text=/de \\d+ instrumentos/')
   return { ctx, page }
 }
 
@@ -76,7 +79,7 @@ async function escribir(page, texto) {
   console.log('el operador recibe la respuesta del técnico con foto en vivo ok')
 
   // ---------- Canal general ----------
-  await op.page.goto(BASE)
+  await op.page.goto(`${BASE}/catalogo`)
   await tec.page.click('nav >> text=Chat')
   await tec.page.waitForSelector('text=Canal general')
   await escribir(tec.page, 'Mañana paro de caldera B a las 7:00')
@@ -86,7 +89,7 @@ async function escribir(page, texto) {
   await op.page.waitForSelector('text=Mañana paro de caldera B')
   await shot(op.page, '22-canal-general')
   await op.page.locator('nav a[href="/chat"] span.bg-red-600').waitFor({ state: 'detached' })
-  await op.page.goto(BASE)
+  await op.page.goto(`${BASE}/catalogo`)
   await op.page.waitForSelector('text=instrumentos')
   const globo = await op.page.locator('nav a[href="/chat"] span.bg-red-600').count()
   console.log('el globo se apaga al leer:', globo === 0)
@@ -96,7 +99,7 @@ async function escribir(page, texto) {
   await op.page.waitForSelector('text=Calibraciones')
   console.log('operador sin botón de registrar calibración:', (await op.page.locator('text=+ Registrar').count()) === 0)
 
-  await tec.page.goto(BASE)
+  await tec.page.goto(`${BASE}/catalogo`)
   await tec.page.click('text=PT-101')
   await tec.page.click('text=+ Registrar')
   await tec.page.waitForSelector('text=Registrar calibración')
@@ -137,7 +140,7 @@ async function escribir(page, texto) {
   if (/sin programar/.test(proxima)) throw new Error('la ficha no muestra la próxima calibración')
   await shot(tec.page, '24-ficha-calibraciones')
 
-  await op.page.goto(BASE)
+  await op.page.goto(`${BASE}/catalogo`)
   await op.page.click('text=PT-101')
   await op.page.click('li >> text=Ajustada')
   await op.page.waitForSelector('text=As-Found')

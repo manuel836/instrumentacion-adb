@@ -10,6 +10,8 @@ interface AuthState {
   rol: Rol | null
   /** El admin le puso una contraseña temporal: hay que pedirle que elija una nueva. */
   cambiarContrasena: boolean
+  /** Área asignada por el admin ('' = todas). */
+  area: string
   entrar: (email: string, password: string) => Promise<void>
   salir: () => Promise<void>
 }
@@ -21,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [rol, setRol] = useState<Rol | null>(null)
   const [cambiarContrasena, setCambiarContrasena] = useState(false)
+  const [area, setArea] = useState('')
 
   useEffect(
     () =>
@@ -42,12 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Cuando el Admin cambia el rol, la Function marca rolActualizado y aquí se renueva el token.
   useEffect(() => {
     setCambiarContrasena(false)
+    setArea('')
     if (!user) return
     let primero = true
     return onSnapshot(
       doc(db, 'usuarios', user.uid),
       (snap) => {
         setCambiarContrasena(snap.get('cambiarContrasena') === true)
+        setArea((snap.get('area') as string | undefined) ?? '')
         if (primero) {
           primero = false
           return
@@ -64,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     rol,
     cambiarContrasena,
+    area,
     entrar: async (email, password) => {
       await signInWithEmailAndPassword(auth, email.trim(), password)
     },

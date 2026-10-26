@@ -34,7 +34,7 @@ export function BorrarInstrumento({
     setError('')
     try {
       await borrarInstrumento(inst.id)
-      navigate('/', { replace: true, state: { aviso: `${inst.tagISA} se borró.` } })
+      navigate('/catalogo', { replace: true, state: { aviso: `${inst.tagISA} se borró.` } })
     } catch (err) {
       const code = (err as { code?: string }).code
       setError(
