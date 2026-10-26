@@ -9,6 +9,7 @@ import { Bitacora } from './pages/Bitacora'
 import { Catalogo } from './pages/Catalogo'
 import { Exportar } from './pages/Exportar'
 import { Imprimir } from './pages/Imprimir'
+import { HojaDeVida } from './pages/HojaDeVida'
 import { Importar } from './pages/Importar'
 import { Inicio } from './pages/Inicio'
 import { DetalleCalibracion } from './pages/DetalleCalibracion'
@@ -130,6 +131,14 @@ function Rutas() {
             <SoloSi permitido={p.exportar}>
               <Imprimir />
             </SoloSi>
+          </ConSesion>
+        }
+      />
+      <Route
+        path="/instrumentos/:id/hoja-de-vida"
+        element={
+          <ConSesion>
+            <HojaDeVida />
           </ConSesion>
         }
       />

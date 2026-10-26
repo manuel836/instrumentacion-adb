@@ -162,6 +162,9 @@ export function Ficha() {
           <ListaFallas fallas={fallas} conTag={false} />
         )}
       </section>
+      <Link to={`/instrumentos/${inst.id}/hoja-de-vida`} className="btn-secundario w-full">
+        Hoja de vida (imprimir o PDF)
+      </Link>
       {p.verBitacora && (
         <Link to={`/bitacora?instrumento=${inst.id}`} className="block py-2 text-center text-sm font-semibold text-marca-700">
           Ver bitácora de cambios de {inst.tagISA}
