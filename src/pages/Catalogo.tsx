@@ -7,6 +7,7 @@ import { AREAS, ESTADOS_INSTRUMENTO, type Instrumento } from '../types'
 import { Estado, Pendiente } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
 import { vencimiento } from '../lib/tolerancia'
+import { Icono } from '../components/Icono'
 
 function normalizar(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -153,7 +154,7 @@ export function Catalogo() {
         {lista?.length === 0 && (
           <p className="p-8 text-center text-slate-500">
             Aún no hay instrumentos.
-            {p.editarInstrumentos && ' Da de alta el primero con el botón ＋ o impórtalos desde Excel.'}
+            {p.editarInstrumentos && ' Da de alta el primero con el botón Alta o impórtalos desde Excel.'}
           </p>
         )}
         {lista && lista.length > 0 && filtrados.length === 0 && (
@@ -161,7 +162,7 @@ export function Catalogo() {
         )}
         {p.editarInstrumentos && (
           <Link to="/instrumentos/nuevo" className="btn-primario fixed right-4 bottom-24 z-10 rounded-full px-5 py-3.5 shadow-lg">
-            ＋ Alta
+            <Icono nombre="mas" /> Alta
           </Link>
         )}
         <div style={{ height: virtual.getTotalSize(), position: 'relative' }}>

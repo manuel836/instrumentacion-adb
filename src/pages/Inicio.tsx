@@ -6,6 +6,7 @@ import { useInstrumentos } from '../lib/instrumentos'
 import { vencimiento } from '../lib/tolerancia'
 import { AREAS } from '../types'
 import { ListaFallas } from '../components/ListaFallas'
+import { Icono, type NombreIcono } from '../components/Icono'
 
 /** Un número grande que lleva a la lista filtrada. */
 function Cifra({ n, texto, a, tono = 'normal' }: { n: number; texto: string; a: string; tono?: 'normal' | 'rojo' | 'ambar' | 'verde' }) {
@@ -39,10 +40,10 @@ function Tarjeta({ titulo, children, enlace }: { titulo: string; children: React
   )
 }
 
-function Atajo({ a, icono, texto }: { a: string; icono: string; texto: string }) {
+function Atajo({ a, icono, texto }: { a: string; icono: NombreIcono; texto: string }) {
   return (
     <Link to={a} className="flex flex-col items-center gap-1 rounded-xl bg-white p-3 text-center text-xs font-semibold text-slate-700 shadow-sm active:bg-slate-50">
-      <span className="text-2xl">{icono}</span>
+      <Icono nombre={icono} className="size-7 text-marca-700" />
       {texto}
     </Link>
   )
@@ -118,10 +119,10 @@ export function Inicio() {
       </div>
 
       <div className={`grid gap-2 ${p.editarInstrumentos ? 'grid-cols-4' : 'grid-cols-2'}`}>
-        <Atajo a="/escanear" icono="⌁" texto="Escanear tag" />
-        <Atajo a="/fallas/nueva" icono="⚠" texto="Reportar falla" />
-        {p.editarInstrumentos && <Atajo a="/instrumentos/nuevo" icono="＋" texto="Alta" />}
-        {p.editarInstrumentos && <Atajo a="/instrumentos/importar" icono="⇪" texto="Importar Excel" />}
+        <Atajo a="/escanear" icono="escanear" texto="Escanear tag" />
+        <Atajo a="/fallas/nueva" icono="falla" texto="Reportar falla" />
+        {p.editarInstrumentos && <Atajo a="/instrumentos/nuevo" icono="mas" texto="Alta" />}
+        {p.editarInstrumentos && <Atajo a="/instrumentos/importar" icono="importar" texto="Importar Excel" />}
       </div>
 
       {cargando && <p className="p-4 text-center text-slate-500">Cargando…</p>}

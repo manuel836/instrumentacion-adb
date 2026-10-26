@@ -5,6 +5,8 @@ import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
 import { useFallas } from '../lib/fallas'
 import { useNoLeidosGeneral } from '../lib/chat'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
+import { ConCarga } from './Diferida'
+import { Icono } from './Icono'
 
 export function BarraConexion() {
   const online = useOnline()
@@ -51,7 +53,9 @@ function Menu({
   return (
     <div className="relative">
       <button className="rounded-lg px-2 py-1 text-sm font-medium text-white/90" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
-        Menú ▾
+        <span className="flex items-center gap-1">
+          Menú <Icono nombre="abajo" className="size-4" />
+        </span>
       </button>
       {abierto && (
         <>
@@ -132,31 +136,36 @@ export function Layout() {
         <AvisoNotificaciones />
       </header>
       <main className="flex-1 pb-24">
-        <Outlet />
+        <ConCarga key={pathname}>
+          <Outlet />
+        </ConCarga>
       </main>
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-2xl border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <NavLink to="/" end className={claseNav}>
-          <span className="text-xl">⌂</span>Inicio
+          <Icono nombre="inicio" className="size-6" />
+          Inicio
         </NavLink>
         <NavLink to="/catalogo" className={claseNav}>
-          <span className="text-xl">☰</span>Catálogo
+          <Icono nombre="catalogo" className="size-6" />
+          Catálogo
         </NavLink>
         <NavLink to="/fallas" className={claseNav}>
-          <span className="relative text-xl">
-            ⚠
+          <span className="relative">
+            <Icono nombre="falla" className="size-6" />
             {abiertas > 0 && <Globo n={abiertas} />}
           </span>
           Fallas
         </NavLink>
         <NavLink to="/chat" className={claseNav}>
-          <span className="relative text-xl">
-            💬
+          <span className="relative">
+            <Icono nombre="chat" className="size-6" />
             {sinLeer > 0 && <Globo n={sinLeer} />}
           </span>
           Chat
         </NavLink>
         <NavLink to="/escanear" className={claseNav}>
-          <span className="text-xl">⌁</span>Escanear
+          <Icono nombre="escanear" className="size-6" />
+          Escanear
         </NavLink>
       </nav>
     </div>

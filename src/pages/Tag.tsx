@@ -9,6 +9,7 @@ import { Estado } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
 import { ordenarConPortada } from '../components/Galeria'
+import { Icono } from '../components/Icono'
 
 /** Destino de la URL grabada en el tag: ficha completa con sesión, vista de invitado sin ella. */
 export function Tag() {
@@ -65,7 +66,12 @@ function VistaInvitado({ token }: { token: string }) {
           </div>
           <Estado estado={pub.estado} />
         </div>
-        {pub.ubicacionTexto && <p className="mt-2 text-sm">📍 {pub.ubicacionTexto}</p>}
+        {pub.ubicacionTexto && (
+          <p className="mt-2 flex items-start gap-1.5 text-sm">
+            <Icono nombre="ubicacion" className="mt-0.5 size-4 text-slate-500" />
+            {pub.ubicacionTexto}
+          </p>
+        )}
       </section>
 
       {fotos.length > 0 && (

@@ -6,6 +6,7 @@ import { agregarFotosUbicacion, asignarToken, instrumentoPorToken, quitarToken, 
 import { grabarUrl, leerYGrabar, nfcDisponible, type Revision } from '../lib/nfc'
 import { bytesNdef, generarToken, tokenDeUrl, urlDeTag } from '../lib/token'
 import { SelectorFotos, type FotoNueva } from '../components/SelectorFotos'
+import { Icono } from '../components/Icono'
 
 type EstadoNfc = 'inicio' | 'esperando' | 'conflicto' | 'grabado' | 'error'
 type Conflicto = Extract<Revision, { grabar: false }>
@@ -121,7 +122,9 @@ export function Vincular() {
             Este navegador no puede grabar tags. Usa Chrome en un teléfono Android con NFC activado.
           </p>
         ) : estado === 'grabado' ? (
-          <p className="rounded-lg bg-emerald-50 p-3 font-medium text-emerald-800">✓ Tag grabado y vinculado.</p>
+          <p className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 font-medium text-emerald-800">
+              <Icono nombre="listo" /> Tag grabado y vinculado.
+            </p>
         ) : estado === 'conflicto' && conflicto ? (
           <div className="space-y-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
             <p className="font-semibold">No se grabó.</p>

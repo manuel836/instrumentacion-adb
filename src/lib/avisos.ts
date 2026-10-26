@@ -1,17 +1,21 @@
 import { arrayUnion, doc, updateDoc } from 'firebase/firestore'
-import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging'
 import { app, db } from '../firebase'
 
 const VAPID = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined
 
+// La parte de notificaciones de Firebase se descarga solo cuando hace falta.
+const fcm = () => import('firebase/messaging')
+
 /** Push web necesita la clave VAPID del proyecto real; en los emuladores no hay FCM. */
 export async function avisosDisponibles(): Promise<boolean> {
-  return !!VAPID && import.meta.env.VITE_USE_EMULATORS !== 'true' && 'Notification' in window && (await isSupported())
+  if (!VAPID || import.meta.env.VITE_USE_EMULATORS === 'true' || !('Notification' in window)) return false
+  return (await fcm()).isSupported()
 }
 
 let escuchando = false
 
 async function registrarToken(uid: string) {
+  const { getMessaging, getToken, onMessage } = await fcm()
   const messaging = getMessaging(app)
   const token = await getToken(messaging, {
     vapidKey: VAPID,

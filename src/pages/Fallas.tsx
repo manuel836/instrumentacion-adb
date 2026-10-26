@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useFallas } from '../lib/fallas'
 import { AREAS, ESTADOS_FALLA, type EstadoFalla } from '../types'
 import { ListaFallas } from '../components/ListaFallas'
+import { Icono } from '../components/Icono'
 
 export function Fallas() {
   const fallas = useFallas()
@@ -65,7 +66,7 @@ export function Fallas() {
         to="/fallas/nueva"
         className="btn-primario fixed right-4 bottom-24 z-10 rounded-full px-5 py-3.5 shadow-lg"
       >
-        ⚠ Reportar falla
+        <Icono nombre="falla" /> Reportar falla
       </Link>
     </div>
   )

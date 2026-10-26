@@ -9,6 +9,7 @@ import { useFallasDeInstrumento } from '../lib/fallas'
 import { useCalibraciones } from '../lib/calibraciones'
 import { fechaDia, ProximaCalibracion, ResultadoCal } from '../components/Calibracion'
 import { BorrarInstrumento } from '../components/BorrarInstrumento'
+import { Icono } from '../components/Icono'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -48,7 +49,12 @@ export function Ficha() {
             {inst.sinSincronizar && <Pendiente />}
           </div>
         </div>
-        {inst.ubicacionTexto && <p className="mt-2 text-sm">📍 {inst.ubicacionTexto}</p>}
+        {inst.ubicacionTexto && (
+          <p className="mt-2 flex items-start gap-1.5 text-sm">
+            <Icono nombre="ubicacion" className="mt-0.5 size-4 text-slate-500" />
+            {inst.ubicacionTexto}
+          </p>
+        )}
         {!inst.nfcToken && <p className="mt-2 text-sm text-slate-500">Sin tag NFC todavía.</p>}
         <div className="mt-2">
           <ProximaCalibracion proxima={inst.proximaCalibracion} />
@@ -151,8 +157,8 @@ export function Ficha() {
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Historial de fallas</h2>
           {p.reportarFallas && (
-            <Link to={`/fallas/nueva?instrumento=${inst.id}`} className="text-sm font-semibold text-red-700">
-              ⚠ Reportar falla
+            <Link to={`/fallas/nueva?instrumento=${inst.id}`} className="flex items-center gap-1 text-sm font-semibold text-red-700">
+              <Icono nombre="falla" className="size-4" /> Reportar falla
             </Link>
           )}
         </div>
@@ -163,7 +169,7 @@ export function Ficha() {
         )}
       </section>
       <Link to={`/instrumentos/${inst.id}/hoja-de-vida`} className="btn-secundario w-full">
-        Hoja de vida (imprimir o PDF)
+        <Icono nombre="documento" /> Hoja de vida (imprimir o PDF)
       </Link>
       {p.verBitacora && (
         <Link to={`/bitacora?instrumento=${inst.id}`} className="block py-2 text-center text-sm font-semibold text-marca-700">

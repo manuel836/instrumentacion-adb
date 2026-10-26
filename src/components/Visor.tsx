@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FotoImg } from './FotoImg'
+import { Icono } from './Icono'
 
 export interface FotoVisor {
   url: string | null
@@ -33,7 +34,7 @@ export function Visor({ fotos, inicio, onCerrar }: { fotos: FotoVisor[]; inicio:
           {i + 1} de {fotos.length}
         </span>
         <button className="rounded-full px-4 py-2 text-lg" onClick={onCerrar} aria-label="Cerrar">
-          ✕
+          <Icono nombre="cerrar" className="size-6" />
         </button>
       </div>
       <div className="relative flex-1 overflow-auto" style={{ touchAction: zoom ? 'pan-x pan-y' : 'pinch-zoom' }}>

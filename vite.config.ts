@@ -37,6 +37,22 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // El archivo de Firebase pesa ~650 kB (~195 kB comprimido) y no se puede partir más.
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        // Firebase y React casi no cambian entre versiones: en archivos aparte, el teléfono
+        // los conserva y al actualizar la app solo baja el código propio.
+        manualChunks(id) {
+          // Las notificaciones se cargan aparte, solo cuando hacen falta.
+          if (/node_modules\/(@firebase\/(messaging|installations)|firebase\/messaging)/.test(id)) return
+          if (/node_modules\/(@firebase|firebase)\//.test(id)) return 'firebase'
+          if (/node_modules\/(react|react-dom|react-router|scheduler|@tanstack)\//.test(id)) return 'react'
+        },
+      },
+    },
+  },
   test: {
     environment: 'node',
   },

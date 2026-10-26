@@ -13,6 +13,7 @@ import { FotoImg } from './FotoImg'
 import { Visor } from './Visor'
 import { SelectorFotos, type FotoNueva } from './SelectorFotos'
 import { Pendiente } from './Estado'
+import { Icono } from './Icono'
 
 /** Portada primero, luego el resto en su orden. */
 export function ordenarConPortada<T extends { esPortada: boolean; orden: number }>(fotos: T[]): T[] {
@@ -102,10 +103,10 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
                     Portada
                   </label>
                   <button disabled={idx === 0} onClick={() => mover(idx, -1)} className="disabled:opacity-30" aria-label="Subir">
-                    ▲
+                    <Icono nombre="arriba" />
                   </button>
                   <button disabled={idx === fotos.length - 1} onClick={() => mover(idx, 1)} className="disabled:opacity-30" aria-label="Bajar">
-                    ▼
+                    <Icono nombre="abajo" />
                   </button>
                   {f.sinSincronizar || f.pendiente ? <Pendiente /> : null}
                   {borrar === f.id ? (
