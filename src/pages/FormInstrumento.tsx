@@ -9,7 +9,9 @@ import {
   useInstrumento,
 } from '../lib/instrumentos'
 import { useSubareas } from '../lib/subareas'
+import { ALIMENTACIONES, alimentacionConocida, unidadConocida } from '../lib/unidades'
 import { Icono } from '../components/Icono'
+import { SelectorUnidades } from '../components/SelectorUnidades'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type InstrumentoNuevo } from '../types'
 
@@ -46,7 +48,13 @@ export function FormInstrumento() {
     if (existente && cargado.current !== existente.id) {
       cargado.current = existente.id
       const { id: _id, sinSincronizar: _s, ...resto } = existente
-      setDatos(resto)
+      // Lo escrito a mano antes ("kg/cm2", "24 VDC lazo") se acomoda a las opciones de la lista
+      // y se guarda así al pulsar Guardar.
+      setDatos({
+        ...resto,
+        unidades: unidadConocida(resto.unidades) ?? resto.unidades,
+        alimentacion: alimentacionConocida(resto.alimentacion) ?? resto.alimentacion,
+      })
       setMasDatos(true)
     }
   }, [existente])
@@ -209,7 +217,7 @@ export function FormInstrumento() {
               <input className="campo" value={datos.serie} onChange={(e) => set('serie', e.target.value)} />
             </Campo>
             <Campo label="Unidades">
-              <input className="campo" placeholder="kg/cm²" value={datos.unidades} onChange={(e) => set('unidades', e.target.value)} />
+              <SelectorUnidades value={datos.unidades} onChange={(v) => set('unidades', v)} />
             </Campo>
             <Campo label="Rango mínimo">
               <input className="campo" inputMode="decimal" value={datos.rangoMin ?? ''} onChange={(e) => set('rangoMin', num(e.target.value))} />
@@ -226,24 +234,47 @@ export function FormInstrumento() {
             </select>
           </Campo>
           <Campo label="Alimentación">
-            <input className="campo" placeholder="24 VDC lazo" value={datos.alimentacion} onChange={(e) => set('alimentacion', e.target.value)} />
+            <select className="campo" value={datos.alimentacion} onChange={(e) => set('alimentacion', e.target.value)}>
+              <option value="">Sin especificar</option>
+              {ALIMENTACIONES.map((a) => (
+                <option key={a.valor} value={a.valor}>
+                  {a.texto}
+                </option>
+              ))}
+              {/* Si traía otra cosa escrita, se sigue viendo para no perderla al guardar. */}
+              {datos.alimentacion && !ALIMENTACIONES.some((a) => a.valor === datos.alimentacion) && (
+                <option value={datos.alimentacion}>{datos.alimentacion} (anterior)</option>
+              )}
+            </select>
           </Campo>
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Estado">
-              <select className="campo" value={datos.estado} onChange={(e) => set('estado', e.target.value as InstrumentoNuevo['estado'])}>
-                {ESTADOS_INSTRUMENTO.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Campo>
-            <Campo label="Próxima calibración">
+          <Campo label="Estado">
+            <select className="campo" value={datos.estado} onChange={(e) => set('estado', e.target.value as InstrumentoNuevo['estado'])}>
+              {ESTADOS_INSTRUMENTO.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </Campo>
+          <div>
+            <span className="etiqueta">Próxima calibración (opcional)</span>
+            <div className="flex gap-2">
               <input
                 className="campo"
                 type="date"
+                aria-label="Próxima calibración"
                 value={aFecha(datos.proximaCalibracion)}
                 onChange={(e) => set('proximaCalibracion', e.target.value ? Timestamp.fromDate(new Date(`${e.target.value}T12:00:00`)) : null)}
               />
-            </Campo>
+              {datos.proximaCalibracion && (
+                <button type="button" className="btn-secundario shrink-0 px-3" onClick={() => set('proximaCalibracion', null)}>
+                  Quitar
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">
+              {datos.proximaCalibracion
+                ? 'Si la pusiste por error, toca Quitar.'
+                : 'Sin fecha, el instrumento queda “sin calibración programada”. También se pone al registrar una calibración.'}
+            </p>
           </div>
         </>
       )}

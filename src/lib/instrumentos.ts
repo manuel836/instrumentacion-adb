@@ -233,19 +233,27 @@ export async function borrarFoto(instrumentoId: string, fotos: FotoUbicacion[], 
 
 // ---------- Documentos adjuntos ----------
 
-export async function adjuntarDocumento(inst: Instrumento, archivo: File) {
-  const limpio = archivo.name.replace(/[^\w.\-]+/g, '_')
-  const ruta = `instrumentos/${inst.id}/docs/${Date.now()}_${limpio}`
-  const nuevo: DocAdjunto = { nombre: archivo.name, ruta, url: null, tipo: archivo.type || 'application/octet-stream' }
-  actualizarInstrumento(inst.id, { docs: [...inst.docs, nuevo] })
-  await encolar([
-    {
-      ruta,
+/** Agrega varios a la vez: con una escritura por archivo, cada una pisaría a la anterior. */
+export async function adjuntarDocumentos(inst: Instrumento, archivos: File[]) {
+  const nuevos = archivos.map((archivo, i) => {
+    const limpio = archivo.name.replace(/[^\w.\-]+/g, '_')
+    const nuevo: DocAdjunto = {
+      nombre: archivo.name,
+      ruta: `instrumentos/${inst.id}/docs/${Date.now() + i}_${limpio}`,
+      url: null,
+      tipo: archivo.type || 'application/octet-stream',
+    }
+    return { archivo, nuevo }
+  })
+  actualizarInstrumento(inst.id, { docs: [...inst.docs, ...nuevos.map((n) => n.nuevo)] })
+  await encolar(
+    nuevos.map(({ archivo, nuevo }) => ({
+      ruta: nuevo.ruta,
       blob: archivo,
       contentType: nuevo.tipo,
       destino: { tipo: 'arreglo', docPath: `instrumentos/${inst.id}`, campo: 'docs' },
-    },
-  ])
+    })),
+  )
 }
 
 /** Quita el documento de la ficha; el archivo en Storage lo borra una Cloud Function. */

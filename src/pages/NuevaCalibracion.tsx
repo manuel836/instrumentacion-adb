@@ -7,6 +7,8 @@ import { useInstrumento } from '../lib/instrumentos'
 import { errorPct, puntosDelRango, resultadoSugerido } from '../lib/tolerancia'
 import { RESULTADOS_CALIBRACION, type ResultadoCalibracion } from '../types'
 import { AvisoDisparo } from '../components/AvisoDisparo'
+import { SelectorUnidades } from '../components/SelectorUnidades'
+import { unidadConocida } from '../lib/unidades'
 
 interface Fila {
   entrada: string
@@ -71,7 +73,7 @@ export function NuevaCalibracion() {
     setListo(true)
     if (inst.rangoMin !== null) setMin(String(inst.rangoMin))
     if (inst.rangoMax !== null) setMax(String(inst.rangoMax))
-    setUnidades(inst.unidades)
+    setUnidades(unidadConocida(inst.unidades) ?? inst.unidades)
     const puntos = inst.rangoMin !== null && inst.rangoMax !== null && inst.rangoMax > inst.rangoMin ? puntosDelRango(inst.rangoMin, inst.rangoMax) : [null, null, null]
     setFilas(puntos.map((p) => ({ entrada: p === null ? '' : String(p), asFound: '', asLeft: '' })))
   }, [inst, listo])
@@ -166,7 +168,7 @@ export function NuevaCalibracion() {
         </label>
         <label className="block">
           <span className="etiqueta">Unidades</span>
-          <input className="campo" placeholder="kg/cm²" value={unidades} onChange={(e) => setUnidades(e.target.value)} />
+          <SelectorUnidades value={unidades} onChange={setUnidades} />
         </label>
         <label className="block">
           <span className="etiqueta">Patrón usado</span>

@@ -82,14 +82,14 @@ async function esperar(cond, msg, ms = 20000) {
   await page.waitForURL(/\/instrumentos\/[^/]+$/)
   const id = page.url().split('/').pop()
 
-  await page.setInputFiles('input[type=file][accept^=".pdf"]', [path.join(REPO, 'README.md')])
+  await page.setInputFiles('input[type=file][accept^="application/pdf"]', [path.join(REPO, 'README.md')])
   await page.waitForSelector('a:has-text("README.md")', { timeout: 20000 })
-  await page.setInputFiles('input[type=file][accept^=".pdf"]', [path.join(REPO, 'index.html')])
+  await page.setInputFiles('input[type=file][accept^="application/pdf"]', [path.join(REPO, 'index.html')])
   await page.waitForSelector('a:has-text("index.html")', { timeout: 20000 })
   await esperar(async () => (await archivos(`instrumentos/${id}/docs/`)).length === 2, 'los documentos no se subieron')
 
   // Quitar un documento borra su archivo en Storage.
-  await page.locator('a:has-text("index.html")').locator('xpath=..').locator('button:has-text("Quitar")').click()
+  await page.locator('div:has(> span > a:has-text("index.html"))').locator('button:has-text("Quitar")').click()
   await esperar(async () => (await archivos(`instrumentos/${id}/docs/`)).length === 1, 'quitar el documento no borró el archivo')
   console.log('quitar documento borra el archivo ok')
 
