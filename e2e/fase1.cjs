@@ -113,7 +113,9 @@ const nfcMock = () => {
   await shot(page, '07-offline-ficha')
   console.log('offline: ficha abierta, imágenes rotas =', rotas)
 
-  // Alta sin señal queda pendiente y se sincroniza al volver
+  // Alta sin señal queda pendiente y se sincroniza al volver (el botón Alta está en el catálogo;
+  // el formulario se descarga aparte y sin señal lo da el service worker).
+  await page.goBack()
   await page.click('a[href="/instrumentos/nuevo"]')
   await page.fill('input[placeholder="PT-101"]', 'TT-202')
   await page.selectOption('select', 'Tratamiento de agua')

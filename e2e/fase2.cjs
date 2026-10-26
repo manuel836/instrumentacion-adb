@@ -18,7 +18,7 @@ async function entrar(browser, email, pass) {
   await page.fill('#email', email)
   await page.fill('#pass', pass)
   await page.click('button:has-text("Entrar")')
-  await page.waitForSelector('text=instrumentos')
+  await page.waitForSelector('text=Menú')
   // Después de entrar se abre el inicio; las pruebas trabajan desde el catálogo.
   await page.goto(`${BASE}/catalogo`)
   await page.waitForSelector('text=/de \\d+ instrumentos/')
@@ -33,6 +33,12 @@ async function esperarEstado(page, tag, estado) {
   return estado
 }
 
+
+/** Abre PT-101 desde el catálogo (con cientos de instrumentos ya no cabe en pantalla: se busca). */
+async function abrirPT101(page) {
+  await page.fill('input[type=search]', 'PT-101')
+  await page.locator('a', { hasText: 'PT-101' }).first().click()
+}
 ;(async () => {
   const browser = await chromium.launch()
 
@@ -58,7 +64,7 @@ async function esperarEstado(page, tag, estado) {
   await op.page.evaluate(() => navigator.serviceWorker.ready)
   const alta = await op.page.locator('a[href="/instrumentos/nuevo"]').count()
   console.log('operador sin botón de alta:', alta === 0)
-  await op.page.click('text=PT-101')
+  await abrirPT101(op.page)
   await op.page.waitForSelector('text=Historial de fallas')
   await op.ctx.setOffline(true)
   await op.page.click('text=Reportar falla')
@@ -105,7 +111,7 @@ async function esperarEstado(page, tag, estado) {
   console.log('el operador ve el cierre ok')
 
   await admin.page.goto(`${BASE}/catalogo`)
-  await admin.page.click('text=PT-101')
+  await abrirPT101(admin.page)
   await admin.page.waitForSelector('text=Lectura congelada')
   await shot(admin.page, '14-ficha-historial')
   console.log('historial en la ficha ok')

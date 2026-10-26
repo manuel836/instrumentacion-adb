@@ -27,7 +27,7 @@ async function login(page, email, pass) {
   const browser = await chromium.launch()
   const admin = await abrir(browser)
   await login(admin.page, 'manuel@adb.test', 'Prueba1234')
-  await admin.page.waitForSelector('text=instrumentos')
+  await admin.page.waitForSelector('text=Menú')
 
   const email = `borrar-${sufijo}@adb.test`
   await admin.page.goto(`${BASE}/usuarios`)
@@ -43,7 +43,7 @@ async function login(page, email, pass) {
   // El operador cambia su contraseña desde el menú.
   const op = await abrir(browser)
   await login(op.page, email, 'Prueba1234')
-  await op.page.waitForSelector('text=instrumentos')
+  await op.page.waitForSelector('text=Menú')
   await op.page.click('text=Menú')
   await op.page.click('text=Cambiar contraseña')
   await op.page.fill('#actual', 'Equivocada99')

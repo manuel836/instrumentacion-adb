@@ -19,7 +19,7 @@ async function entrar(browser, email, pass) {
   await page.fill('#email', email)
   await page.fill('#pass', pass)
   await page.click('button:has-text("Entrar")')
-  await page.waitForSelector('text=instrumentos')
+  await page.waitForSelector('text=Menú')
   // Después de entrar se abre el inicio; las pruebas trabajan desde el catálogo.
   await page.goto(`${BASE}/catalogo`)
   await page.waitForSelector('text=/de \\d+ instrumentos/')
@@ -31,6 +31,12 @@ function textoXlsx(archivo) {
   return execFileSync('unzip', ['-p', archivo, 'xl/sharedStrings.xml', 'xl/worksheets/*.xml']).toString()
 }
 
+
+/** Abre PT-101 desde el catálogo (con cientos de instrumentos ya no cabe en pantalla: se busca). */
+async function abrirPT101(page) {
+  await page.fill('input[type=search]', 'PT-101')
+  await page.locator('a', { hasText: 'PT-101' }).first().click()
+}
 ;(async () => {
   const browser = await chromium.launch()
   const admin = await entrar(browser, 'manuel@adb.test', 'Prueba1234')
@@ -38,7 +44,7 @@ function textoXlsx(archivo) {
 
   // ---------- Bitácora ----------
   const servicio = `Presión de vapor a cabezal ${sufijo}`
-  await page.click('text=PT-101')
+  await abrirPT101(page)
   await page.click('text=Editar')
   const campo = page.locator('input[placeholder="Presión de vapor a cabezal"]')
   const anterior = await campo.inputValue()
@@ -61,7 +67,7 @@ function textoXlsx(archivo) {
   console.log('cambios de estado de fallas en la bitácora ok')
 
   await page.goto(`${BASE}/catalogo`)
-  await page.click('text=PT-101')
+  await abrirPT101(page)
   await page.click('text=Ver bitácora de cambios de PT-101')
   await page.waitForSelector('text=Bitácora de')
   await page.waitForSelector('li:has-text("Calibración") >> text=Alta')
