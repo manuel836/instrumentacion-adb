@@ -8,6 +8,7 @@ import { Pendiente } from '../components/Estado'
 import { EstadoFalla, fechaCorta } from '../components/EstadoFalla'
 import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
+import { RefaccionesUsadas } from '../components/RefaccionesUsadas'
 
 export function DetalleFalla() {
   const { id } = useParams()
@@ -125,6 +126,8 @@ export function DetalleFalla() {
           </div>
         </form>
       )}
+
+      <RefaccionesUsadas falla={falla} />
 
       <section className="tarjeta space-y-3">
         <h2 className="font-semibold">Chat de la falla</h2>

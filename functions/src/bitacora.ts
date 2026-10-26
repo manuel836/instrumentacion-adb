@@ -12,7 +12,7 @@ export interface Persona {
   nombre: string
 }
 
-type Coleccion = 'instrumentos' | 'ubicacion' | 'calibraciones' | 'fallas' | 'usuarios'
+type Coleccion = 'instrumentos' | 'ubicacion' | 'calibraciones' | 'fallas' | 'usuarios' | 'refacciones'
 type Accion = 'crear' | 'editar' | 'borrar'
 
 interface Entrada {
@@ -51,6 +51,9 @@ const IGNORADOS = new Set([
   'miniatura',
   'ruta',
   'instrumentoId',
+  // La existencia de las refacciones queda en su kardex (movimientos), no aquí.
+  'existencia',
+  'ultimoMovimiento',
 ])
 
 const esPersona = (v: unknown): v is Persona =>
@@ -64,6 +67,7 @@ function resumir(campo: string, v: unknown): unknown {
   if (Array.isArray(v)) {
     if (campo === 'docs') return v.map((d) => (d as { nombre?: string }).nombre ?? '').join(', ')
     if (campo === 'fotos') return v.length === 0 ? '' : `${v.length} ${v.length === 1 ? 'foto' : 'fotos'}`
+    if (campo === 'instrumentos') return v.length === 0 ? '' : `${v.length} ${v.length === 1 ? 'instrumento' : 'instrumentos'}`
     if (campo === 'puntos')
       return v
         .map((p) => {
@@ -192,3 +196,7 @@ export const auditarAreaUsuario = onDocumentWrittenWithAuthContext('usuarios/{ui
     despues: { area: despues.area || 'Todas' },
   })
 })
+
+export const auditarRefaccion = onDocumentWrittenWithAuthContext('refacciones/{id}', (ev) =>
+  auditar(ev, 'refacciones', null, async (a, d) => String((d ?? a)?.nombre ?? '')),
+)

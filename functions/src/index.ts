@@ -12,7 +12,7 @@ import { logger } from 'firebase-functions/v2'
 import { enBorrado, registrar } from './bitacora.js'
 import { avisoCalibraciones, limitePorVencer, resumenCalibraciones, type InstrumentoCal } from './calibraciones.js'
 
-export { auditarAreaUsuario, auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento } from './bitacora.js'
+export { auditarAreaUsuario, auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento, auditarRefaccion } from './bitacora.js'
 
 initializeApp()
 setGlobalOptions({ region: 'us-central1', maxInstances: 5 })
@@ -286,7 +286,8 @@ export const alBorrarFotoUbicacion = onDocumentDeleted('instrumentos/{id}/ubicac
 
 /**
  * Borra un instrumento con todo lo suyo: fotos de ubicación, calibraciones, documentos,
- * fallas (con su chat) y los archivos en Storage. Su tag deja de abrir la vista pública.
+ * fallas (con su chat) y los archivos en Storage. Su tag deja de abrir la vista pública
+ * y las refacciones dejan de listarlo como compatible.
  * La bitácora guarda una sola entrada con lo que se borró y quién lo pidió.
  */
 export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, async (req) => {
@@ -334,6 +335,9 @@ export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, asy
   await bucket.deleteFiles({ prefix: `instrumentos/${id}/` })
   const token = inst.get('nfcToken') as string | null
   if (token) await db.doc(`publico/${token}`).delete()
+  // Las refacciones ya no lo listan como compatible (su kardex conserva el tag).
+  const refacciones = await db.collection('refacciones').where('instrumentos', 'array-contains', id).get()
+  await Promise.all(refacciones.docs.map((r) => r.ref.update({ instrumentos: FieldValue.arrayRemove(id) })))
   return { fallas: fallas.size }
 })
 

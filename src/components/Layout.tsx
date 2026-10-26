@@ -66,6 +66,9 @@ function Menu({
                 Usuarios
               </Link>
             )}
+            <Link to="/refacciones" className={clase}>
+              Refacciones
+            </Link>
             <Link to="/cuenta" className={clase}>
               Cambiar contraseña
             </Link>

@@ -9,6 +9,7 @@ import { useFallasDeInstrumento } from '../lib/fallas'
 import { useCalibraciones } from '../lib/calibraciones'
 import { fechaDia, ProximaCalibracion, ResultadoCal } from '../components/Calibracion'
 import { BorrarInstrumento } from '../components/BorrarInstrumento'
+import { RefaccionesDelInstrumento } from '../components/RefaccionesUsadas'
 import { Icono } from '../components/Icono'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
@@ -168,6 +169,7 @@ export function Ficha() {
           <ListaFallas fallas={fallas} conTag={false} />
         )}
       </section>
+      <RefaccionesDelInstrumento instrumentoId={inst.id} />
       <Link to={`/instrumentos/${inst.id}/hoja-de-vida`} className="btn-secundario w-full">
         <Icono nombre="documento" /> Hoja de vida (imprimir o PDF)
       </Link>

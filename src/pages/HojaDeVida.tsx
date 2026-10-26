@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useCalibraciones } from '../lib/calibraciones'
 import { useFallasDeInstrumento } from '../lib/fallas'
 import { useFotosUbicacion, useInstrumento } from '../lib/instrumentos'
+import { useRefacciones } from '../lib/refacciones'
 import { errorPct, vencimiento } from '../lib/tolerancia'
 import { fechaDia } from '../components/Calibracion'
 import { FotoImg } from '../components/FotoImg'
@@ -62,6 +63,7 @@ export function HojaDeVida() {
   const fotos = useFotosUbicacion(id)
   const calibraciones = useCalibraciones(id)
   const fallas = useFallasDeInstrumento(id)
+  const refacciones = (useRefacciones() ?? []).filter((r) => id && r.instrumentos.includes(id))
   const [preparando, setPreparando] = useState(false)
 
   if (inst === undefined || calibraciones === null) return <p className="p-6 text-slate-500">Cargando…</p>
@@ -250,6 +252,33 @@ export function HojaDeVida() {
             </ul>
           )}
         </Seccion>
+
+        {refacciones.length > 0 && (
+          <Seccion titulo={`Refacciones (${refacciones.length})`}>
+            <table className="w-full border-collapse text-[11px] leading-snug print:text-[9.5px]">
+              <thead>
+                <tr>
+                  <th className={th}>Refacción</th>
+                  <th className={th}>Número de parte</th>
+                  <th className={th}>Ubicación en almacén</th>
+                  <th className={th}>Existencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {refacciones.map((r) => (
+                  <tr key={r.id} className="break-inside-avoid">
+                    <td className={td}>{r.nombre}</td>
+                    <td className={td}>{r.numeroParte || '—'}</td>
+                    <td className={td}>{r.ubicacion || '—'}</td>
+                    <td className={`${td} whitespace-nowrap`}>
+                      {r.existencia} {r.unidad}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Seccion>
+        )}
 
         {otras.length > 0 && (
           <Seccion titulo="Más fotos de ubicación">

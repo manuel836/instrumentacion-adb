@@ -100,5 +100,8 @@ export function permisos(rol: Rol | null) {
     verBitacora: tecnico,
     exportar: tecnico,
     gestionarUsuarios: rol === 'admin',
+    /** Dar de alta refacciones y registrar entradas, salidas y conteos. */
+    refacciones: tecnico,
+    borrarRefacciones: rol === 'admin',
   }
 }

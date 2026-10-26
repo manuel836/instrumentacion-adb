@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useFallas } from '../lib/fallas'
 import { useInstrumentos } from '../lib/instrumentos'
+import { porPedir, sinExistencia, useRefacciones } from '../lib/refacciones'
 import { vencimiento } from '../lib/tolerancia'
 import { AREAS } from '../types'
 import { ListaFallas } from '../components/ListaFallas'
@@ -57,6 +58,7 @@ export function Inicio() {
   const p = permisos(rol)
   const instrumentos = useInstrumentos()
   const fallas = useFallas()
+  const refacciones = useRefacciones()
   // El área elegida va en la dirección para que siga igual al regresar de una lista.
   // Sin elegir, se usa el área del usuario (si el admin le asignó una).
   const [params, setParams] = useSearchParams()
@@ -187,6 +189,14 @@ export function Inicio() {
               </ul>
             )}
           </Tarjeta>
+          {refacciones && refacciones.length > 0 && (
+            <Tarjeta titulo="Refacciones" enlace={{ a: '/refacciones', texto: 'Abrir' }}>
+              <div className="grid grid-cols-2 gap-2">
+                <Cifra n={refacciones.filter(porPedir).length} texto="por pedir (llegaron al mínimo)" a="/refacciones?filtro=por-pedir" tono="ambar" />
+                <Cifra n={refacciones.filter(sinExistencia).length} texto="sin existencia" a="/refacciones?filtro=sin-existencia" tono="rojo" />
+              </div>
+            </Tarjeta>
+          )}
         </>
       )}
     </div>

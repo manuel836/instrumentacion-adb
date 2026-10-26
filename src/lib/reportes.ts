@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
-import { collectionGroup, getDocs } from 'firebase/firestore'
+import { collection, collectionGroup, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
-import type { Calibracion, Falla, Instrumento } from '../types'
+import { TIPOS_MOVIMIENTO, type Calibracion, type Falla, type Instrumento, type Movimiento, type Refaccion } from '../types'
 import { useFallas } from './fallas'
 import { useInstrumentos } from './instrumentos'
+import { porPedir, useRefacciones } from './refacciones'
 import { errorPct } from './tolerancia'
 
-export type TipoReporte = 'instrumentos' | 'fallas' | 'calibraciones'
+export type TipoReporte = 'instrumentos' | 'fallas' | 'calibraciones' | 'refacciones'
 
 export const TIPOS_REPORTE: Record<TipoReporte, { titulo: string; descripcion: string; conPeriodo: boolean }> = {
   instrumentos: { titulo: 'Listado de instrumentos', descripcion: 'Todos los datos de la ficha, estado y próxima calibración.', conPeriodo: false },
   fallas: { titulo: 'Fallas por periodo', descripcion: 'Reportadas en el periodo, con quién atendió, causa raíz y acción correctiva.', conPeriodo: true },
   calibraciones: { titulo: 'Calibraciones', descripcion: 'Registradas en el periodo, con resultado y puntos As-Found / As-Left.', conPeriodo: true },
+  refacciones: {
+    titulo: 'Inventario de refacciones',
+    descripcion: 'Existencia, mínimo y cuáles hay que pedir. En Excel también todas las entradas y salidas.',
+    conPeriodo: false,
+  },
 }
 
 export type Valor = string | number | Date | null
@@ -219,6 +225,80 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
   }
 }
 
+/** Con área elegida: las refacciones de instrumentos de esa área. */
+function reporteRefacciones(refacciones: Refaccion[], movimientos: Movimiento[], instrumentos: Instrumento[], f: Filtros): Reporte {
+  const tags = new Map(instrumentos.map((i) => [i.id, i]))
+  const vista = refacciones.filter((r) => !f.area || r.instrumentos.some((id) => tags.get(id)?.area === f.area))
+  const ids = new Set(vista.map((r) => r.id))
+  const unidad = new Map(refacciones.map((r) => [r.id, r.unidad]))
+  return {
+    titulo: TIPOS_REPORTE.refacciones.titulo,
+    hojas: [
+      {
+        nombre: 'Refacciones',
+        columnas: [
+          c('Refacción', 30),
+          c('Número de parte', 16),
+          c('Marca', 14),
+          c('Ubicación en almacén', 20),
+          c('Existencia', 10),
+          c('Unidad', 8),
+          c('Mínimo', 8),
+          c('Por pedir', 9),
+          c('Instrumentos', 30),
+          c('Notas', 30),
+        ],
+        filas: vista.map((r): Valor[] => [
+          r.nombre,
+          r.numeroParte,
+          r.marca,
+          r.ubicacion,
+          r.existencia,
+          r.unidad,
+          r.minimo,
+          porPedir(r) ? 'Sí' : 'No',
+          r.instrumentos.map((id) => tags.get(id)?.tagISA ?? '').filter(Boolean).join(', '),
+          r.notas,
+        ]),
+      },
+      {
+        nombre: 'Movimientos',
+        columnas: [c('Fecha', 12), c('Refacción', 30), c('Tipo', 16), c('Cantidad', 9), c('Unidad', 8), c('Instrumento', 12), c('Quién', 18), c('Nota', 36)],
+        filas: movimientos
+          .filter((m) => !f.area || ids.has(m.refaccionId))
+          .sort((a, b) => (a.fecha?.toMillis() ?? 0) - (b.fecha?.toMillis() ?? 0))
+          .map((m): Valor[] => [
+            fecha(m.fecha),
+            m.refaccionNombre,
+            TIPOS_MOVIMIENTO[m.tipo] ?? m.tipo,
+            m.cantidad,
+            unidad.get(m.refaccionId) ?? '',
+            m.tagISA ?? '',
+            m.quien.nombre,
+            m.nota,
+          ]),
+      },
+    ],
+  }
+}
+
+/** Todos los movimientos de refacciones, leídos una vez al abrir el reporte. */
+function useTodosLosMovimientos(activo: boolean) {
+  const [lista, setLista] = useState<Movimiento[] | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!activo) return
+    let vivo = true
+    getDocs(collection(db, 'movimientos'))
+      .then((snap) => vivo && setLista(snap.docs.map((d) => ({ ...(d.data() as Movimiento), id: d.id }))))
+      .catch((e: Error) => vivo && setError(e.message))
+    return () => {
+      vivo = false
+    }
+  }, [activo])
+  return { lista, error }
+}
+
 /** Todas las calibraciones (son pocas), leídas una vez al abrir el reporte. */
 function useTodasLasCalibraciones(activo: boolean) {
   const [lista, setLista] = useState<CalibracionConInstrumento[] | null>(null)
@@ -243,12 +323,15 @@ export function useReporte(tipo: TipoReporte, filtros: Filtros): { reporte: Repo
   const instrumentos = useInstrumentos()
   const fallas = useFallas()
   const cals = useTodasLasCalibraciones(tipo === 'calibraciones')
+  const refacciones = useRefacciones()
+  const movs = useTodosLosMovimientos(tipo === 'refacciones')
   const reporte = useMemo(() => {
     if (tipo === 'instrumentos') return instrumentos && reporteInstrumentos(instrumentos, filtros)
     if (tipo === 'fallas') return fallas && reporteFallas(fallas, filtros)
+    if (tipo === 'refacciones') return refacciones && movs.lista && instrumentos && reporteRefacciones(refacciones, movs.lista, instrumentos, filtros)
     return cals.lista && instrumentos && reporteCalibraciones(cals.lista, instrumentos, filtros)
-  }, [tipo, filtros, instrumentos, fallas, cals.lista])
-  return { reporte, error: cals.error }
+  }, [tipo, filtros, instrumentos, fallas, cals.lista, refacciones, movs.lista])
+  return { reporte, error: cals.error || movs.error }
 }
 
 export function textoCelda(v: Valor): string {

@@ -14,7 +14,7 @@ import {
 import { db } from '../firebase'
 import type { Persona } from '../types'
 
-export type ColeccionBitacora = 'instrumentos' | 'ubicacion' | 'calibraciones' | 'fallas' | 'usuarios'
+export type ColeccionBitacora = 'instrumentos' | 'ubicacion' | 'calibraciones' | 'fallas' | 'usuarios' | 'refacciones'
 
 export interface EntradaBitacora {
   id: string
@@ -97,6 +97,7 @@ export const NOMBRE_COLECCION: Record<ColeccionBitacora, string> = {
   calibraciones: 'Calibración',
   fallas: 'Falla',
   usuarios: 'Usuario',
+  refacciones: 'Refacción',
 }
 
 export const NOMBRE_ACCION = { crear: 'Alta', editar: 'Edición', borrar: 'Baja' } as const
@@ -145,6 +146,12 @@ const CAMPOS: Record<string, string> = {
   contrasena: 'Contraseña',
   calibraciones: 'Calibraciones',
   fallasBorradas: 'Fallas (con su chat)',
+  numeroParte: 'Número de parte',
+  ubicacion: 'Ubicación en almacén',
+  unidad: 'Unidad',
+  minimo: 'Mínimo',
+  instrumentos: 'Instrumentos compatibles',
+  notas: 'Notas',
 }
 
 export const nombreCampo = (c: string) => CAMPOS[c] ?? c

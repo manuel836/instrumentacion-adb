@@ -29,6 +29,9 @@ const Cuenta = diferida(() => import('./pages/Cuenta'), 'Cuenta')
 const FormInstrumento = diferida(() => import('./pages/FormInstrumento'), 'FormInstrumento')
 const Usuarios = diferida(() => import('./pages/Usuarios'), 'Usuarios')
 const Vincular = diferida(() => import('./pages/Vincular'), 'Vincular')
+const Refacciones = diferida(() => import('./pages/Refacciones'), 'Refacciones')
+const DetalleRefaccion = diferida(() => import('./pages/DetalleRefaccion'), 'DetalleRefaccion')
+const FormRefaccion = diferida(() => import('./pages/FormRefaccion'), 'FormRefaccion')
 
 function ConSesion({ children }: { children: ReactNode }) {
   const { cargando, user, rol, salir } = useAuth()
@@ -126,6 +129,10 @@ function Rutas() {
         <Route path="bitacora" element={<SoloSi permitido={p.verBitacora}><Bitacora /></SoloSi>} />
         <Route path="exportar" element={<SoloSi permitido={p.exportar}><Exportar /></SoloSi>} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
+        <Route path="refacciones" element={<Refacciones />} />
+        <Route path="refacciones/nueva" element={<SoloSi permitido={p.refacciones}><FormRefaccion /></SoloSi>} />
+        <Route path="refacciones/:id" element={<DetalleRefaccion />} />
+        <Route path="refacciones/:id/editar" element={<SoloSi permitido={p.refacciones}><FormRefaccion /></SoloSi>} />
       </Route>
       <Route
         path="/imprimir"

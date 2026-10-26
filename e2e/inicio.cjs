@@ -44,6 +44,11 @@ const shot = (p, n) => p.screenshot({ path: path.join(S, 'shots', n + '.png') })
         // "Cerradas en 30 días" es un subconjunto de todas las cerradas.
         const ok = texto.includes('30 días') ? visto >= n : visto === n
         if (!ok) throw new Error(`${etiqueta}: "${texto}" dice ${n} y la lista muestra ${visto}`)
+      } else if (href.startsWith('/refacciones')) {
+        await page.waitForSelector('text=/\\d+ de \\d+ refacciones/')
+        await page.waitForTimeout(300)
+        const visto = Number((await page.locator('text=/\\d+ de \\d+ refacciones/').innerText()).split(' ')[0])
+        if (visto !== n) throw new Error(`${etiqueta}: "${texto}" dice ${n} y la lista de refacciones muestra ${visto}`)
       } else {
         await page.waitForSelector('text=/\\d+ de \\d+ instrumentos/')
         await page.waitForTimeout(300)
