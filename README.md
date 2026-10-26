@@ -14,7 +14,8 @@ Firebase (Auth, Firestore con caché persistente, Storage, Cloud Functions, Host
 | 2. Fallas | Abierta → En proceso → Cerrada, fotos con cola offline, push a técnicos | En producción |
 | 3. Chat y calibraciones | Chat por falla (con fotos) y canal general con push; calibraciones As-Found / As-Left con tolerancia y próxima calibración | En producción |
 | 4. Bitácora y exportes | Bitácora de cambios (quién, qué, cuándo, antes y después) escrita por Functions; Excel (3 reportes) y vista de impresión a PDF | En producción |
-| 5. Mejoras | Contraseña temporal puesta por el admin; borrar instrumentos con todo lo suyo; el catálogo recuerda búsqueda, filtros y posición; revisar el tag antes de grabarlo; importar desde Excel o CSV; pantalla de inicio con resumen; avisos de fallas por área; aviso semanal de calibraciones; hoja de vida en PDF; app más ligera e íconos propios; refacciones con kardex | Lista para prueba en campo |
+| 5. Mejoras | Contraseña temporal puesta por el admin; borrar instrumentos con todo lo suyo; el catálogo recuerda búsqueda, filtros y posición; revisar el tag antes de grabarlo; importar desde Excel o CSV; pantalla de inicio con resumen; avisos de fallas por área; aviso semanal de calibraciones; hoja de vida en PDF; app más ligera e íconos propios; refacciones con kardex | En producción |
+| 6. Orden y seguridad | Canal general que empieza en blanco cada día, con historial por día y chats privados; el chat de una falla se cierra con ella y conserva lo hablado; próxima calibración opcional; sub áreas editables (el mismo tag puede repetirse en otra caldera); marca "Puede disparar la caldera" con aviso rojo antes de intervenir | Lista para prueba en campo |
 
 ## Desarrollo local con emuladores
 
@@ -24,7 +25,7 @@ Requisitos: Node 22, Java 21 (emulador de Firestore) y `npm i -g firebase-tools`
 npm install
 npm --prefix functions install
 npm --prefix functions run build
-cp .env.example .env.local          # deja VITE_USE_EMULATORS=true
+printf 'VITE_PUBLIC_ORIGIN=http://localhost:4173\nVITE_USE_EMULATORS=true\n' > .env.local
 echo 'ADMIN_INICIAL=manuel@adb.test' > functions/.env.local
 firebase emulators:start --project demo-instrumentacion-adb --only auth,firestore,storage,functions
 
@@ -36,6 +37,8 @@ npm run dev
 ```
 
 Con `VITE_USE_EMULATORS=true`, los IDs de proyecto vacíos caen en `demo-instrumentacion-adb`.
+No copies `.env.example` tal cual: trae el ID del proyecto real y las Functions del emulador rechazan
+las llamadas (error de CORS).
 
 Pruebas:
 
@@ -64,13 +67,22 @@ Pruebas:
 - `node e2e/hoja-de-vida.cjs`: hoja de vida con datos, fotos, calibraciones, fallas y su PDF.
 - `node e2e/ligera.cjs`: las pantallas raras se bajan al abrirlas y la app se recupera de una versión vieja.
 - `node e2e/refacciones.cjs`: alta, entradas, salidas, conteo, uso en una falla, inventario en Excel.
+- `node e2e/chat.cjs`: el canal general solo muestra lo de hoy, el historial por día (solo para leer),
+  un chat privado entre una operadora y un técnico con foto y globo de no leídos, y que el admin no
+  pueda ver chats privados ajenos.
+- `node e2e/falla-cerrada.cjs`: al cerrar la falla su chat queda de solo lectura con lo hablado y las fotos.
+- `node e2e/calibracion-opcional.cjs`: calibración sin próxima fecha (la ficha queda sin programar) y con el atajo de 6 meses.
+- `node e2e/subareas.cjs`: el admin da de alta sub áreas, el mismo tag en dos calderas, filtro del
+  catálogo, renombrar y no dejar quitar una sub área en uso.
+- `node e2e/dispara-caldera.cjs`: la marca de disparo en el formulario, la ficha, el catálogo, al
+  calibrar, en la falla y en la vista del tag sin cuenta.
 - `node e2e/importar.cjs`: plantilla, 520 filas con errores, actualizar existentes y CSV con acentos.
   Va casi al final: las 520 altas disparan muchos registros de bitácora que retrasan a las demás.
 - `node e2e/inicio.cjs`: cada número del inicio coincide con la lista a la que lleva. Va al final.
 
 Con los emuladores recién arrancados y el admin creado, el orden que funciona es: fase1, fase2, fase3,
 fase4, usuarios, restablecer, borrar, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,
-ligera, refacciones, importar e inicio.
+ligera, refacciones, chat, falla-cerrada, calibracion-opcional, subareas, dispara-caldera, importar e inicio.
 
 Para correr las pruebas de punta a punta, compila apuntando a los emuladores con
 `npx vite build --mode e2e` (con `npm run build` manda la configuración de producción de `.env.production`).
@@ -122,3 +134,11 @@ cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL 
   calibraciones vencidas y por vencer de cada área. Usa Cloud Scheduler (el primer despliegue lo activa).
 - `src/lib/refacciones.ts`: cada entrada o salida es un documento en `movimientos` que se escribe en el
   mismo lote que la existencia; las reglas solo aceptan el cambio si cuadra con el movimiento.
+- `src/lib/chat.ts` y `src/lib/privados.ts`: el canal general filtra los mensajes desde la medianoche
+  (el historial los agrupa por día, nada se borra). Un chat privado vive en `chats_privados/{uidA_uidB}`
+  (los dos uid ordenados), así las reglas saben quién puede leerlo sin consultar otro documento.
+  La lista de personas sale de `directorio/{uid}`, que una Function mantiene igual que `usuarios`.
+- `src/lib/subareas.ts`: las sub áreas son documentos en `subareas` que edita el admin. El tag ISA es
+  único por área y sub área, por eso el mismo PT-101 puede existir en la Caldera 1 y en la Caldera 2.
+- `src/components/AvisoDisparo.tsx`: el aviso rojo de los instrumentos marcados con
+  "Puede disparar la caldera"; sale en la ficha, la hoja de vida, al calibrar, en la falla y en el tag.
