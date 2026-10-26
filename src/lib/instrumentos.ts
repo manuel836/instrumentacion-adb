@@ -113,8 +113,13 @@ export function precargarMiniaturas(): () => void {
 }
 
 export async function buscarPorToken(token: string): Promise<string | null> {
+  return (await instrumentoPorToken(token))?.id ?? null
+}
+
+/** El instrumento que tiene vinculado ese token (sin señal busca en la caché del teléfono). */
+export async function instrumentoPorToken(token: string): Promise<Instrumento | null> {
   const snap = await getDocs(query(colInstrumentos, where('nfcToken', '==', token), limit(1)))
-  return snap.empty ? null : snap.docs[0].id
+  return snap.empty ? null : aInstrumento(snap.docs[0].id, snap.docs[0].data())
 }
 
 export async function tagISAExiste(tagISA: string, exceptoId?: string): Promise<boolean> {
@@ -138,6 +143,11 @@ export function actualizarInstrumento(id: string, cambios: Partial<InstrumentoNu
 
 export function asignarToken(id: string, token: string) {
   actualizarInstrumento(id, { nfcToken: token })
+}
+
+/** El tag físico se regrabó para otro instrumento: este se queda sin tag. */
+export function quitarToken(id: string) {
+  actualizarInstrumento(id, { nfcToken: null })
 }
 
 // ---------- Galería de ubicación ----------
