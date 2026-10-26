@@ -27,7 +27,8 @@ function contrasenaTemporal(): string {
 /** Qué avisos de fallas le llegan según su rol y su área. */
 function textoAvisos(u: Usuario): string {
   if (u.rol === 'operador') return 'Le llegan avisos solo de las fallas que reporta. Su inicio abre en esta área.'
-  return u.area ? `Le llegan avisos de fallas nuevas solo de ${u.area}.` : 'Le llegan avisos de fallas nuevas de todas las áreas.'
+  const cuales = 'Le llegan avisos de fallas nuevas y, cada lunes, el resumen de calibraciones'
+  return u.area ? `${cuales}, solo de ${u.area}.` : `${cuales} de todas las áreas.`
 }
 
 const ROLES: { v: Rol; t: string }[] = [

@@ -1,14 +1,16 @@
 import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
-import { FieldValue, getFirestore } from 'firebase-admin/firestore'
+import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getMessaging } from 'firebase-admin/messaging'
 import { getStorage } from 'firebase-admin/storage'
 import { setGlobalOptions } from 'firebase-functions/v2'
 import { defineString } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { logger } from 'firebase-functions/v2'
 import { enBorrado, registrar } from './bitacora.js'
+import { avisoCalibraciones, limitePorVencer, resumenCalibraciones, type InstrumentoCal } from './calibraciones.js'
 
 export { auditarAreaUsuario, auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento } from './bitacora.js'
 
@@ -466,3 +468,40 @@ export const alCrearMensajeGeneral = onDocumentCreated('chat_general/{msgId}', a
     { titulo: `Canal general · ${m.autor?.nombre ?? 'Mensaje'}`, cuerpo: resumen(m), ruta: '/chat' },
   )
 })
+
+// ---------- Calibraciones ----------
+
+/**
+ * Qué aviso le toca a cada grupo de técnicos y admins activos: los de un área reciben
+ * solo su área; los que no tienen área, todas. Sin nada pendiente no hay aviso.
+ */
+export async function avisosDeCalibracion(ahora: Date) {
+  const [insts, personas] = await Promise.all([
+    db.collection('instrumentos').where('proximaCalibracion', '<', Timestamp.fromDate(limitePorVencer(ahora))).get(),
+    db.collection('usuarios').where('rol', 'in', ['tecnico', 'admin']).where('activo', '==', true).get(),
+  ])
+  const lista: InstrumentoCal[] = insts.docs.map((d) => ({
+    tagISA: String(d.get('tagISA')),
+    area: String(d.get('area')),
+    proxima: (d.get('proximaCalibracion') as Timestamp | null)?.toDate() ?? null,
+  }))
+  const porArea = new Map<string, string[]>()
+  for (const p of personas.docs) {
+    const area = (p.get('area') as string | undefined) || ''
+    porArea.set(area, [...(porArea.get(area) ?? []), p.id])
+  }
+  return [...porArea].flatMap(([area, uids]) => {
+    const aviso = avisoCalibraciones(resumenCalibraciones(lista, area, ahora), area)
+    return aviso ? [{ area, uids, aviso }] : []
+  })
+}
+
+/** Cada lunes a las 7:00 (hora de la planta) avisa de calibraciones vencidas y por vencer. */
+export const avisoSemanalCalibraciones = onSchedule(
+  { schedule: 'every monday 07:00', timeZone: 'America/Mexico_City', retryCount: 1 },
+  async () => {
+    const avisos = await avisosDeCalibracion(new Date())
+    for (const { uids, aviso } of avisos) await avisar(uids, aviso)
+    logger.info(`Aviso de calibraciones: ${avisos.length} grupos`, avisos.map((a) => ({ area: a.area || 'Todas', personas: a.uids.length })))
+  },
+)
