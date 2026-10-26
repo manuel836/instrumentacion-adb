@@ -9,6 +9,7 @@ import { Bitacora } from './pages/Bitacora'
 import { Catalogo } from './pages/Catalogo'
 import { Exportar } from './pages/Exportar'
 import { Imprimir } from './pages/Imprimir'
+import { Importar } from './pages/Importar'
 import { DetalleCalibracion } from './pages/DetalleCalibracion'
 import { NuevaCalibracion } from './pages/NuevaCalibracion'
 import { ChatGeneral } from './pages/ChatGeneral'
@@ -106,6 +107,7 @@ function Rutas() {
         <Route path="catalogo" element={<Catalogo />} />
         <Route path="escanear" element={<Escanear />} />
         <Route path="instrumentos/nuevo" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />
+        <Route path="instrumentos/importar" element={<SoloSi permitido={p.editarInstrumentos}><Importar /></SoloSi>} />
         <Route path="instrumentos/:id" element={<Ficha />} />
         <Route path="instrumentos/:id/editar" element={<SoloSi permitido={p.editarInstrumentos}><FormInstrumento /></SoloSi>} />
         <Route path="instrumentos/:id/vincular" element={<SoloSi permitido={p.grabarTags}><Vincular /></SoloSi>} />

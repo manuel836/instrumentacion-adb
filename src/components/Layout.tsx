@@ -31,7 +31,7 @@ function AvisoContrasena() {
   )
 }
 
-function Menu({ bitacora, exportar, onSalir }: { bitacora: boolean; exportar: boolean; onSalir: () => void }) {
+function Menu({ bitacora, exportar, importar, onSalir }: { bitacora: boolean; exportar: boolean; importar: boolean; onSalir: () => void }) {
   const [abierto, setAbierto] = useState(false)
   const { pathname } = useLocation()
   useEffect(() => setAbierto(false), [pathname])
@@ -51,6 +51,11 @@ function Menu({ bitacora, exportar, onSalir }: { bitacora: boolean; exportar: bo
             {bitacora && (
               <Link to="/bitacora" className={clase}>
                 Bitácora de cambios
+              </Link>
+            )}
+            {importar && (
+              <Link to="/instrumentos/importar" className={clase}>
+                Importar desde Excel
               </Link>
             )}
             {exportar && (
@@ -103,7 +108,7 @@ export function Layout() {
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
         <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <span className="text-lg font-bold">Instrumentación ADB</span>
-          <Menu bitacora={p.verBitacora} exportar={p.exportar} onSalir={() => void salir()} />
+          <Menu bitacora={p.verBitacora} exportar={p.exportar} importar={p.editarInstrumentos} onSalir={() => void salir()} />
         </div>
         <BarraConexion />
         <AvisoContrasena />

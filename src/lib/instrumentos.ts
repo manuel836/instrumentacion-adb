@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  Timestamp,
   collection,
   collectionGroup,
   deleteDoc,
@@ -19,6 +20,7 @@ import {
 import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../firebase'
 import type { DocAdjunto, FotoUbicacion, Instrumento, InstrumentoNuevo } from '../types'
+import type { Analisis, InstrumentoImportado } from './importar'
 import { comprimirFoto } from './images'
 import { descartarDeDocumento, descartarRuta, encolar } from './uploadQueue'
 
@@ -250,4 +252,40 @@ const fnBorrarInstrumento = httpsCallable<{ id: string }, { fallas: number }>(fu
 /** Borra el instrumento con sus fotos, calibraciones, documentos y fallas (solo admin, con señal). */
 export async function borrarInstrumento(id: string): Promise<void> {
   await fnBorrarInstrumento({ id })
+}
+
+// ---------- Importación desde Excel ----------
+
+const aFirestore = (d: Partial<InstrumentoImportado>) => {
+  const { proximaCalibracion, ...resto } = d
+  return proximaCalibracion === undefined ? resto : { ...resto, proximaCalibracion: proximaCalibracion && Timestamp.fromDate(proximaCalibracion) }
+}
+
+/**
+ * Guarda lo analizado en lotes de 400 escrituras (el máximo de Firestore es 500) y espera
+ * la confirmación del servidor de cada lote: se usa con señal y avisa el avance.
+ */
+export async function guardarImportacion(a: Analisis, alAvanzar: (hechos: number, total: number) => void): Promise<void> {
+  const ops = [
+    ...a.nuevos.map((n) => (b: ReturnType<typeof writeBatch>) =>
+      b.set(doc(colInstrumentos), {
+        ...instrumentoVacio(),
+        ...aFirestore(n.datos),
+        nfcToken: null,
+        docs: [],
+        portadaMiniatura: null,
+        actualizado: serverTimestamp(),
+      }),
+    ),
+    ...a.actualizar.map((u) => (b: ReturnType<typeof writeBatch>) =>
+      b.update(doc(colInstrumentos, u.id), { ...aFirestore(u.cambios), actualizado: serverTimestamp() }),
+    ),
+  ]
+  alAvanzar(0, ops.length)
+  for (let i = 0; i < ops.length; i += 400) {
+    const lote = writeBatch(db)
+    ops.slice(i, i + 400).forEach((op) => op(lote))
+    await lote.commit()
+    alAvanzar(Math.min(i + 400, ops.length), ops.length)
+  }
 }
