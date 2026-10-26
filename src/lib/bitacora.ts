@@ -143,6 +143,8 @@ const CAMPOS: Record<string, string> = {
   rol: 'Rol',
   activo: 'Activo',
   contrasena: 'Contraseña',
+  calibraciones: 'Calibraciones',
+  fallasBorradas: 'Fallas (con su chat)',
 }
 
 export const nombreCampo = (c: string) => CAMPOS[c] ?? c

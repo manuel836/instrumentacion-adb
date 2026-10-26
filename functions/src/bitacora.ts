@@ -27,6 +27,12 @@ interface Entrada {
   despues: Record<string, unknown>
 }
 
+/** true si el instrumento se está borrando completo (lo marca la función borrarInstrumento). */
+export async function enBorrado(instrumentoId: string | null): Promise<boolean> {
+  if (!instrumentoId) return false
+  return (await db().doc(`borrados/${instrumentoId}`).get()).exists
+}
+
 export async function registrar(e: Entrada) {
   await db().collection('auditoria').add({ ...e, fecha: FieldValue.serverTimestamp() })
 }
@@ -135,6 +141,8 @@ async function auditar(
   if (!antes && !despues) return
   const cambios = diferencias(antes, despues)
   const accion: Accion = !antes ? 'crear' : !despues ? 'borrar' : 'editar'
+  // Al borrar un instrumento completo, borrarInstrumento deja una sola entrada con el resumen.
+  if (accion === 'borrar' && (await enBorrado(instrumentoId))) return
   if (accion === 'editar' && Object.keys(cambios.despues).length === 0) return
   const d = despues ?? antes
   const pista = d?.tecnico ?? (accion === 'crear' ? d?.reportadoPor : despues?.tecnicoAsignado)

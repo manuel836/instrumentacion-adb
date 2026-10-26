@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { useInstrumentos } from '../lib/instrumentos'
 import { AREAS, ESTADOS_INSTRUMENTO } from '../types'
@@ -13,6 +13,7 @@ function normalizar(s: string) {
 
 export function Catalogo() {
   const lista = useInstrumentos()
+  const aviso = (useLocation().state as { aviso?: string } | null)?.aviso
   const [texto, setTexto] = useState('')
   const [area, setArea] = useState<string>('')
   const [estado, setEstado] = useState<string>('')
@@ -39,6 +40,7 @@ export function Catalogo() {
   return (
     <div>
       <div className="space-y-2 border-b border-slate-200 bg-white p-3">
+        {aviso && <p className="rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">{aviso}</p>}
         <input
           className="campo"
           type="search"

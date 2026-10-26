@@ -16,10 +16,11 @@ import {
   writeBatch,
   type DocumentData,
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '../firebase'
 import type { DocAdjunto, FotoUbicacion, Instrumento, InstrumentoNuevo } from '../types'
 import { comprimirFoto } from './images'
-import { descartarDeDocumento, encolar } from './uploadQueue'
+import { descartarDeDocumento, descartarRuta, encolar } from './uploadQueue'
 
 export type ConPendiente<T> = T & { sinSincronizar: boolean }
 
@@ -228,6 +229,15 @@ export async function adjuntarDocumento(inst: Instrumento, archivo: File) {
   ])
 }
 
+/** Quita el documento de la ficha; el archivo en Storage lo borra una Cloud Function. */
 export function quitarDocumento(inst: Instrumento, ruta: string) {
+  void descartarRuta(ruta)
   actualizarInstrumento(inst.id, { docs: inst.docs.filter((d) => d.ruta !== ruta) })
+}
+
+const fnBorrarInstrumento = httpsCallable<{ id: string }, { fallas: number }>(functions, 'borrarInstrumento')
+
+/** Borra el instrumento con sus fotos, calibraciones, documentos y fallas (solo admin, con señal). */
+export async function borrarInstrumento(id: string): Promise<void> {
+  await fnBorrarInstrumento({ id })
 }

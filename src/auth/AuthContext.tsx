@@ -85,6 +85,7 @@ export function permisos(rol: Rol | null) {
   return {
     verCatalogo: rol !== null,
     editarInstrumentos: tecnico,
+    borrarInstrumentos: rol === 'admin',
     grabarTags: tecnico,
     gestionarFotos: tecnico,
     reportarFallas: rol !== null,

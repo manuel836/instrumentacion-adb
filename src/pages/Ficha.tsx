@@ -8,6 +8,7 @@ import { ListaFallas } from '../components/ListaFallas'
 import { useFallasDeInstrumento } from '../lib/fallas'
 import { useCalibraciones } from '../lib/calibraciones'
 import { fechaDia, ProximaCalibracion, ResultadoCal } from '../components/Calibracion'
+import { BorrarInstrumento } from '../components/BorrarInstrumento'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -166,6 +167,7 @@ export function Ficha() {
           Ver bitácora de cambios de {inst.tagISA}
         </Link>
       )}
+      {p.borrarInstrumentos && <BorrarInstrumento inst={inst} fallas={fallas} calibraciones={calibraciones} />}
     </div>
   )
 }

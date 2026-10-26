@@ -8,7 +8,7 @@ import { defineString } from 'firebase-functions/params'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { logger } from 'firebase-functions/v2'
-import { registrar } from './bitacora.js'
+import { enBorrado, registrar } from './bitacora.js'
 
 export { auditarCalibracion, auditarFalla, auditarFotoUbicacion, auditarInstrumento } from './bitacora.js'
 
@@ -216,10 +216,15 @@ interface Foto {
  */
 async function reconstruir(instrumentoId: string, tokenAnterior?: string | null) {
   const instRef = db.doc(`instrumentos/${instrumentoId}`)
-  const [inst, fotosSnap] = await Promise.all([instRef.get(), instRef.collection('ubicacion').orderBy('orden').get()])
+  const [inst, fotosSnap, borrando] = await Promise.all([
+    instRef.get(),
+    instRef.collection('ubicacion').orderBy('orden').get(),
+    enBorrado(instrumentoId),
+  ])
 
   if (tokenAnterior) await db.doc(`publico/${tokenAnterior}`).delete()
-  if (!inst.exists) return
+  // Mientras se borra el instrumento no se vuelve a crear su vista pública.
+  if (!inst.exists || borrando) return
 
   const fotos = fotosSnap.docs.map((d) => d.data() as Foto)
   const portada = fotos.find((f) => f.esPortada) ?? fotos[0]
@@ -245,6 +250,13 @@ const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'estado', 'ubicacionTexto
 export const alEscribirInstrumento = onDocumentWritten('instrumentos/{id}', async (ev) => {
   const antes = ev.data?.before.data()
   const despues = ev.data?.after.data()
+  // Documentos (hojas de datos, manuales) que se quitaron de la ficha: se borra el archivo.
+  const quedan = new Set(((despues?.docs as { ruta?: string }[] | undefined) ?? []).map((d) => d.ruta))
+  const quitados = ((antes?.docs as { ruta?: string }[] | undefined) ?? []).map((d) => d.ruta).filter((r): r is string => !!r && !quedan.has(r))
+  if (quitados.length > 0) {
+    const bucket = getStorage().bucket()
+    await Promise.all(quitados.map((r) => bucket.file(r).delete({ ignoreNotFound: true })))
+  }
   const tokenAntes = (antes?.nfcToken as string | null | undefined) ?? null
   const tokenDespues = (despues?.nfcToken as string | null | undefined) ?? null
   const cambioPublico = !antes || !despues || CAMPOS_PUBLICOS.some((k) => antes[k] !== despues[k])
@@ -266,6 +278,61 @@ export const alBorrarFotoUbicacion = onDocumentDeleted('instrumentos/{id}/ubicac
       .filter((r): r is string => typeof r === 'string')
       .map((r) => bucket.file(r).delete({ ignoreNotFound: true })),
   )
+})
+
+// ---------- Borrar instrumentos ----------
+
+/**
+ * Borra un instrumento con todo lo suyo: fotos de ubicación, calibraciones, documentos,
+ * fallas (con su chat) y los archivos en Storage. Su tag deja de abrir la vista pública.
+ * La bitácora guarda una sola entrada con lo que se borró y quién lo pidió.
+ */
+export const borrarInstrumento = onCall({ ...PUBLICA, timeoutSeconds: 300 }, async (req) => {
+  exigirAdmin(req)
+  const id = exigirTexto(req.data?.id, 'el instrumento')
+  const ref = db.doc(`instrumentos/${id}`)
+  const inst = await ref.get()
+  if (!inst.exists) throw new HttpsError('not-found', 'Ese instrumento ya no existe.')
+
+  const [fallas, fotos, calibraciones] = await Promise.all([
+    db.collection('fallas').where('instrumentoId', '==', id).get(),
+    ref.collection('ubicacion').count().get(),
+    ref.collection('calibraciones').count().get(),
+  ])
+  const docs = (inst.get('docs') as unknown[] | undefined)?.length ?? 0
+
+  // La marca hace que los triggers no anoten cada foto, calibración y falla por separado.
+  await db.doc(`borrados/${id}`).set({ tagISA: inst.get('tagISA') ?? '', por: adminDe(req), fecha: FieldValue.serverTimestamp() })
+  await registrar({
+    usuario: adminDe(req),
+    coleccion: 'instrumentos',
+    docId: id,
+    ruta: ref.path,
+    instrumentoId: id,
+    etiqueta: String(inst.get('tagISA') ?? id),
+    accion: 'borrar',
+    antes: {
+      tagISA: inst.get('tagISA') ?? null,
+      servicio: inst.get('servicio') ?? null,
+      area: inst.get('area') ?? null,
+      fotos: `${fotos.data().count}`,
+      calibraciones: `${calibraciones.data().count}`,
+      fallasBorradas: `${fallas.size}`,
+      docs: `${docs}`,
+    },
+    despues: {},
+  })
+
+  const bucket = getStorage().bucket()
+  for (const f of fallas.docs) {
+    await db.recursiveDelete(f.ref)
+    await bucket.deleteFiles({ prefix: `fallas/${f.id}/` })
+  }
+  await db.recursiveDelete(ref)
+  await bucket.deleteFiles({ prefix: `instrumentos/${id}/` })
+  const token = inst.get('nfcToken') as string | null
+  if (token) await db.doc(`publico/${token}`).delete()
+  return { fallas: fallas.size }
 })
 
 // ---------- Fallas ----------
