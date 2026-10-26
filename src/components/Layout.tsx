@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
@@ -8,17 +8,30 @@ import { useNoLeidosPrivados } from '../lib/privados'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
 import { ConCarga } from './Diferida'
 import { Icono } from './Icono'
+import { SubidasDetenidas } from './SubidasDetenidas'
 
 export function BarraConexion() {
   const online = useOnline()
-  const subidas = useSubidasPendientes()
-  if (online && subidas === 0) return null
+  const { pendientes, detenidas } = useSubidasPendientes()
+  const [verDetenidas, setVerDetenidas] = useState(false)
+  const cerrar = useCallback(() => setVerDetenidas(false), [])
+  const subidas = pendientes - detenidas
   return (
-    <div className={`px-4 py-1.5 text-center text-sm font-medium ${online ? 'bg-sky-100 text-sky-900' : 'bg-amber-100 text-amber-900'}`}>
-      {!online && 'Sin conexión: los cambios se guardan en el teléfono'}
-      {!online && subidas > 0 && ' · '}
-      {subidas > 0 && `${subidas} ${subidas === 1 ? 'archivo' : 'archivos'} por subir`}
-    </div>
+    <>
+      {(!online || subidas > 0) && (
+        <div className={`px-4 py-1.5 text-center text-sm font-medium ${online ? 'bg-sky-100 text-sky-900' : 'bg-amber-100 text-amber-900'}`}>
+          {!online && 'Sin conexión: los cambios se guardan en el teléfono'}
+          {!online && subidas > 0 && ' · '}
+          {subidas > 0 && `${subidas} ${subidas === 1 ? 'archivo' : 'archivos'} por subir`}
+        </div>
+      )}
+      {detenidas > 0 && (
+        <button className="block w-full bg-red-100 px-4 py-1.5 text-center text-sm font-medium text-red-900" onClick={() => setVerDetenidas(true)}>
+          {detenidas === 1 ? '1 archivo no se pudo subir' : `${detenidas} archivos no se pudieron subir`} · Ver
+        </button>
+      )}
+      {verDetenidas && <SubidasDetenidas onCerrar={cerrar} />}
+    </>
   )
 }
 

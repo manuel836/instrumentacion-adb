@@ -79,9 +79,9 @@ export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[
   const ref_ = doc(collection(db, ruta))
   const comprimidas = await Promise.all(archivos.map((a) => comprimirFoto(a)))
   const base = `${ruta}/${ref_.id}`
-  const fotos: FotoFalla[] = comprimidas.map((_, i) => ({
-    ruta: `${base}/${i}.webp`,
-    miniatura: `${base}/${i}_min.webp`,
+  const fotos: FotoFalla[] = comprimidas.map((c, i) => ({
+    ruta: `${base}/${i}.${c.ext}`,
+    miniatura: `${base}/${i}_min.${c.ext}`,
     url: null,
     miniaturaUrl: null,
   }))
@@ -92,11 +92,11 @@ export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[
   if (fotos.length > 0) {
     await encolar(
       comprimidas.flatMap((c, i) => [
-        { ruta: fotos[i].ruta, blob: c.completa, contentType: 'image/webp', destino: { tipo: 'arreglo' as const, docPath: ref_.path, campo: 'fotos' } },
+        { ruta: fotos[i].ruta, blob: c.completa, contentType: c.tipo, destino: { tipo: 'arreglo' as const, docPath: ref_.path, campo: 'fotos' } },
         {
           ruta: fotos[i].miniatura,
           blob: c.miniatura,
-          contentType: 'image/webp',
+          contentType: c.tipo,
           destino: { tipo: 'arreglo' as const, docPath: ref_.path, campo: 'fotos', clave: 'miniatura', campoUrl: 'miniaturaUrl' },
         },
       ]),

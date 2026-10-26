@@ -17,6 +17,7 @@ import { Ficha } from './pages/Ficha'
 import { Login } from './pages/Login'
 import { Tag } from './pages/Tag'
 import { ConCarga, diferida } from './components/Diferida'
+import { useOnline } from './hooks/useOnline'
 
 // Pantallas que se usan poco: se descargan al abrirlas.
 const Bitacora = diferida(() => import('./pages/Bitacora'), 'Bitacora')
@@ -62,6 +63,7 @@ const reclamarAdminInicial = httpsCallable(functions, 'reclamarAdminInicial')
 
 function SinRol({ onSalir }: { onSalir: () => void }) {
   const { user } = useAuth()
+  const online = useOnline()
   const [mensaje, setMensaje] = useState('')
   const [enviando, setEnviando] = useState(false)
 
@@ -76,6 +78,16 @@ function SinRol({ onSalir }: { onSalir: () => void }) {
     } finally {
       setEnviando(false)
     }
+  }
+
+  // Sin señal no se puede preguntar al servidor: no hay que asustar con "no tienes rol".
+  if (!online) {
+    return (
+      <div className="p-8 text-center">
+        <p className="font-semibold">Sin conexión</p>
+        <p className="mt-2 text-slate-500">No se pudo comprobar tu cuenta sin señal. Conéctate a internet y la app se abrirá sola.</p>
+      </div>
+    )
   }
 
   return (

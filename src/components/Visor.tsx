@@ -5,6 +5,8 @@ import { Icono } from './Icono'
 export interface FotoVisor {
   url: string | null
   ruta?: string
+  /** Mientras la foto completa no se sube, se ve la miniatura. */
+  miniaturaUrl?: string | null
   pie: string
 }
 
@@ -42,10 +44,17 @@ export function Visor({ fotos, inicio, onCerrar }: { fotos: FotoVisor[]; inicio:
           className={zoom ? 'w-[250%]' : 'flex h-full w-full items-center justify-center'}
           onDoubleClick={() => setZoom((z) => !z)}
         >
-          <FotoImg url={foto.url} ruta={foto.ruta} alt={foto.pie} className={zoom ? 'w-full' : 'max-h-full max-w-full object-contain'} />
+          <FotoImg
+            url={foto.url}
+            ruta={foto.ruta}
+            respaldo={foto.miniaturaUrl}
+            alt={foto.pie}
+            className={zoom ? 'w-full' : 'max-h-full max-w-full object-contain'}
+          />
         </div>
       </div>
       <div className="space-y-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {!foto.url && <p className="text-sm text-white/70">Vista previa: la foto completa aún no se sube desde el teléfono que la tomó.</p>}
         {foto.pie && <p className="text-base">{foto.pie}</p>}
         <div className="flex gap-2">
           <button className="btn flex-1 bg-white/10" disabled={i === 0} onClick={() => setI(i - 1)}>

@@ -157,7 +157,7 @@ export function DetalleFalla() {
       {p.borrarFallas && <BorrarFalla falla={falla} />}
 
       {visor !== null && (
-        <Visor fotos={falla.fotos.map((f) => ({ url: f.url, ruta: f.ruta, pie: '' }))} inicio={visor} onCerrar={() => setVisor(null)} />
+        <Visor fotos={falla.fotos.map((f) => ({ url: f.url, ruta: f.ruta, miniaturaUrl: f.miniaturaUrl, pie: '' }))} inicio={visor} onCerrar={() => setVisor(null)} />
       )}
     </div>
   )

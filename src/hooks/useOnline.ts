@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { suscribirPendientes } from '../lib/uploadQueue'
+import { suscribirPendientes, type EstadoCola } from '../lib/uploadQueue'
 
 export function useOnline(): boolean {
   const [online, setOnline] = useState(navigator.onLine)
@@ -16,8 +16,8 @@ export function useOnline(): boolean {
   return online
 }
 
-export function useSubidasPendientes(): number {
-  const [n, setN] = useState(0)
-  useEffect(() => suscribirPendientes(setN), [])
-  return n
+export function useSubidasPendientes(): EstadoCola {
+  const [estado, setEstado] = useState<EstadoCola>({ pendientes: 0, detenidas: 0 })
+  useEffect(() => suscribirPendientes(setEstado), [])
+  return estado
 }

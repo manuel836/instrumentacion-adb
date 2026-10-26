@@ -82,6 +82,10 @@ Pruebas:
 - `node e2e/importar.cjs`: plantilla, 520 filas con errores, actualizar existentes y CSV con acentos.
   Va casi al final: las 520 altas disparan muchos registros de bitácora que retrasan a las demás.
 - `node e2e/inicio.cjs`: cada número del inicio coincide con la lista a la que lleva. Va al final.
+- `node e2e/subidas-iphone.cjs`: fotos de iPhone (simula Safari, que no hace WebP) aunque se cierre la
+  falla al momento, fotos viejas atoradas en PNG que se recuperan solas, reintento que no resube lo ya
+  subido, foto que llega antes que su mensaje, subida rechazada que se detiene y se descarta, y el admin
+  sin señal con el token vencido. Crea sus propios datos: se puede correr en cualquier momento.
 
 Con los emuladores recién arrancados y el admin creado, el orden que funciona es: fase1, fase2, fase3,
 fase4, usuarios, restablecer, borrar, borrar-falla, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,
@@ -120,8 +124,12 @@ cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL 
 - `src/firebase.ts`: Firestore con `persistentLocalCache`; el catálogo completo vive en el teléfono
   y las escrituras sin señal se sincronizan solas.
 - `src/lib/uploadQueue.ts`: Storage no encola subidas offline, así que fotos y documentos esperan en
-  IndexedDB y se suben al recuperar señal. La barra superior muestra cuántos faltan.
+  IndexedDB y se suben al recuperar señal. La barra superior muestra cuántos faltan. Lo que el servidor
+  rechaza tres veces seguidas se detiene (no frena lo demás) y la barra deja reintentarlo o descartarlo.
 - `src/lib/images.ts`: cada foto se reduce en el teléfono a 1600 px en WebP más una miniatura de 320 px.
+  Safari (todos los navegadores del iPhone) no sabe hacer WebP: ahí las fotos salen en JPEG.
+- `src/auth/AuthContext.tsx`: el rol viaja en el token, que dura una hora. Sin señal y con el token
+  vencido se lee el rol del último token guardado en el teléfono, para seguir trabajando.
 - `src/lib/nfc.ts`: Web NFC (`NDEFReader`). Cada tag guarda una URL `https://<dominio>/t/<token>`
   con un token aleatorio de 18 caracteres (unos 50 de los 144 bytes del NTAG213). No se usa `makeReadOnly()`.
 - `functions/src/index.ts`: alta de usuarios y roles (custom claim `rol`), baja y cierre de sesiones,

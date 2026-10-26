@@ -133,7 +133,7 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
 
       {visor !== null && (
         <Visor
-          fotos={vista.map((f) => ({ url: f.url, ruta: f.ruta, pie: f.pie }))}
+          fotos={vista.map((f) => ({ url: f.url, ruta: f.ruta, miniaturaUrl: f.miniaturaUrl, pie: f.pie }))}
           inicio={visor}
           onCerrar={() => setVisor(null)}
         />
