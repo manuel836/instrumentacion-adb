@@ -203,6 +203,17 @@ describe('chat', () => {
     await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m5'), msg('u-operador', { texto: '' })))
   })
 
+  it('al cerrar la falla se cierra su chat, pero lo escrito se sigue leyendo', async () => {
+    const foto = { ruta: 'a', miniatura: 'b', url: null, miniaturaUrl: null }
+    await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador', { fotos: [foto] })))
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'fallas/f1'), { estado: 'Cerrada' }))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m2'), msg('u-operador')))
+    await assertFails(setDoc(doc(como('admin'), 'fallas/f1/mensajes/m3'), msg('u-admin')))
+    await assertSucceeds(getDocs(collection(como('operador'), 'fallas/f1/mensajes')))
+    // La foto que se mandó sin señal antes del cierre todavía puede completar su URL.
+    await assertSucceeds(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), { fotos: [{ ...foto, url: 'https://x' }] }))
+  })
+
   it('el autor solo completa las URLs de sus fotos', async () => {
     const foto = { ruta: 'a', miniatura: 'b', url: null, miniaturaUrl: null }
     await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador', { texto: '', fotos: [foto] })))

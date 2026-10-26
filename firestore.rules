@@ -113,11 +113,13 @@ service cloud.firestore {
             && request.resource.data.fotos.size() == resource.data.fotos.size());
       allow delete: if admin();
 
-      // Chat de la falla: cualquiera con rol escribe; el autor solo completa las URLs de sus fotos.
+      // Chat de la falla: cualquiera con rol escribe mientras la falla no esté cerrada; al
+      // cerrarse, lo escrito y las fotos se quedan para consulta. El autor solo completa
+      // las URLs de sus fotos (también después del cierre, si se subieron sin señal).
       match /mensajes/{msgId} {
         allow read: if conRol();
         allow create: if conRol() && mensajeValido(request.resource.data, 4)
-          && exists(/databases/$(database)/documents/fallas/$(id));
+          && get(/databases/$(database)/documents/fallas/$(id)).data.estado != 'Cerrada';
         allow update: if conRol() && resource.data.autor.uid == request.auth.uid
           && cambian().hasOnly(['fotos'])
           && request.resource.data.fotos.size() == resource.data.fotos.size();
