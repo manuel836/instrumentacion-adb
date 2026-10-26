@@ -119,6 +119,7 @@ const CAMPOS: Record<string, string> = {
   alimentacion: 'Alimentación',
   nfcToken: 'Tag NFC',
   estado: 'Estado',
+  subArea: 'Sub área',
   proximaCalibracion: 'Próxima calibración',
   docs: 'Documentos',
   pie: 'Pie de foto',

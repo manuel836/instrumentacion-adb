@@ -4,7 +4,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthContext'
 import { buscarPorToken } from '../lib/instrumentos'
-import type { Publico } from '../types'
+import { dondeEsta, type Publico } from '../types'
 import { Estado } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
@@ -62,7 +62,7 @@ function VistaInvitado({ token }: { token: string }) {
           <div>
             <h1 className="font-mono text-2xl font-bold">{pub.tagISA}</h1>
             <p className="text-slate-700">{pub.servicio}</p>
-            <p className="text-sm text-slate-500">{pub.area}</p>
+            <p className="text-sm text-slate-500">{dondeEsta(pub)}</p>
           </div>
           <Estado estado={pub.estado} />
         </div>

@@ -8,7 +8,9 @@ import {
   tagISAExiste,
   useInstrumento,
 } from '../lib/instrumentos'
-import { AREAS, ESTADOS_INSTRUMENTO, SENALES, type InstrumentoNuevo } from '../types'
+import { useSubareas } from '../lib/subareas'
+import { permisos, useAuth } from '../auth/AuthContext'
+import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type InstrumentoNuevo } from '../types'
 
 function Campo({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -28,6 +30,8 @@ function aFecha(t: Timestamp | null): string {
 export function FormInstrumento() {
   const { id } = useParams()
   const existente = useInstrumento(id)
+  const subareas = useSubareas()
+  const { rol } = useAuth()
   const navigate = useNavigate()
   const [datos, setDatos] = useState<InstrumentoNuevo>(instrumentoVacio())
   const [masDatos, setMasDatos] = useState(false)
@@ -60,8 +64,8 @@ export function FormInstrumento() {
     }
     setGuardando(true)
     try {
-      if (await tagISAExiste(tagISA, id).catch(() => false)) {
-        setError(`Ya existe un instrumento con el tag ${tagISA}.`)
+      if (await tagISAExiste(tagISA, datos.area, datos.subArea, id).catch(() => false)) {
+        setError(`Ya existe ${tagISA} en ${dondeEsta(datos)}. El mismo tag solo se puede repetir en otra área o sub área.`)
         return
       }
       const limpio = { ...datos, tagISA, servicio: datos.servicio.trim() }
@@ -80,6 +84,10 @@ export function FormInstrumento() {
   }
 
   if (id && existente === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+
+  const delArea = (subareas ?? []).filter((s) => s.area === datos.area).map((s) => s.nombre)
+  // Si la sub área se quitó o renombró, la que ya tenía se sigue viendo para no perderla al guardar.
+  const opciones = datos.subArea && !delArea.includes(datos.subArea) ? [...delArea, datos.subArea] : delArea
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 p-4">
@@ -104,12 +112,41 @@ export function FormInstrumento() {
         />
       </Campo>
       <Campo label="Área *">
-        <select className="campo" value={datos.area} onChange={(e) => set('area', e.target.value as InstrumentoNuevo['area'])}>
+        <select
+          className="campo"
+          value={datos.area}
+          onChange={(e) => {
+            const area = e.target.value as InstrumentoNuevo['area']
+            // Al cambiar de área se conserva la sub área solo si también existe en la nueva.
+            const sigue = (subareas ?? []).some((s) => s.area === area && s.nombre === datos.subArea)
+            setDatos((d) => ({ ...d, area, subArea: sigue ? d.subArea : '' }))
+          }}
+        >
           {AREAS.map((a) => (
             <option key={a}>{a}</option>
           ))}
         </select>
       </Campo>
+      <div>
+        <Campo label="Sub área">
+          <select className="campo" value={datos.subArea} onChange={(e) => set('subArea', e.target.value)}>
+            <option value="">Sin sub área</option>
+            {opciones.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        </Campo>
+        <p className="mt-1 text-xs text-slate-500">
+          {opciones.length === 0 ? `${datos.area} aún no tiene sub áreas. ` : 'Caldera, tanque o sección. '}
+          {permisos(rol).gestionarUsuarios ? (
+            <Link to="/subareas" className="font-semibold text-marca-700">
+              Administrar sub áreas
+            </Link>
+          ) : (
+            opciones.length === 0 && 'El administrador las agrega.'
+          )}
+        </p>
+      </div>
       <Campo label="Servicio *">
         <input className="campo" required placeholder="Presión de vapor a cabezal" value={datos.servicio} onChange={(e) => set('servicio', e.target.value)} />
       </Campo>

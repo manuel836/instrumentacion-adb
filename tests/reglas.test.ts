@@ -78,6 +78,28 @@ describe('instrumentos', () => {
   })
 })
 
+describe('sub áreas', () => {
+  it('todos las ven; solo el admin las agrega, renombra o quita', async () => {
+    const sub = { area: 'Generación de vapor', nombre: 'Caldera 2' }
+    await assertFails(setDoc(doc(como('tecnico'), 'subareas/s1'), sub))
+    await assertSucceeds(setDoc(doc(como('admin'), 'subareas/s1'), sub))
+    await assertSucceeds(getDocs(collection(como('operador'), 'subareas')))
+    await assertFails(getDocs(collection(como(null), 'subareas')))
+    await assertFails(setDoc(doc(como('admin'), 'subareas/s2'), { ...sub, area: 'Cocina' }))
+    await assertFails(setDoc(doc(como('admin'), 'subareas/s3'), { ...sub, nombre: '' }))
+    await assertFails(setDoc(doc(como('admin'), 'subareas/s4'), { ...sub, orden: 1 }))
+    await assertSucceeds(updateDoc(doc(como('admin'), 'subareas/s1'), { nombre: 'Caldera B' }))
+    await assertFails(deleteDoc(doc(como('tecnico'), 'subareas/s1')))
+    await assertSucceeds(deleteDoc(doc(como('admin'), 'subareas/s1')))
+  })
+
+  it('el instrumento guarda su sub área como texto corto', async () => {
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 'Caldera 2' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 2 }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { subArea: 'x'.repeat(61) }))
+  })
+})
+
 describe('galería de ubicación', () => {
   const foto = { ruta: 'a', miniatura: 'b', pie: 'Nivel 2', orden: 0, esPortada: true, url: null, miniaturaUrl: null }
   it('técnico agrega fotos, operador no', async () => {

@@ -67,6 +67,11 @@ function Menu({
                 Usuarios
               </Link>
             )}
+            {usuarios && (
+              <Link to="/subareas" className={clase}>
+                Sub áreas
+              </Link>
+            )}
             <Link to="/refacciones" className={clase}>
               Refacciones
             </Link>

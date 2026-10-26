@@ -12,6 +12,7 @@ export function ListaFallas({ fallas, conTag = true }: { fallas: ConPendiente<Fa
           <Link to={`/fallas/${f.id}`} className="block space-y-1 py-3 active:bg-slate-50">
             <div className="flex items-center gap-2">
               {conTag && <span className="font-mono font-bold">{f.tagISA}</span>}
+              {conTag && f.subArea && <span className="truncate rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700">{f.subArea}</span>}
               <EstadoFalla estado={f.estado} />
               {f.sinSincronizar && <Pendiente />}
               <span className="ml-auto text-xs text-slate-400">{fechaCorta(f.fechas.creada)}</span>

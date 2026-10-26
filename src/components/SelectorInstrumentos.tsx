@@ -12,7 +12,7 @@ export function SelectorInstrumentos({ ids, onCambio }: { ids: string[]; onCambi
   const q = normalizar(texto.trim())
   const sugerencias = useMemo(() => {
     if (!q || !lista) return []
-    return lista.filter((i) => !ids.includes(i.id) && normalizar(`${i.tagISA} ${i.servicio}`).includes(q)).slice(0, 6)
+    return lista.filter((i) => !ids.includes(i.id) && normalizar(`${i.tagISA} ${i.servicio} ${i.subArea}`).includes(q)).slice(0, 6)
   }, [lista, q, ids])
 
   return (
@@ -22,6 +22,7 @@ export function SelectorInstrumentos({ ids, onCambio }: { ids: string[]; onCambi
           {ids.map((id) => (
             <li key={id} className="flex items-center gap-1 rounded-full bg-marca-50 py-1 pr-1 pl-3 text-sm font-medium text-marca-800">
               <span className="font-mono">{porId.get(id)?.tagISA ?? '…'}</span>
+              {porId.get(id)?.subArea && <span className="text-xs font-normal">{porId.get(id)?.subArea}</span>}
               <button type="button" className="rounded-full p-1" aria-label={`Quitar ${porId.get(id)?.tagISA ?? ''}`} onClick={() => onCambio(ids.filter((x) => x !== id))}>
                 <Icono nombre="cerrar" className="size-3.5" />
               </button>
@@ -50,6 +51,7 @@ export function SelectorInstrumentos({ ids, onCambio }: { ids: string[]; onCambi
                 }}
               >
                 <span className="font-mono font-semibold">{i.tagISA}</span>
+                {i.subArea && <span className="shrink-0 text-xs text-slate-700">{i.subArea}</span>}
                 <span className="truncate text-slate-500">{i.servicio}</span>
               </button>
             </li>

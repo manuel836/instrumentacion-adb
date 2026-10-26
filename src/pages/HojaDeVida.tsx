@@ -128,6 +128,7 @@ export function HojaDeVida() {
           )}
           <dl className="grid flex-1 grid-cols-2 content-start gap-x-4 gap-y-2 sm:grid-cols-3 print:grid-cols-3">
             <Dato k="Área" v={inst.area} />
+            {inst.subArea && <Dato k="Sub área" v={inst.subArea} />}
             <Dato k="Estado" v={inst.estado} />
             <Dato k="Ubicación" v={inst.ubicacionTexto} />
             <Dato k="Lazo" v={inst.lazo} />

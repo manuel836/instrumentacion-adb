@@ -7,6 +7,7 @@ import { grabarUrl, leerYGrabar, nfcDisponible, type Revision } from '../lib/nfc
 import { bytesNdef, generarToken, tokenDeUrl, urlDeTag } from '../lib/token'
 import { SelectorFotos, type FotoNueva } from '../components/SelectorFotos'
 import { Icono } from '../components/Icono'
+import { dondeEsta } from '../types'
 
 type EstadoNfc = 'inicio' | 'esperando' | 'conflicto' | 'grabado' | 'error'
 type Conflicto = Extract<Revision, { grabar: false }>
@@ -48,9 +49,9 @@ export function Vincular() {
     if (!otro || otro.id === inst.id) return { grabar: true }
     return {
       grabar: false,
-      motivo: `Este tag ya pertenece a ${otro.tagISA} (${otro.servicio}).`,
+      motivo: `Este tag ya pertenece a ${otro.tagISA} (${otro.servicio}, ${dondeEsta(otro)}).`,
       otroId: otro.id,
-      otroTag: otro.tagISA,
+      otroTag: otro.subArea ? `${otro.tagISA} de ${otro.subArea}` : otro.tagISA,
     }
   }
 
@@ -108,6 +109,7 @@ export function Vincular() {
     <div className="space-y-4 p-4">
       <h1 className="text-xl font-bold">
         Tag NFC de <span className="font-mono">{inst.tagISA}</span>
+        {inst.subArea && <span className="block text-sm font-normal text-slate-500">{dondeEsta(inst)}</span>}
       </h1>
 
       <section className="tarjeta space-y-3">

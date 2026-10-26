@@ -240,6 +240,7 @@ async function reconstruir(instrumentoId: string, tokenAnterior?: string | null)
     tagISA: inst.get('tagISA') ?? '',
     servicio: inst.get('servicio') ?? '',
     area: inst.get('area') ?? '',
+    subArea: inst.get('subArea') ?? '',
     estado: inst.get('estado') ?? '',
     ubicacionTexto: inst.get('ubicacionTexto') ?? '',
     fotosUbicacion: fotos.map((f) => ({ url: f.url ?? null, miniaturaUrl: f.miniaturaUrl ?? null, pie: f.pie ?? '', esPortada: !!f.esPortada })),
@@ -247,7 +248,7 @@ async function reconstruir(instrumentoId: string, tokenAnterior?: string | null)
   })
 }
 
-const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'estado', 'ubicacionTexto', 'nfcToken']
+const CAMPOS_PUBLICOS = ['tagISA', 'servicio', 'area', 'subArea', 'estado', 'ubicacionTexto', 'nfcToken']
 
 export const alEscribirInstrumento = onDocumentWritten('instrumentos/{id}', async (ev) => {
   const antes = ev.data?.before.data()
@@ -509,7 +510,8 @@ export async function avisosDeCalibracion(ahora: Date) {
     db.collection('usuarios').where('rol', 'in', ['tecnico', 'admin']).where('activo', '==', true).get(),
   ])
   const lista: InstrumentoCal[] = insts.docs.map((d) => ({
-    tagISA: String(d.get('tagISA')),
+    // Con sub área el tag se puede repetir: "PT-101 (Caldera 2)".
+    tagISA: d.get('subArea') ? `${d.get('tagISA')} (${d.get('subArea')})` : String(d.get('tagISA')),
     area: String(d.get('area')),
     proxima: (d.get('proximaCalibracion') as Timestamp | null)?.toDate() ?? null,
   }))

@@ -9,6 +9,7 @@ import { EstadoFalla, fechaCorta } from '../components/EstadoFalla'
 import { FotoImg } from '../components/FotoImg'
 import { Visor } from '../components/Visor'
 import { RefaccionesUsadas } from '../components/RefaccionesUsadas'
+import { dondeEsta } from '../types'
 
 export function DetalleFalla() {
   const { id } = useParams()
@@ -47,7 +48,7 @@ export function DetalleFalla() {
           <EstadoFalla estado={falla.estado} />
           {falla.sinSincronizar && <Pendiente />}
         </div>
-        <p className="text-sm text-slate-500">{falla.area}</p>
+        <p className="text-sm text-slate-500">{dondeEsta(falla)}</p>
         <p className="whitespace-pre-wrap">{falla.descripcion}</p>
         {falla.fotos.length > 0 && (
           <div className="grid grid-cols-4 gap-2 pt-1">

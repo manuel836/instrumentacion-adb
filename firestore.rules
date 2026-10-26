@@ -37,6 +37,7 @@ service cloud.firestore {
       return d.tagISA is string && d.tagISA.size() >= 2 && d.tagISA.size() <= 16
         && d.servicio is string && d.servicio.size() >= 1 && d.servicio.size() <= 200
         && d.area in ['Generación de vapor', 'Almacenamiento de amoniaco', 'Tratamiento de agua']
+        && d.get('subArea', '') is string && d.get('subArea', '').size() <= 60
         && d.estado in ['Operando', 'Con falla', 'Fuera de servicio']
         && (d.nfcToken == null || (d.nfcToken is string && d.nfcToken.matches('^[A-Za-z0-9]{16,22}$')))
         && d.docs is list && d.docs.size() <= 30;
@@ -255,6 +256,17 @@ service cloud.firestore {
       allow create: if tecnico() && movimientoValido(request.resource.data)
         && getAfter(/databases/$(database)/documents/refacciones/$(request.resource.data.refaccionId)).data.ultimoMovimiento == movId;
       allow update, delete: if false;
+    }
+
+    // Sub áreas (calderas, tanques, secciones) de cada área: todos las ven, el admin las edita.
+    match /subareas/{id} {
+      allow read: if conRol();
+      allow create, update: if admin()
+        && request.resource.data.keys().hasOnly(['area', 'nombre'])
+        && request.resource.data.area in ['Generación de vapor', 'Almacenamiento de amoniaco', 'Tratamiento de agua']
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 60;
+      allow delete: if admin();
     }
 
     // Vista de invitado: solo se lee un documento por su token exacto; no se puede listar.

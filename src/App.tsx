@@ -36,6 +36,7 @@ const FormRefaccion = diferida(() => import('./pages/FormRefaccion'), 'FormRefac
 const HistorialChat = diferida(() => import('./pages/HistorialChat'), 'HistorialChat')
 const DiaChat = diferida(() => import('./pages/HistorialChat'), 'DiaChat')
 const ChatsPrivados = diferida(() => import('./pages/ChatsPrivados'), 'ChatsPrivados')
+const Subareas = diferida(() => import('./pages/Subareas'), 'Subareas')
 const ConversacionPrivada = diferida(() => import('./pages/ChatsPrivados'), 'ConversacionPrivada')
 
 function ConSesion({ children }: { children: ReactNode }) {
@@ -143,6 +144,7 @@ function Rutas() {
         <Route path="bitacora" element={<SoloSi permitido={p.verBitacora}><Bitacora /></SoloSi>} />
         <Route path="exportar" element={<SoloSi permitido={p.exportar}><Exportar /></SoloSi>} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
+        <Route path="subareas" element={<SoloSi permitido={p.gestionarUsuarios}><Subareas /></SoloSi>} />
         <Route path="refacciones" element={<Refacciones />} />
         <Route path="refacciones/nueva" element={<SoloSi permitido={p.refacciones}><FormRefaccion /></SoloSi>} />
         <Route path="refacciones/:id" element={<DetalleRefaccion />} />

@@ -78,6 +78,7 @@ export async function reportarFalla(inst: Instrumento, descripcion: string, arch
     instrumentoId: inst.id,
     tagISA: inst.tagISA,
     area: inst.area,
+    subArea: inst.subArea ?? '',
     estado: 'Abierta',
     reportadoPor: quien,
     tecnicoAsignado: null,
