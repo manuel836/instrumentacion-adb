@@ -85,6 +85,12 @@ describe('instrumentos', () => {
     await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { puntoAjuste: '10' }))
     await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { tipo: 'x'.repeat(61) }))
   })
+
+  it('la salida del transmisor es lineal o raíz cuadrada', async () => {
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { tipo: 'Transmisor de flujo', salidaTransmisor: 'Raíz cuadrada' }))
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { salidaTransmisor: 'Lineal' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { salidaTransmisor: 'Cuadrática' }))
+  })
 })
 
 describe('sub áreas', () => {
@@ -387,6 +393,12 @@ describe('calibraciones', () => {
     await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c2'), cal('u-tecnico', { ...kv, revisiones: [] })))
     // Una calibración con puntos sigue pidiendo rango y tolerancia.
     await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c3'), cal('u-tecnico', { tolerancia: 0, revisiones: kv.revisiones })))
+  })
+
+  it('el transmisor guarda si su salida es lineal o raíz cuadrada', async () => {
+    const ft = { tipo: 'Transmisor de flujo', lecturaEn: 'mA', puntos: [{ entrada: 37.5, asFound: 12.02, asLeft: null }, { entrada: 150, asFound: 20, asLeft: null }], rangoMax: 150 }
+    await assertSucceeds(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c1'), cal('u-tecnico', { ...ft, salidaTransmisor: 'Raíz cuadrada' })))
+    await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c2'), cal('u-tecnico', { ...ft, salidaTransmisor: 'sqrt' })))
   })
 
   it('el interruptor se evalúa en unidades y puede ir sin rango', async () => {

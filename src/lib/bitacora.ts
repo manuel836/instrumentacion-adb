@@ -129,6 +129,7 @@ const CAMPOS: Record<string, string> = {
   presionSuministro: 'Presión de suministro',
   finalesCarrera: 'Finales de carrera',
   sensor: 'Sensor',
+  salidaTransmisor: 'Salida del transmisor',
   puntoAjuste: 'Punto de ajuste',
   disparaAl: 'Dispara',
   contacto: 'Contacto',

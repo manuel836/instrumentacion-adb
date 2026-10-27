@@ -10,6 +10,7 @@ const colCalibraciones = (instrumentoId: string) => collection(db, 'instrumentos
 const SIN_TIPO = {
   tipo: '',
   lecturaEn: 'unidades',
+  salidaTransmisor: '',
   toleranciaEn: '%',
   senalInvertida: false,
   disparaAl: '',

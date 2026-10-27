@@ -238,4 +238,33 @@ describe('tipo de instrumento', () => {
     expect(a.actualizar).toEqual([{ fila: 5, id: 'i1', tagISA: 'FCV-70', cambios: { tipo: 'Válvula de control', accionValvula: 'Aire para cerrar' } }])
     expect(a.avisos.map((x) => [x.tag, x.mensaje])).toEqual([['XX-5', 'Tipo "bomba" no está en la lista: se deja como estaba.']])
   })
+
+  it('lee la salida del transmisor (lineal o raíz cuadrada)', () => {
+    const a = analizar(
+      [
+        {
+          nombre: 'Instrumentos',
+          filas: [
+            ['Tag ISA', 'Servicio', 'Área', 'Tipo', 'Salida del transmisor'],
+            ['FT-202', 'Flujo de vapor', 'vapor', 'FT', 'raiz cuadrada'],
+            ['PDT-12', 'DP de filtro', 'agua', 'PDT', 'Lineal'],
+            ['FT-203', 'Flujo de agua', 'agua', 'FT', 'SQRT'],
+            ['TT-4', 'Temperatura', 'vapor', 'TT', 'Raíz cuadrada'],
+            ['LT-5', 'Nivel', 'agua', 'LT', 'logarítmica'],
+          ],
+        },
+      ],
+      [],
+      true,
+    )
+    expect(a.nuevos.map((n) => [n.datos.tagISA, n.datos.salidaTransmisor])).toEqual([
+      ['FT-202', 'Raíz cuadrada'],
+      ['PDT-12', 'Lineal'],
+      ['FT-203', 'Raíz cuadrada'],
+      // La de temperatura no lleva salida de raíz.
+      ['TT-4', ''],
+      ['LT-5', ''],
+    ])
+    expect(a.avisos.map((x) => [x.tag, x.mensaje])).toEqual([['LT-5', 'Salida del transmisor "logarítmica" no está en la lista: se deja como estaba.']])
+  })
 })

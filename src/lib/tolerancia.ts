@@ -12,6 +12,8 @@ export interface Medida {
   rangoMin: number
   rangoMax: number
   lecturaEn?: 'mA' | 'unidades'
+  /** 'Raíz cuadrada': los mA siguen la raíz de la fracción del rango (flujo por DP). */
+  salidaTransmisor?: string
   toleranciaEn?: '%' | 'unidades'
   senalInvertida?: boolean
 }
@@ -19,9 +21,15 @@ export interface Medida {
 /**
  * Lo que debería marcar el instrumento en ese punto: la misma entrada, su salida en mA
  * (4 a 20) si se leyó la salida, o la posición contraria si la señal de la válvula va invertida.
+ * Salida lineal: (PV - LRV) / SPAN × 16 + 4. Raíz cuadrada: √((PV - LRV) / SPAN) × 16 + 4.
  */
 export function esperado(m: Medida, entrada: number): number | null {
-  if (m.lecturaEn === 'mA') return m.rangoMax > m.rangoMin ? 4 + (16 * (entrada - m.rangoMin)) / (m.rangoMax - m.rangoMin) : null
+  if (m.lecturaEn === 'mA') {
+    if (m.rangoMax <= m.rangoMin) return null
+    const fraccion = (entrada - m.rangoMin) / (m.rangoMax - m.rangoMin)
+    // Bajo el cero no hay raíz: el transmisor se queda en 4 mA (corte de bajo flujo).
+    return 4 + 16 * (m.salidaTransmisor === 'Raíz cuadrada' ? Math.sqrt(Math.max(0, fraccion)) : fraccion)
+  }
   if (m.senalInvertida) return m.rangoMax - (entrada - m.rangoMin)
   return entrada
 }

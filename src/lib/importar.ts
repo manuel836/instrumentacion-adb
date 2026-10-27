@@ -11,6 +11,8 @@ import {
   DISPARA_AL,
   FINALES_CARRERA,
   POSICIONADORES,
+  RAIZ_CUADRADA,
+  SALIDAS_TRANSMISOR,
   SENSORES_TEMPERATURA,
   TIPOS,
   soloDatosDelTipo,
@@ -76,6 +78,13 @@ export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: s
   { campo: 'presionSuministro', titulo: 'Presión de suministro', ayuda: 'Solo válvula de control. Ej.: 20 psi.', ejemplo: '20 psi', alias: ['suministro', 'presiondeaire'], deTipo: true },
   { campo: 'finalesCarrera', titulo: 'Finales de carrera', ayuda: `Solo válvula de corte. Uno de: ${FINALES_CARRERA.join(', ')}.`, ejemplo: 'Abierta y cerrada', alias: ['finales', 'limitswitch'], deTipo: true },
   { campo: 'sensor', titulo: 'Sensor', ayuda: `Solo transmisor de temperatura. Uno de: ${SENSORES_TEMPERATURA.join(', ')}.`, ejemplo: 'RTD Pt100', alias: ['elemento', 'tiposensor'], deTipo: true },
+  {
+    campo: 'salidaTransmisor',
+    titulo: 'Salida del transmisor',
+    ayuda: 'Solo transmisores (menos temperatura). Lineal o Raíz cuadrada (flujo por presión diferencial). Si va vacío: Lineal.',
+    ejemplo: 'Lineal',
+    alias: ['tipodesalida', 'funciondetransferencia', 'transferfunction', 'caracteristica'],
+  },
   { campo: 'puntoAjuste', titulo: 'Punto de ajuste', ayuda: 'Solo interruptores. Número, en las unidades del instrumento.', ejemplo: 10.5, alias: ['setpoint', 'ajuste', 'puntodedisparo'], deTipo: true },
   { campo: 'disparaAl', titulo: 'Dispara al', ayuda: 'Solo interruptores. Al subir o Al bajar.', ejemplo: 'Al subir', alias: ['dispara', 'accioninterruptor'], deTipo: true },
   { campo: 'contacto', titulo: 'Contacto', ayuda: 'Solo interruptores. NA o NC.', ejemplo: 'NA', alias: ['tipodecontacto'], deTipo: true },
@@ -170,6 +179,13 @@ function accionValvula(v: string): string | null {
   return null
 }
 
+function salidaTransmisor(v: string): string | null {
+  const k = clave(v)
+  if (k.includes('raiz') || k.includes('cuadra') || ['sqrt', 'squareroot', 'sq'].includes(k)) return RAIZ_CUADRADA
+  if (k.includes('lineal') || k === 'linear') return SALIDAS_TRANSMISOR[0].valor
+  return null
+}
+
 function disparaAl(v: string): string | null {
   const k = clave(v)
   if (k.includes('subir') || ['alto', 'h', 'high', 'sube', 'ascendente'].includes(k)) return DISPARA_AL[0]
@@ -192,6 +208,7 @@ const DE_LISTA: Partial<Record<Campo, { nombre: string; leer: (t: string) => str
   posicionador: { nombre: 'Posicionador', leer: (t) => deLista(t, POSICIONADORES) },
   finalesCarrera: { nombre: 'Finales de carrera', leer: (t) => deLista(t, FINALES_CARRERA) },
   sensor: { nombre: 'Sensor', leer: (t) => deLista(t, SENSORES_TEMPERATURA) },
+  salidaTransmisor: { nombre: 'Salida del transmisor', leer: salidaTransmisor },
   disparaAl: { nombre: 'Dispara al', leer: disparaAl },
   contacto: { nombre: 'Contacto', leer: contacto },
 }
@@ -491,6 +508,7 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         presionSuministro: leido.presionSuministro ?? '',
         finalesCarrera: leido.finalesCarrera ?? '',
         sensor: leido.sensor ?? '',
+        salidaTransmisor: leido.salidaTransmisor ?? '',
         puntoAjuste: leido.puntoAjuste ?? null,
         disparaAl: leido.disparaAl ?? '',
         contacto: leido.contacto ?? '',

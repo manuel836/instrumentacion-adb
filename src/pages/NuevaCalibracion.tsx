@@ -7,6 +7,9 @@ import { useInstrumento } from '../lib/instrumentos'
 import { errorLectura, esperado, puntosDelRango, resultadoSugerido, textoError, type Medida } from '../lib/tolerancia'
 import {
   DISPARA_AL,
+  RAIZ_CUADRADA,
+  SALIDAS_TRANSMISOR,
+  camposDeTipo,
   datosDelTipo,
   diferencial,
   pruebaDe,
@@ -51,6 +54,8 @@ interface Captura {
   tolerancia: string
   filas: Fila[]
   lecturaEn: 'mA' | 'unidades'
+  /** '' si el tipo no la tiene (temperatura y lo que no es transmisor). */
+  salidaTransmisor: string
   senalInvertida: boolean
   disparaAl: string
   reposicion: { asFound: string; asLeft: string }
@@ -64,7 +69,8 @@ interface Captura {
 
 /**
  * Valores con los que empieza la prueba: rango, unidades y puntos salen de la ficha del instrumento.
- * Un transmisor se lee como en su calibración anterior (mA o unidades de proceso).
+ * Un transmisor se lee como en su calibración anterior (mA o unidades de proceso); el de raíz
+ * cuadrada, si no hay anterior, en mA, que es donde se ve la raíz.
  */
 function capturaInicial(inst: Instrumento, tipo: string, anterior?: Calibracion): Captura {
   const p = pruebaDe(tipo)
@@ -78,6 +84,7 @@ function capturaInicial(inst: Instrumento, tipo: string, anterior?: Calibracion)
     tolerancia: '0.5',
     filas: filasDe(conRango ? puntosDelRango(inst.rangoMin!, inst.rangoMax!) : [null, null, null]),
     lecturaEn: 'unidades',
+    salidaTransmisor: camposDeTipo(tipo).includes('salidaTransmisor') ? inst.salidaTransmisor || 'Lineal' : '',
     senalInvertida: false,
     disparaAl: inst.disparaAl,
     reposicion: { asFound: '', asLeft: '' },
@@ -88,7 +95,10 @@ function capturaInicial(inst: Instrumento, tipo: string, anterior?: Calibracion)
     pendiente: '',
     offset: '',
   }
-  if (p === 'transmisor') return { ...base, lecturaEn: anterior?.lecturaEn === 'mA' ? 'mA' : 'unidades' }
+  if (p === 'transmisor') {
+    const enMA = anterior ? anterior.lecturaEn === 'mA' : base.salidaTransmisor === RAIZ_CUADRADA
+    return { ...base, lecturaEn: enMA ? 'mA' : 'unidades' }
+  }
   // La carrera va de 0 a 100 % de la señal (4 a 20 mA).
   if (p === 'carrera') return { ...base, min: '0', max: '100', unidades: '%', tolerancia: '2', filas: filasDe([0, 25, 50, 75, 100]) }
   if (p === 'funcional') return { ...base, filas: [], tolerancia: '' }
@@ -116,6 +126,7 @@ function medidaDe(p: Prueba, c: Captura, inst: Instrumento): Medida & { unidades
     ...rango,
     unidades: c.unidades.trim(),
     lecturaEn: p === 'transmisor' ? c.lecturaEn : 'unidades',
+    salidaTransmisor: c.salidaTransmisor,
     toleranciaEn: enUnidades ? 'unidades' : '%',
     senalInvertida: p === 'carrera' && c.senalInvertida,
   }
@@ -231,6 +242,7 @@ export function NuevaCalibracion() {
       proxima: proxima ? aTimestamp(proxima) : null,
       tipo: cap.tipo,
       lecturaEn: medida.lecturaEn ?? 'unidades',
+      salidaTransmisor: cap.salidaTransmisor,
       toleranciaEn: medida.toleranciaEn ?? '%',
       senalInvertida: medida.senalInvertida ?? false,
       disparaAl: p === 'interruptor' ? cap.disparaAl : '',
@@ -244,6 +256,8 @@ export function NuevaCalibracion() {
     // Lo que se llenó aquí y la ficha no tenía se guarda también en la ficha.
     const paraLaFicha: Partial<InstrumentoNuevo> = {}
     if (!inst.tipo && cap.tipo) paraLaFicha.tipo = cap.tipo
+    // Si en la prueba resultó de otra salida, la ficha se corrige.
+    if (cap.salidaTransmisor && cap.salidaTransmisor !== (inst.salidaTransmisor || 'Lineal')) paraLaFicha.salidaTransmisor = cap.salidaTransmisor
     if (p === 'interruptor') {
       if (inst.puntoAjuste === null) paraLaFicha.puntoAjuste = puntos[0].entrada
       if (!inst.disparaAl && cap.disparaAl) paraLaFicha.disparaAl = cap.disparaAl
@@ -367,6 +381,24 @@ export function NuevaCalibracion() {
         </section>
       )}
 
+      {cap.salidaTransmisor && (
+        <div>
+          <span className="etiqueta">Salida del transmisor</span>
+          <Segmentado
+            etiqueta="Salida del transmisor"
+            opciones={SALIDAS_TRANSMISOR.map((s): { valor: string; texto: string } => ({ valor: s.valor, texto: s.valor }))}
+            valor={cap.salidaTransmisor}
+            onChange={(v) => set('salidaTransmisor', v)}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            {cap.salidaTransmisor === RAIZ_CUADRADA
+              ? 'mA = √((entrada − mín.) / span) × 16 + 4. Con 25 % de la entrada debe dar 12 mA.'
+              : 'mA = (entrada − mín.) / span × 16 + 4.'}
+            {inst.tipo && cap.salidaTransmisor !== (inst.salidaTransmisor || 'Lineal') && ' Al guardar, también se corrige en su ficha.'}
+          </p>
+        </div>
+      )}
+
       {p === 'transmisor' && (
         <div>
           <span className="etiqueta">Leí la salida en</span>
@@ -379,6 +411,9 @@ export function NuevaCalibracion() {
             valor={cap.lecturaEn}
             onChange={(v) => set('lecturaEn', v)}
           />
+          {cap.salidaTransmisor === RAIZ_CUADRADA && cap.lecturaEn === 'unidades' && (
+            <p className="mt-1 text-xs text-slate-500">En unidades de proceso la presión diferencial se compara igual que en uno lineal. La raíz solo se comprueba leyendo los mA.</p>
+          )}
         </div>
       )}
 

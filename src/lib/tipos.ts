@@ -111,6 +111,13 @@ export const POSICIONADORES = ['Neumático', 'Electroneumático', 'Digital (HART
 export const FINALES_CARRERA = ['Abierta y cerrada', 'Solo abierta', 'Solo cerrada', 'Sin finales de carrera'] as const
 export const SENSORES_TEMPERATURA = ['RTD Pt100', 'RTD Pt1000', 'Termopar J', 'Termopar K', 'Termopar T', 'Termopar E', 'Otro'] as const
 export const DISPARA_AL = ['Al subir', 'Al bajar'] as const
+
+/** Cómo va la salida de 4 a 20 mA con la variable. La de raíz cuadrada es la del flujo medido por presión diferencial. */
+export const SALIDAS_TRANSMISOR = [
+  { valor: 'Lineal', ayuda: 'Los mA suben parejo con la variable' },
+  { valor: 'Raíz cuadrada', ayuda: 'Flujo por presión diferencial' },
+] as const
+export const RAIZ_CUADRADA = SALIDAS_TRANSMISOR[1].valor
 export const CONTACTOS = [
   { valor: 'NA', texto: 'NA (normalmente abierto)' },
   { valor: 'NC', texto: 'NC (normalmente cerrado)' },
@@ -124,6 +131,7 @@ export type CampoDeTipo =
   | 'presionSuministro'
   | 'finalesCarrera'
   | 'sensor'
+  | 'salidaTransmisor'
   | 'puntoAjuste'
   | 'disparaAl'
   | 'contacto'
@@ -135,6 +143,7 @@ const VACIOS: Record<CampoDeTipo, string | null> = {
   presionSuministro: '',
   finalesCarrera: '',
   sensor: '',
+  salidaTransmisor: '',
   puntoAjuste: null,
   disparaAl: '',
   contacto: '',
@@ -149,6 +158,8 @@ export function camposDeTipo(tipo: string, accion = ''): CampoDeTipo[] {
   if (p === 'funcional') return ['accionValvula', 'finalesCarrera']
   if (p === 'interruptor') return ['puntoAjuste', 'disparaAl', 'contacto']
   if (tipo === 'Transmisor de temperatura') return ['sensor']
+  // La de temperatura siempre es lineal; las demás pueden sacar la raíz (flujo por DP).
+  if (p === 'transmisor') return ['salidaTransmisor']
   return []
 }
 
@@ -182,6 +193,8 @@ export function datosDelTipo(i: Pick<Instrumento, 'tipo' | 'unidades' | CampoDeT
     if (c === 'presionSuministro') agregar('Presión de suministro', i.presionSuministro)
     if (c === 'finalesCarrera') agregar('Finales de carrera', i.finalesCarrera)
     if (c === 'sensor') agregar('Sensor', i.sensor)
+    // Sin elegir es lineal, como todos los de antes.
+    if (c === 'salidaTransmisor') agregar('Salida', i.salidaTransmisor || 'Lineal')
     if (c === 'puntoAjuste') agregar('Punto de ajuste', i.puntoAjuste === null ? null : `${i.puntoAjuste} ${i.unidades}`.trim())
     if (c === 'disparaAl') agregar('Dispara', i.disparaAl.toLowerCase())
     if (c === 'contacto') agregar('Contacto', CONTACTOS.find((x) => x.valor === i.contacto)?.texto ?? i.contacto)
@@ -278,7 +291,7 @@ export function resumenRevisiones(revisiones: Revision[]): string {
 
 type CalResumible = Pick<
   Calibracion,
-  'tipo' | 'lecturaEn' | 'senalInvertida' | 'puntos' | 'unidades' | 'disparaAl' | 'reposicion' | 'revisiones' | 'tiempoApertura' | 'tiempoCierre' | 'pendiente' | 'offset'
+  'tipo' | 'lecturaEn' | 'salidaTransmisor' | 'senalInvertida' | 'puntos' | 'unidades' | 'disparaAl' | 'reposicion' | 'revisiones' | 'tiempoApertura' | 'tiempoCierre' | 'pendiente' | 'offset'
 >
 
 /** "abre en 4 s, cierra en 3 s" → "Abre en 4 s, cierra en 3 s." */
@@ -292,6 +305,7 @@ export function detallePrueba(c: CalResumible): string {
   const p = pruebaDe(c.tipo)
   const u = c.unidades ? ` ${c.unidades}` : ''
   const partes: string[] = []
+  if (p === 'transmisor' && c.salidaTransmisor === RAIZ_CUADRADA) partes.push('Salida en raíz cuadrada.')
   if (p === 'transmisor' && c.lecturaEn === 'mA') partes.push('Salida leída en mA (4-20).')
   if (p === 'interruptor' && c.puntos[0]) {
     const { entrada, asFound, asLeft } = c.puntos[0]

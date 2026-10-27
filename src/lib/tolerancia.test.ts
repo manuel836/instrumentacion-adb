@@ -34,6 +34,23 @@ describe('tolerancia', () => {
     expect(errorMaximo({ ...m, puntos: [p(0, 4.02), p(20, 19.9)] }, 'asFound')).toBeCloseTo(-0.625)
   })
 
+  it('con salida de raíz cuadrada los mA siguen la raíz de la entrada', () => {
+    // El ejemplo del transmisor de presión diferencial de 0 a 150 inH2O.
+    const lineal = { rangoMin: 0, rangoMax: 150, lecturaEn: 'mA' as const, salidaTransmisor: 'Lineal' }
+    const raiz = { ...lineal, salidaTransmisor: 'Raíz cuadrada' }
+    expect([0, 37.5, 75, 112.5, 150].map((e) => Number(esperado(lineal, e)!.toFixed(2)))).toEqual([4, 8, 12, 16, 20])
+    expect([0, 37.5, 75, 112.5, 150].map((e) => Number(esperado(raiz, e)!.toFixed(2)))).toEqual([4, 12, 15.31, 17.86, 20])
+    // Bajo el cero se queda en 4 mA (no hay raíz de un negativo).
+    expect(esperado(raiz, -1)).toBe(4)
+    // El error sigue en % de los 16 mA: 15.39 contra 15.31 es 0.5 %.
+    expect(errorLectura(raiz, 15.3937, 75)).toBeCloseTo(0.5, 2)
+    expect(resultadoSugerido([p(0, 4.01), p(37.5, 12.03), p(75, 15.3), p(112.5, 17.87), p(150, 19.98)], 0.5, raiz)).toBe('Aprobada sin ajuste')
+    // Un transmisor de raíz evaluado como lineal sale fuera.
+    expect(resultadoSugerido([p(37.5, 12.03)], 0.5, lineal)).toBe('Fuera de tolerancia')
+    // En unidades de proceso no cambia nada: se compara la presión diferencial.
+    expect(esperado({ ...raiz, lecturaEn: 'unidades' as const }, 37.5)).toBe(37.5)
+  })
+
   it('en interruptores y analizadores el error va en unidades', () => {
     const m = { rangoMin: 0, rangoMax: 0, toleranciaEn: 'unidades' as const }
     expect(errorLectura(m, 10.3, 10)).toBeCloseTo(0.3)
