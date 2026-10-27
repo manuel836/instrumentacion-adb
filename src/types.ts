@@ -144,7 +144,8 @@ export interface Falla {
   fotos: FotoFalla[]
   causaRaiz: string
   accionCorrectiva: string
-  fechas: { creada: Timestamp | null; tomada: Timestamp | null; cerrada: Timestamp | null }
+  /** `enTelefono`: hora real del reporte en el teléfono (sin señal, `creada` es la de llegada). */
+  fechas: { creada: Timestamp | null; tomada: Timestamp | null; cerrada: Timestamp | null; enTelefono?: Timestamp | null }
 }
 
 export interface Mensaje {

@@ -263,7 +263,7 @@ export function NuevaCalibracion() {
       if (!inst.disparaAl && cap.disparaAl) paraLaFicha.disparaAl = cap.disparaAl
     }
     const masReciente = (anteriores ?? []).every((c) => c.fecha.toMillis() <= datos.fecha.toMillis())
-    registrarCalibracion(inst.id, datos, masReciente, paraLaFicha)
+    registrarCalibracion(inst.id, datos, masReciente, paraLaFicha, inst.tagISA)
     avisarGuardado('Calibración guardada.', 'Calibración guardada en el teléfono. Se envía cuando haya señal.')
     navigate(`/instrumentos/${inst.id}`, { replace: true })
   }

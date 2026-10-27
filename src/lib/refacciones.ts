@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { collection, deleteDoc, doc, getDocFromServer, increment, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
+import { vigilar } from './rechazos'
 import type { Movimiento, Persona, Refaccion, RefaccionNueva, TipoMovimiento } from '../types'
 import type { ConPendiente } from './instrumentos'
 
@@ -137,7 +138,13 @@ export function registrarMovimiento(r: Refaccion, m: DatosMovimiento) {
   const lote = writeBatch(db)
   const movId = agregarMovimiento(lote, r.id, r.nombre, m)
   lote.update(doc(colRefacciones, r.id), { existencia: increment(m.cantidad), ultimoMovimiento: movId, actualizado: serverTimestamp() })
-  void lote.commit()
+  vigilar(lote.commit(), {
+    docPath: `movimientos/${movId}`,
+    titulo: `${m.tipo === 'entrada' ? 'Entrada' : m.tipo === 'salida' ? 'Salida' : 'Ajuste'} de ${r.nombre}`,
+    texto: `Cantidad: ${Math.abs(m.cantidad)} ${r.unidad}${m.nota.trim() ? `\nNota: ${m.nota.trim()}` : ''}`,
+    ruta: `/refacciones/${r.id}`,
+    motivo: 'El servidor no aceptó el movimiento. Puede que la refacción se haya borrado mientras no había señal.',
+  })
 }
 
 /**

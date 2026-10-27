@@ -18,6 +18,7 @@ import { claveDia } from '../hooks/useHoy'
 import type { FotoFalla, Mensaje, Persona } from '../types'
 import { comprimirFoto } from './images'
 import type { ConPendiente } from './instrumentos'
+import { vigilar } from './rechazos'
 import { encolar } from './uploadQueue'
 
 /** Canal general del equipo. */
@@ -74,6 +75,20 @@ export function useMensajes(ruta: string | null, desde?: Date, hasta?: Date) {
 /** Escrituras que van en el mismo lote que el mensaje (el resumen de un chat privado). */
 export type Tambien = (lote: WriteBatch, mensaje: { ref: DocumentReference; texto: string; fotos: number }) => void
 
+/** Qué decir de un mensaje que el servidor no aceptó, según el chat donde iba. */
+function dondeVa(ruta: string) {
+  const falla = /^fallas\/([^/]+)\/mensajes$/.exec(ruta)?.[1]
+  if (falla) {
+    return {
+      titulo: 'Mensaje en el chat de una falla',
+      ruta: `/fallas/${falla}`,
+      motivo: 'La falla ya estaba cerrada (o se eliminó) cuando tu teléfono tuvo señal.',
+    }
+  }
+  if (ruta === CANAL_GENERAL) return { titulo: 'Mensaje en el canal general', ruta: '/chat', motivo: 'El servidor no aceptó el mensaje.' }
+  return { titulo: 'Mensaje privado', ruta: '/chat/privados', motivo: 'El servidor no aceptó el mensaje.' }
+}
+
 /** Envía un mensaje. Sin señal queda en el teléfono y las fotos en la cola local. */
 export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[], autor: Persona, tambien?: Tambien): Promise<void> {
   const ref_ = doc(collection(db, ruta))
@@ -88,7 +103,7 @@ export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[
   const lote = writeBatch(db)
   lote.set(ref_, { autor, texto: texto.trim(), fotos, fecha: serverTimestamp() })
   tambien?.(lote, { ref: ref_, texto: texto.trim(), fotos: fotos.length })
-  void lote.commit()
+  vigilar(lote.commit(), { ...dondeVa(ruta), docPath: ref_.path, texto: texto.trim() || '(solo fotos)' })
   if (fotos.length > 0) {
     await encolar(
       comprimidas.flatMap((c, i) => [

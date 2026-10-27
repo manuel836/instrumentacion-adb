@@ -137,7 +137,7 @@ export function FormInstrumento() {
       })
       if (id) {
         const { nfcToken: _t, docs: _d, portadaMiniatura: _p, ...editables } = limpio
-        actualizarInstrumento(id, editables)
+        actualizarInstrumento(id, editables, tagISA)
         avisarGuardado('Cambios guardados.', 'Cambios guardados en el teléfono. Se envía cuando haya señal.')
         navigate(`/instrumentos/${id}`, { replace: true })
       } else {

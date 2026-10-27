@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
-import { cerrarFalla, tomarFalla, useFalla } from '../lib/fallas'
+import { cerrarFalla, horaDelReporte, tomarFalla, useFalla } from '../lib/fallas'
 import { hiloDeFalla } from '../lib/chat'
 import { Chat } from '../components/Chat'
 import { Pendiente } from '../components/Estado'
@@ -9,12 +9,18 @@ import { EstadoFalla, fechaCorta } from '../components/EstadoFalla'
 import { FotoImg } from '../components/FotoImg'
 import { nombreFoto, Visor } from '../components/Visor'
 import { RefaccionesUsadas } from '../components/RefaccionesUsadas'
-import { dondeEsta } from '../types'
+import { dondeEsta, type Falla } from '../types'
 import { useInstrumento } from '../lib/instrumentos'
 import { AvisoDisparo } from '../components/AvisoDisparo'
 import { BorrarFalla } from '../components/BorrarFalla'
 import { avisarGuardado } from '../components/Listo'
 import { Silueta } from '../components/Silueta'
+
+/** Llegó al servidor más de 10 minutos después de reportarse: se dice cuándo. */
+function llegoDespues(f: Falla) {
+  const { enTelefono, creada } = f.fechas
+  return !!enTelefono && !!creada && creada.toMillis() - enTelefono.toMillis() > 10 * 60_000
+}
 
 export function DetalleFalla() {
   const { id } = useParams()
@@ -41,7 +47,7 @@ export function DetalleFalla() {
       setError('La causa raíz y la acción correctiva son obligatorias.')
       return
     }
-    cerrarFalla(falla.id, causa, accion, yo, !!falla.tecnicoAsignado)
+    cerrarFalla(falla, causa, accion, yo, !!falla.tecnicoAsignado)
     avisarGuardado('Falla cerrada.', 'Falla cerrada en el teléfono. Se envía cuando haya señal.')
     setCerrando(false)
   }
@@ -74,7 +80,8 @@ export function DetalleFalla() {
         <h2 className="mb-2 font-semibold">Seguimiento</h2>
         <ol className="space-y-2 text-sm">
           <li>
-            <span className="font-medium">Reportada</span> por {falla.reportadoPor.nombre} · {fechaCorta(falla.fechas.creada)}
+            <span className="font-medium">Reportada</span> por {falla.reportadoPor.nombre} · {fechaCorta(horaDelReporte(falla))}
+            {llegoDespues(falla) && <span className="block text-xs text-slate-500">Sin señal: llegó al servidor {fechaCorta(falla.fechas.creada)}</span>}
           </li>
           {falla.tecnicoAsignado && (
             <li>
@@ -107,7 +114,7 @@ export function DetalleFalla() {
             <button
               className="btn-primario"
               onClick={() => {
-                tomarFalla(falla.id, yo)
+                tomarFalla(falla, yo)
                 avisarGuardado('Tomaste la falla: ahora está En proceso.', 'Tomaste la falla en el teléfono. Se envía cuando haya señal.')
               }}
             >

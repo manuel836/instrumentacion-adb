@@ -6,6 +6,7 @@ import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
 import { precargarMiniaturas } from './lib/instrumentos'
 import { anotarEnDirectorio } from './lib/privados'
+import { revisarSesionesAnteriores } from './lib/rechazos'
 import { Catalogo } from './pages/Catalogo'
 import { Inicio } from './pages/Inicio'
 import { ChatGeneral } from './pages/ChatGeneral'
@@ -47,6 +48,14 @@ function ConSesion({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (rol) return precargarMiniaturas()
   }, [rol])
+
+  useEffect(() => {
+    if (!user || !rol) return
+    // Lo que quedó sin respuesta del servidor la vez anterior se revisa al reconectar.
+    void revisarSesionesAnteriores(user.uid)
+    // Que el teléfono no borre lo guardado sin señal cuando se le llena la memoria.
+    void navigator.storage?.persist?.().catch(() => false)
+  }, [user, rol])
 
   // Para que los demás lo encuentren al abrir un chat privado.
   useEffect(() => {

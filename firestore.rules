@@ -122,6 +122,8 @@ service cloud.firestore {
         && request.resource.data.descripcion.size() >= 3 && request.resource.data.descripcion.size() <= 2000
         && request.resource.data.fotos is list && request.resource.data.fotos.size() <= 6
         && request.resource.data.causaRaiz == '' && request.resource.data.accionCorrectiva == ''
+        // Hora real del reporte en el teléfono (sin señal, la del servidor es la de llegada).
+        && (request.resource.data.fechas.get('enTelefono', null) == null || request.resource.data.fechas.enTelefono is timestamp)
         && exists(/databases/$(database)/documents/instrumentos/$(request.resource.data.instrumentoId));
       allow update: if (tecnico() && cambioDeFallaValido())
         // El teléfono de quien reporta solo completa las URLs de sus fotos al subirlas.
@@ -205,13 +207,16 @@ service cloud.firestore {
       let antes = resource.data;
       let despues = request.resource.data;
       let fijos = !cambian().hasAny(['instrumentoId', 'tagISA', 'area', 'reportadoPor', 'descripcion'])
-        && despues.fechas.creada == antes.fechas.creada;
+        && despues.fechas.creada == antes.fechas.creada
+        && despues.fechas.get('enTelefono', null) == antes.fechas.get('enTelefono', null);
       let cerrada = despues.estado == 'Cerrada'
         && despues.causaRaiz is string && despues.causaRaiz.size() >= 3
         && despues.accionCorrectiva is string && despues.accionCorrectiva.size() >= 3
         && despues.tecnicoAsignado != null;
+      // Quien ya la tomó la conserva: si otro técnico la toma sin señal, al sincronizar no se la quita.
+      let mismaAsignacion = !cambian().hasAny(['tecnicoAsignado']) || antes.tecnicoAsignado == null;
       return fijos && antes.estado != 'Cerrada' && (
-        (despues.estado == antes.estado)
+        (despues.estado == antes.estado && mismaAsignacion)
         || (antes.estado == 'Abierta' && despues.estado == 'En proceso' && despues.tecnicoAsignado != null)
         || (antes.estado in ['Abierta', 'En proceso'] && cerrada)
       );
@@ -290,6 +295,25 @@ service cloud.firestore {
       allow get: if true;
       allow list: if false;
       allow write: if false;
+    }
+
+    // Estado de cada teléfono (pendientes, errores, versión): lo escribe el propio teléfono
+    // y solo el admin lo consulta. El id es "uid_dispositivo".
+    match /telefonos/{id} {
+      allow read, delete: if admin();
+      allow create, update: if conRol()
+        && id.matches('^' + request.auth.uid + '_[A-Za-z0-9-]{8,40}$')
+        && request.resource.data.keys().hasOnly(['uid', 'nombre', 'dispositivo', 'version', 'instalada', 'almacenamientoProtegido',
+          'sinConfirmar', 'subidas', 'detenidas', 'rechazos', 'errores', 'actualizado'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 100
+        && request.resource.data.dispositivo is string && request.resource.data.dispositivo.size() <= 100
+        && request.resource.data.version is string && request.resource.data.version.size() <= 40
+        && request.resource.data.instalada is bool && request.resource.data.almacenamientoProtegido is bool
+        && request.resource.data.sinConfirmar is int && request.resource.data.subidas is int
+        && request.resource.data.detenidas is int && request.resource.data.rechazos is int
+        && request.resource.data.errores is list && request.resource.data.errores.size() <= 5
+        && request.resource.data.actualizado == request.time;
     }
 
     // Bitácora: la escriben triggers de Cloud Functions; nadie la edita ni la borra.

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
 import { useCalibraciones } from '../lib/calibraciones'
-import { duracionCierre, useFallasDeInstrumento } from '../lib/fallas'
+import { duracionCierre, horaDelReporte, useFallasDeInstrumento } from '../lib/fallas'
 import { useFotosUbicacion, useInstrumento } from '../lib/instrumentos'
 import { useRefacciones } from '../lib/refacciones'
 import { errorMaximo, textoError, textoTolerancia, vencimiento } from '../lib/tolerancia'
@@ -18,7 +18,7 @@ const cuantas = (n: number, una: string, varias: string) => `${n} ${n === 1 ? un
 
 /** "3.5 h" o "2.1 días" entre el reporte y el cierre. */
 function duracion(f: Falla): string {
-  const inicio = f.fechas.creada?.toMillis()
+  const inicio = horaDelReporte(f)?.toMillis()
   const fin = f.fechas.cerrada?.toMillis()
   if (!inicio || !fin || fin < inicio) return '—'
   const h = (fin - inicio) / HORA
@@ -76,7 +76,7 @@ export function HojaDeVida() {
   const otras = fotos.filter((f) => f !== portada)
   const cerradas = fallas.filter((f) => f.estado === 'Cerrada')
   const horas = cerradas
-    .map((f) => ((f.fechas.cerrada?.toMillis() ?? 0) - (f.fechas.creada?.toMillis() ?? 0)) / HORA)
+    .map((f) => ((f.fechas.cerrada?.toMillis() ?? 0) - (horaDelReporte(f)?.toMillis() ?? 0)) / HORA)
     .filter((h) => h > 0)
   const promedio = horas.length ? horas.reduce((s, h) => s + h, 0) / horas.length : null
   const ultima = calibraciones[0]
@@ -235,7 +235,7 @@ export function HojaDeVida() {
                   {fallas.map((f) => (
                     <tr key={f.id} className="break-inside-avoid">
                       <td className={`${td} whitespace-nowrap`}>
-                        {fechaDia(f.fechas.creada) ?? 'sin sincronizar'}
+                        {fechaDia(horaDelReporte(f)) ?? 'sin sincronizar'}
                         <span className="block text-slate-500">{f.reportadoPor.nombre}</span>
                       </td>
                       <td className={`${td} min-w-40`}>{f.descripcion}</td>
