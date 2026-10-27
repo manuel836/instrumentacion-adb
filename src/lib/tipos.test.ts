@@ -106,6 +106,22 @@ describe('tipos de instrumento', () => {
     expect(revisionesDe('transmisor', { accionValvula: '', finalesCarrera: '' })).toEqual([])
   })
 
+  it('la válvula de doble efecto no tiene resorte y se prueba quitándole la señal', () => {
+    const entreCamaras = 'Sin paso de aire entre cámaras (diafragma o pistón sano)'
+    const kv = revisionesDe('funcional', { accionValvula: 'Aire para abrir y cerrar', finalesCarrera: '' })
+    expect(kv).toContain('Al desenergizar el solenoide va a su posición segura')
+    expect(kv).toContain(entreCamaras)
+    expect(kv.some((r) => r.startsWith('Sin aire'))).toBe(false)
+    expect(revisionesDe('carrera', { accionValvula: 'Aire para abrir y cerrar', finalesCarrera: '' })).toContain('Al quitar la señal va a su posición segura')
+    expect(revisionesDe('funcional', { accionValvula: 'Aire para abrir', finalesCarrera: '' })).not.toContain(entreCamaras)
+    const fcv = { ...instrumentoVacio(), tipo: 'Válvula de control', accionValvula: 'Aire para abrir y cerrar', rangoResorte: '3-15 psi', presionSuministro: '60 psi' }
+    expect(soloDatosDelTipo(fcv).rangoResorte).toBe('')
+    expect(datosDelTipo(fcv)).toEqual([
+      { k: 'Acción', v: 'Aire para abrir y cerrar · doble efecto, sin resorte' },
+      { k: 'Presión de suministro', v: '60 psi' },
+    ])
+  })
+
   it('el resultado de la válvula de corte sale de sus revisiones', () => {
     const r = (estado: 'Bien' | 'Mal' | 'No aplica' | '') => ({ nombre: 'x', estado })
     expect(resultadoRevisiones([r('Bien'), r('')], false)).toBeNull()

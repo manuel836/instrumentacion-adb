@@ -53,7 +53,7 @@ export interface Instrumento {
   notaDisparo: string
   /** Tipo de instrumento ('' = sin tipo: calibración general). La lista está en lib/tipos. */
   tipo: string
-  /** Válvulas: 'Aire para abrir' (sin aire cierra) o 'Aire para cerrar' (sin aire abre). */
+  /** Válvulas: 'Aire para abrir' (sin aire cierra), 'Aire para cerrar' (sin aire abre) o 'Aire para abrir y cerrar' (doble efecto). */
   accionValvula: string
   /** Válvula de control. */
   posicionador: string

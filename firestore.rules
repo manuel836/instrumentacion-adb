@@ -49,7 +49,7 @@ service cloud.firestore {
         && d.get('disparaCaldera', false) is bool
         && d.get('notaDisparo', '') is string && d.get('notaDisparo', '').size() <= 300
         && d.get('tipo', '') is string && d.get('tipo', '').size() <= 60
-        && d.get('accionValvula', '') in ['', 'Aire para abrir', 'Aire para cerrar']
+        && d.get('accionValvula', '') in ['', 'Aire para abrir', 'Aire para cerrar', 'Aire para abrir y cerrar']
         && (d.get('puntoAjuste', null) == null || d.get('puntoAjuste', null) is number)
         && d.estado in ['Operando', 'Con falla', 'Fuera de servicio']
         && (d.nfcToken == null || (d.nfcToken is string && d.nfcToken.matches('^[A-Za-z0-9]{16,22}$')))

@@ -66,7 +66,7 @@ export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: s
   {
     campo: 'accionValvula',
     titulo: 'Acción de válvula',
-    ayuda: 'Solo válvulas. Aire para abrir (sin aire cierra) o Aire para cerrar (sin aire abre).',
+    ayuda: 'Solo válvulas. Aire para abrir (sin aire cierra), Aire para cerrar (sin aire abre) o Aire para abrir y cerrar (doble efecto).',
     ejemplo: 'Aire para abrir',
     alias: ['accion', 'accionvalvula', 'falla', 'posicionafalla'],
     deTipo: true,
@@ -164,6 +164,7 @@ function deLista(v: string, lista: readonly string[]): string | null {
 
 function accionValvula(v: string): string | null {
   const k = clave(v)
+  if ((k.includes('abrir') && k.includes('cerrar')) || k.includes('doble') || ['da', 'doubleacting'].includes(k)) return ACCIONES_VALVULA[2].valor
   if (k.includes('abrir') || ['ato', 'fc', 'fallacerrada', 'failclose', 'failclosed'].includes(k)) return ACCIONES_VALVULA[0].valor
   if (k.includes('cerrar') || ['atc', 'fo', 'fallaabierta', 'failopen'].includes(k)) return ACCIONES_VALVULA[1].valor
   return null

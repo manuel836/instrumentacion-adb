@@ -101,7 +101,11 @@ const clave = (s: string) =>
 export const ACCIONES_VALVULA = [
   { valor: 'Aire para abrir', ayuda: 'Sin aire cierra (falla cerrada)' },
   { valor: 'Aire para cerrar', ayuda: 'Sin aire abre (falla abierta)' },
+  { valor: 'Aire para abrir y cerrar', ayuda: 'Doble efecto, sin resorte' },
 ] as const
+
+/** La válvula de doble efecto no tiene resorte: el aire la mueve para los dos lados. */
+export const DOBLE_EFECTO = ACCIONES_VALVULA[2].valor
 
 export const POSICIONADORES = ['Neumático', 'Electroneumático', 'Digital (HART)', 'Sin posicionador'] as const
 export const FINALES_CARRERA = ['Abierta y cerrada', 'Solo abierta', 'Solo cerrada', 'Sin finales de carrera'] as const
@@ -136,9 +140,12 @@ const VACIOS: Record<CampoDeTipo, string | null> = {
   contacto: '',
 }
 
-export function camposDeTipo(tipo: string): CampoDeTipo[] {
+export function camposDeTipo(tipo: string, accion = ''): CampoDeTipo[] {
   const p = pruebaDe(tipo)
-  if (p === 'carrera') return ['accionValvula', 'posicionador', 'rangoResorte', 'presionSuministro']
+  if (p === 'carrera') {
+    // La de doble efecto no tiene resorte.
+    return accion === DOBLE_EFECTO ? ['accionValvula', 'posicionador', 'presionSuministro'] : ['accionValvula', 'posicionador', 'rangoResorte', 'presionSuministro']
+  }
   if (p === 'funcional') return ['accionValvula', 'finalesCarrera']
   if (p === 'interruptor') return ['puntoAjuste', 'disparaAl', 'contacto']
   if (tipo === 'Transmisor de temperatura') return ['sensor']
@@ -147,7 +154,7 @@ export function camposDeTipo(tipo: string): CampoDeTipo[] {
 
 /** Vacía los datos que no son de su tipo (por ejemplo, si una válvula pasó a ser transmisor). */
 export function soloDatosDelTipo<T extends Pick<Instrumento, 'tipo' | CampoDeTipo>>(d: T): T {
-  const propios = new Set(camposDeTipo(d.tipo))
+  const propios = new Set(camposDeTipo(d.tipo, d.accionValvula))
   const limpio = { ...d }
   for (const k of Object.keys(VACIOS) as CampoDeTipo[]) {
     if (!propios.has(k)) (limpio as Record<string, unknown>)[k] = VACIOS[k]
@@ -163,7 +170,7 @@ export function textoAccion(accion: string): string {
 
 /** Datos propios del tipo para mostrarlos en la ficha y la hoja de vida (solo los que tienen valor). */
 export function datosDelTipo(i: Pick<Instrumento, 'tipo' | 'unidades' | CampoDeTipo>): { k: string; v: string }[] {
-  const campos = camposDeTipo(i.tipo)
+  const campos = camposDeTipo(i.tipo, i.accionValvula)
   const r: { k: string; v: string }[] = []
   const agregar = (k: string, v: string | number | null) => {
     if (v !== null && v !== '') r.push({ k, v: String(v) })
@@ -184,29 +191,45 @@ export function datosDelTipo(i: Pick<Instrumento, 'tipo' | 'unidades' | CampoDeT
 
 // ---------- Revisiones de las válvulas ----------
 
-/** Qué queda en la válvula cuando le falta el aire, según su acción. */
-function sinAire(accion: string): string {
+/**
+ * Cómo se prueba que la válvula va a su posición segura, según su acción. La de resorte va
+ * sola al quitarle el aire; la de doble efecto se queda donde está sin aire, así que se prueba
+ * quitándole la señal (el solenoide en la de corte) para que el aire la lleve.
+ */
+function posicionSegura(accion: string, prueba: Prueba): string {
   if (accion === 'Aire para abrir') return 'Sin aire cierra sola (posición segura)'
   if (accion === 'Aire para cerrar') return 'Sin aire abre sola (posición segura)'
+  if (accion === DOBLE_EFECTO) return prueba === 'funcional' ? 'Al desenergizar el solenoide va a su posición segura' : 'Al quitar la señal va a su posición segura'
   return 'Sin aire va sola a su posición segura'
 }
+
+/** En la de doble efecto el aire de un lado no debe pasar al otro (diafragma o sellos dañados). */
+const entreCamaras = (accion: string) => (accion === DOBLE_EFECTO ? ['Sin paso de aire entre cámaras (diafragma o pistón sano)'] : [])
 
 /** Lo que se revisa en la prueba de cada válvula, en orden. */
 export function revisionesDe(prueba: Prueba, i: Pick<Instrumento, 'accionValvula' | 'finalesCarrera'>): string[] {
   if (prueba === 'carrera') {
-    return ['Cierra hermético (sin paso)', 'Sin fugas de aire', 'Se mueve suave, sin brincos ni pegarse', 'Retroaviso de posición correcto', sinAire(i.accionValvula)]
+    return [
+      'Cierra hermético (sin paso)',
+      'Sin fugas de aire',
+      ...entreCamaras(i.accionValvula),
+      'Se mueve suave, sin brincos ni pegarse',
+      'Retroaviso de posición correcto',
+      posicionSegura(i.accionValvula, prueba),
+    ]
   }
   if (prueba === 'funcional') {
     const f = i.finalesCarrera
     return [
       'Abre completo',
       'Cierra completo',
-      sinAire(i.accionValvula),
+      posicionSegura(i.accionValvula, prueba),
       'Cierra hermético (sin paso)',
       ...(f === 'Solo cerrada' || f === 'Sin finales de carrera' ? [] : ['Final de carrera abierta (ZSO) señaliza']),
       ...(f === 'Solo abierta' || f === 'Sin finales de carrera' ? [] : ['Final de carrera cerrada (ZSC) señaliza']),
       'Solenoide energiza y desenergiza bien',
       'Sin fugas de aire',
+      ...entreCamaras(i.accionValvula),
     ]
   }
   return []
