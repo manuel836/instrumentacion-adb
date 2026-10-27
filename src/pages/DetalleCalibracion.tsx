@@ -73,6 +73,7 @@ export function DetalleCalibracion() {
           <Dato k="Técnico" v={cal.tecnico.nombre} />
           {cal.rangoMax > cal.rangoMin && p !== 'carrera' && <Dato k="Rango" v={`${cal.rangoMin} a ${cal.rangoMax} ${cal.unidades}`} />}
           {cal.tolerancia > 0 && <Dato k="Tolerancia" v={textoTolerancia(cal)} />}
+          {p === 'transmisor' && cal.salidaTransmisor && <Dato k="Salida" v={cal.salidaTransmisor} />}
           {p === 'transmisor' && <Dato k="Salida leída en" v={mA ? 'mA (4-20)' : 'Unidades de proceso'} />}
           {p === 'carrera' && cal.senalInvertida && <Dato k="Señal" v="Invertida (4 mA = abierta)" />}
           {p === 'funcional' && <Dato k="Tiempo para abrir" v={cal.tiempoApertura === null ? '—' : `${cal.tiempoApertura} s`} />}

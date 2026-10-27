@@ -63,6 +63,8 @@ export interface Instrumento {
   finalesCarrera: string
   /** Transmisor de temperatura: RTD o termopar. */
   sensor: string
+  /** Transmisores (menos temperatura): 'Lineal' o 'Raíz cuadrada' (flujo por DP). '' = lineal, como los de antes. */
+  salidaTransmisor: string
   /** Interruptores: punto de ajuste (en sus unidades), si dispara al subir o al bajar, y su contacto. */
   puntoAjuste: number | null
   disparaAl: string
@@ -194,6 +196,8 @@ export interface Calibracion {
   tipo: string
   /** Transmisores: las lecturas son la salida en mA (4-20) y no el valor en unidades de proceso. */
   lecturaEn: 'mA' | 'unidades'
+  /** Transmisores: 'Raíz cuadrada' si los mA siguen la raíz de la entrada (flujo por DP). '' o 'Lineal' = lineal. */
+  salidaTransmisor: string
   /** Interruptores y analizadores: tolerancia y error en unidades de proceso. */
   toleranciaEn: '%' | 'unidades'
   /** Válvula de control: con 4 mA queda 100 % abierta. */

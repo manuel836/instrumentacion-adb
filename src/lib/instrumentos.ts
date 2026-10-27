@@ -56,6 +56,7 @@ export function instrumentoVacio(): InstrumentoNuevo {
     presionSuministro: '',
     finalesCarrera: '',
     sensor: '',
+    salidaTransmisor: '',
     puntoAjuste: null,
     disparaAl: '',
     contacto: '',

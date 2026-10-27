@@ -1,6 +1,7 @@
 // Prueba de punta a punta del tipo de instrumento: el formulario lo sugiere por el tag y pide
 // los datos de su tipo, y Registrar calibración cambia la prueba según el tipo (válvula de corte,
-// transmisor leído en mA, interruptor, válvula de control con señal invertida, válvulas de doble efecto).
+// transmisor leído en mA, interruptor, válvula de control con señal invertida, válvulas de doble efecto,
+// transmisor de salida lineal o de raíz cuadrada).
 // Requiere el admin manuel@adb.test / Prueba1234 y los emuladores corriendo.
 // Uso: node e2e/tipos-calibracion.cjs
 const { chromium, devices } = require('playwright')
@@ -252,6 +253,67 @@ const sugerencia = (page) => page.locator('label:has-text("Resultado *") select 
   await page.waitForURL(/\/instrumentos\/[^/]+$/)
   await page.waitForSelector('dd:has-text("RTD Pt100")')
   console.log('edición: tomó el tipo sugerido y guardó el sensor ok')
+
+  // ---------- Transmisor de flujo con salida de raíz cuadrada (0 a 150 inH₂O) ----------
+  const FT = `FT-${n}`
+  await page.goto(`${BASE}/instrumentos/nuevo`)
+  await page.fill('input[placeholder="PT-101"]', FT)
+  await page.waitForSelector('[role="radiogroup"][aria-label="Salida"] [aria-checked="true"]:has-text("Lineal")')
+  await page.click('[role="radiogroup"][aria-label="Salida"] button:has-text("Raíz cuadrada")')
+  await page.fill('input[placeholder="Presión de vapor a cabezal"]', 'Flujo de vapor a cabezal')
+  await shot(page, '211-alta-transmisor-raiz')
+  await page.click('button:has-text("Guardar sin tag ni fotos")')
+  await page.waitForURL((u) => /\/instrumentos\/[^/]+$/.test(u.pathname) && !u.pathname.endsWith('/nuevo'))
+  const idFT = page.url().split('/').pop()
+  await page.waitForSelector('dd:has-text("Raíz cuadrada")')
+  const ftDoc = await hasta(async () => (await firestore().doc(`instrumentos/${idFT}`).get()).data(), 'el FT en el servidor')
+  if (ftDoc.tipo !== 'Transmisor de flujo' || ftDoc.salidaTransmisor !== 'Raíz cuadrada') throw new Error(`el FT se guardó mal: ${JSON.stringify(ftDoc)}`)
+  await firestore().doc(`instrumentos/${idFT}`).update({ rangoMin: 0, rangoMax: 150, unidades: 'inH₂O' })
+  await page.goto(`${BASE}/instrumentos/${idFT}/calibrar`)
+  await page.waitForSelector('text=Salida: Raíz cuadrada')
+  // Sin calibración anterior, el de raíz empieza leyendo los mA: es donde se ve la raíz.
+  await page.waitForSelector('[role="radiogroup"][aria-label="Leí la salida en"] [aria-checked="true"]:has-text("mA")')
+  for (const mA of ['4.00', '12.00', '15.31', '17.86', '20.00']) await page.waitForSelector(`text=debe dar ${mA} mA`)
+  // Los valores de la tabla de ejemplo (17.85 es 17.856 cortado).
+  const raiz = ['4', '12', '15.31', '17.85', '20']
+  for (let i = 0; i < raiz.length; i++) await page.fill(`input[aria-label="As-Found ${i + 1}"]`, raiz[i])
+  const sugFT = await sugerencia(page)
+  if (sugFT !== 'Según tolerancia: Aprobada sin ajuste') throw new Error(`sugerencia del FT: ${sugFT}`)
+  await shot(page, '212-calibrar-transmisor-raiz')
+  // Los mismos mA evaluados como lineal salen fuera (en 25 % debía dar 8 mA).
+  await page.click('[role="radiogroup"][aria-label="Salida del transmisor"] button:has-text("Lineal")')
+  await page.waitForSelector('text=debe dar 8.00 mA')
+  await page.waitForSelector('text=Al guardar, también se corrige en su ficha.')
+  if ((await sugerencia(page)) !== 'Según tolerancia: Fuera de tolerancia') throw new Error('como lineal no salió fuera de tolerancia')
+  await page.click('[role="radiogroup"][aria-label="Salida del transmisor"] button:has-text("Raíz cuadrada")')
+  await page.click('button:has-text("Guardar")')
+  await page.waitForURL(/\/instrumentos\/[^/]+$/)
+  const [calFT] = await hasta(() => calibraciones(idFT).then((c) => (c.length ? c : null)), 'calibración del FT')
+  if (calFT.salidaTransmisor !== 'Raíz cuadrada' || calFT.lecturaEn !== 'mA' || calFT.resultado !== 'Aprobada sin ajuste') throw new Error(`calibración del FT: ${JSON.stringify(calFT)}`)
+  await page.click('a:has-text("Aprobada sin ajuste")')
+  await page.waitForSelector('dd:has-text("Raíz cuadrada")')
+  await page.waitForSelector('text=debe dar 15.31 mA')
+  await shot(page, '213-detalle-transmisor-raiz')
+  await page.goto(`${BASE}/instrumentos/${idFT}/hoja-de-vida`)
+  await page.waitForSelector('text=Salida en raíz cuadrada. Salida leída en mA (4-20).')
+  console.log('transmisor de raíz cuadrada: alta, mA esperados de la tabla, resultado y detalle ok')
+
+  // Uno de antes (sin salida) es lineal; si en la prueba resulta de raíz, se corrige su ficha.
+  const PDT = `PDT-${n}`
+  const idPDT = await instrumento({ tagISA: PDT, servicio: 'Flujo de agua de alimentación', tipo: 'Transmisor de presión diferencial', rangoMin: 0, rangoMax: 150, unidades: 'inH₂O' })
+  await page.goto(`${BASE}/instrumentos/${idPDT}/calibrar`)
+  await page.waitForSelector('text=Salida: Lineal')
+  await page.waitForSelector('[role="radiogroup"][aria-label="Leí la salida en"] [aria-checked="true"]:has-text("Unidades de proceso")')
+  await page.click('[role="radiogroup"][aria-label="Salida del transmisor"] button:has-text("Raíz cuadrada")')
+  await page.waitForSelector('text=La raíz solo se comprueba leyendo los mA.')
+  await page.click('[role="radiogroup"][aria-label="Leí la salida en"] button:has-text("mA (4-20)")')
+  await page.waitForSelector('text=debe dar 17.86 mA')
+  for (let i = 0; i < raiz.length; i++) await page.fill(`input[aria-label="As-Found ${i + 1}"]`, raiz[i])
+  await page.click('button:has-text("Guardar")')
+  await page.waitForURL(/\/instrumentos\/[^/]+$/)
+  await hasta(async () => (await firestore().doc(`instrumentos/${idPDT}`).get()).data().salidaTransmisor === 'Raíz cuadrada', 'la salida corregida en la ficha del PDT')
+  await page.waitForSelector('dd:has-text("Raíz cuadrada")')
+  console.log('transmisor de antes: lineal por omisión y la ficha se corrige al calibrarlo como raíz ok')
 
   // ---------- Catálogo filtrado por tipo ----------
   await page.goto(`${BASE}/catalogo?tipo=${encodeURIComponent('Válvula de corte')}`)

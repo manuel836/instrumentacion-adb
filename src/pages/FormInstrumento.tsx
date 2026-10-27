@@ -16,6 +16,7 @@ import {
   DISPARA_AL,
   FINALES_CARRERA,
   POSICIONADORES,
+  SALIDAS_TRANSMISOR,
   SENSORES_TEMPERATURA,
   camposDeTipo,
   pruebaDe,
@@ -261,6 +262,31 @@ export function FormInstrumento() {
             <Campo label="Sensor">
               <Opciones label="Sensor" value={datos.sensor} onChange={(v) => set('sensor', v)} opciones={comoOpciones(SENSORES_TEMPERATURA)} vacio="Sin especificar" />
             </Campo>
+          )}
+          {campos.includes('salidaTransmisor') && (
+            <div>
+              <span className="etiqueta">Salida (4-20 mA)</span>
+              <div role="radiogroup" aria-label="Salida" className="grid grid-cols-2 gap-2">
+                {SALIDAS_TRANSMISOR.map((a) => {
+                  // Sin elegir es lineal, como todos los de antes.
+                  const elegida = (datos.salidaTransmisor || 'Lineal') === a.valor
+                  return (
+                    <button
+                      key={a.valor}
+                      type="button"
+                      role="radio"
+                      aria-checked={elegida}
+                      className={`rounded-lg border p-2 text-left text-sm ${elegida ? 'border-marca-700 bg-marca-50' : 'border-slate-300'}`}
+                      onClick={() => set('salidaTransmisor', a.valor)}
+                    >
+                      <span className="block font-semibold">{a.valor}</span>
+                      <span className="block text-xs text-slate-600">{a.ayuda}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Define qué mA debe dar en cada punto de su calibración.</p>
+            </div>
           )}
           {campos.includes('puntoAjuste') && (
             <>

@@ -22,6 +22,7 @@ const instrumentoVacio = () => ({
   presionSuministro: '',
   finalesCarrera: '',
   sensor: '',
+  salidaTransmisor: '',
   puntoAjuste: null as number | null,
   disparaAl: '',
   contacto: '',
@@ -84,6 +85,16 @@ describe('tipos de instrumento', () => {
     expect(kv.finalesCarrera).toBe('Solo cerrada')
   })
 
+  it('los transmisores (menos temperatura) son de salida lineal o raíz cuadrada', () => {
+    const ft = { ...instrumentoVacio(), tipo: 'Transmisor de flujo', salidaTransmisor: 'Raíz cuadrada' }
+    expect(soloDatosDelTipo(ft).salidaTransmisor).toBe('Raíz cuadrada')
+    expect(datosDelTipo(ft)).toEqual([{ k: 'Salida', v: 'Raíz cuadrada' }])
+    // Los de antes no la tienen: son lineales.
+    expect(datosDelTipo({ ...ft, tipo: 'Transmisor de presión diferencial', salidaTransmisor: '' })).toEqual([{ k: 'Salida', v: 'Lineal' }])
+    expect(soloDatosDelTipo({ ...ft, tipo: 'Transmisor de temperatura' }).salidaTransmisor).toBe('')
+    expect(soloDatosDelTipo({ ...ft, tipo: 'Válvula de control' }).salidaTransmisor).toBe('')
+  })
+
   it('muestra en la ficha solo los datos de su tipo', () => {
     const ps = { ...instrumentoVacio(), tipo: 'Interruptor de presión', unidades: 'kg/cm²', puntoAjuste: 10.5, disparaAl: 'Al subir', contacto: 'NC', sensor: 'RTD Pt100' }
     expect(datosDelTipo(ps)).toEqual([
@@ -136,6 +147,7 @@ describe('tipos de instrumento', () => {
     const base: Parameters<typeof detallePrueba>[0] = {
       tipo: '',
       lecturaEn: 'unidades',
+      salidaTransmisor: '',
       senalInvertida: false,
       puntos: [],
       unidades: 'kg/cm²',
@@ -172,5 +184,8 @@ describe('tipos de instrumento', () => {
     ).toBe('Abre en 4.2 s. Revisiones: 1 bien, 1 mal (Cierra completo), 1 no aplica.')
     expect(detallePrueba({ ...base, tipo: 'Analizador', pendiente: 98, offset: -3 })).toBe('Pendiente 98 %, offset -3 mV.')
     expect(detallePrueba({ ...base, tipo: 'Transmisor de presión', lecturaEn: 'mA' })).toBe('Salida leída en mA (4-20).')
+    expect(detallePrueba({ ...base, tipo: 'Transmisor de flujo', lecturaEn: 'mA', salidaTransmisor: 'Raíz cuadrada' })).toBe(
+      'Salida en raíz cuadrada. Salida leída en mA (4-20).',
+    )
   })
 })

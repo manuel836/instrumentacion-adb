@@ -23,6 +23,7 @@ service cloud.firestore {
         && d.puntos is list && d.puntos.size() <= 11 && (d.puntos.size() >= 1 || soloRevisiones)
         && d.get('revisiones', []) is list && d.get('revisiones', []).size() <= 20
         && d.get('tipo', '') is string && d.get('tipo', '').size() <= 60
+        && d.get('salidaTransmisor', '') in ['', 'Lineal', 'Raíz cuadrada']
         && d.resultado in ['Aprobada sin ajuste', 'Ajustada', 'Fuera de tolerancia']
         && d.tolerancia is number && (d.tolerancia > 0 || soloRevisiones)
         && d.rangoMin is number && d.rangoMax is number
@@ -50,6 +51,7 @@ service cloud.firestore {
         && d.get('notaDisparo', '') is string && d.get('notaDisparo', '').size() <= 300
         && d.get('tipo', '') is string && d.get('tipo', '').size() <= 60
         && d.get('accionValvula', '') in ['', 'Aire para abrir', 'Aire para cerrar', 'Aire para abrir y cerrar']
+        && d.get('salidaTransmisor', '') in ['', 'Lineal', 'Raíz cuadrada']
         && (d.get('puntoAjuste', null) == null || d.get('puntoAjuste', null) is number)
         && d.estado in ['Operando', 'Con falla', 'Fuera de servicio']
         && (d.nfcToken == null || (d.nfcToken is string && d.nfcToken.matches('^[A-Za-z0-9]{16,22}$')))
