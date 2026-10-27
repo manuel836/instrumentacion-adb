@@ -42,7 +42,8 @@ export function Fallas() {
             <button
               key={e}
               onClick={() => setEstado(e)}
-              className={`rounded-md py-2 text-sm font-semibold ${estado === e ? 'bg-white shadow-sm' : 'text-slate-500'}`}
+              aria-pressed={estado === e}
+              className={`rounded-md py-2.5 text-sm font-semibold ${estado === e ? 'bg-white shadow-sm' : 'text-slate-600'}`}
             >
               {e} {conteo[e] ? `(${conteo[e]})` : ''}
             </button>

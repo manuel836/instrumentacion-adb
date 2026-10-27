@@ -16,7 +16,7 @@ export function Existencia({ r, grande = false }: { r: Refaccion; grande?: boole
     <span className={`block text-right leading-tight ${color}`}>
       <span className={`font-bold ${grande ? 'text-4xl' : 'text-xl'}`}>{r.existencia}</span>
       <span className="ml-1 text-xs">{r.unidad}</span>
-      {r.minimo > 0 && <span className="block text-[11px] text-slate-500">mínimo {r.minimo}</span>}
+      {r.minimo > 0 && <span className="block text-xs text-slate-500">mínimo {r.minimo}</span>}
     </span>
   )
 }
@@ -97,7 +97,7 @@ export function Refacciones() {
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold">{r.nombre}</span>
                 <span className="block truncate text-sm text-slate-500">{[r.numeroParte, r.marca].filter(Boolean).join(' · ') || 'Sin número de parte'}</span>
-                {r.ubicacion && <span className="block truncate text-xs text-slate-400">{r.ubicacion}</span>}
+                {r.ubicacion && <span className="block truncate text-xs text-slate-500">{r.ubicacion}</span>}
                 {r.sinSincronizar && <Pendiente />}
               </span>
               <Existencia r={r} />

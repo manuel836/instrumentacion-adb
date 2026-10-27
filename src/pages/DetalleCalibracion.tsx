@@ -8,12 +8,12 @@ import { Pendiente } from '../components/Estado'
 import type { Calibracion, EstadoRevision } from '../types'
 
 function Celda({ v, err, cal }: { v: number | null; err: number | null; cal: Calibracion }) {
-  if (v === null) return <td className="py-2 text-slate-400">—</td>
+  if (v === null) return <td className="py-2 text-slate-500">—</td>
   const fuera = err !== null && Math.abs(err) > cal.tolerancia + 1e-9
   return (
     <td className="py-2">
       {v}
-      {err !== null && <span className={`block text-[11px] ${fuera ? 'font-semibold text-red-700' : 'text-slate-500'}`}>{textoError(err, cal)}</span>}
+      {err !== null && <span className={`block text-xs ${fuera ? 'font-semibold text-red-700' : 'text-slate-500'}`}>{textoError(err, cal)}</span>}
     </td>
   )
 }
@@ -136,7 +136,7 @@ export function DetalleCalibracion() {
                   <tr key={i}>
                     <td className="py-2">
                       {pt.entrada}
-                      {debe(pt.entrada) && <span className="block text-[11px] text-slate-500">{debe(pt.entrada)}</span>}
+                      {debe(pt.entrada) && <span className="block text-xs text-slate-500">{debe(pt.entrada)}</span>}
                     </td>
                     <Celda v={pt.asFound} err={err(pt.asFound, pt.entrada)} cal={cal} />
                     <Celda v={pt.asLeft} err={err(pt.asLeft, pt.entrada)} cal={cal} />

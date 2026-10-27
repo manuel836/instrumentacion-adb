@@ -22,6 +22,15 @@ function aFalla(id: string, d: Record<string, unknown>, pendiente: boolean): Con
   }
 }
 
+/** Tiempo promedio de cierre: minutos si fue menos de una hora (no "0.0 horas"), días si pasó de dos. */
+export function duracionCierre(horas: number) {
+  if (horas < 1) {
+    const min = Math.max(1, Math.round(horas * 60))
+    return `${min} ${min === 1 ? 'minuto' : 'minutos'}`
+  }
+  return horas < 48 ? `${horas.toFixed(1)} horas` : `${(horas / 24).toFixed(1)} días`
+}
+
 /** Todas las fallas (son pocas): quedan en la caché del teléfono para verlas sin señal. */
 export function useFallas() {
   const [lista, setLista] = useState<ConPendiente<Falla>[] | null>(null)

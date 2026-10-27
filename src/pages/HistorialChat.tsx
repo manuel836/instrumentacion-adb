@@ -63,7 +63,7 @@ export function HistorialChat() {
                   </span>
                 </div>
                 <p className="truncate text-sm text-slate-600">{d.ultimo}</p>
-                <p className="truncate text-xs text-slate-400">{quienes(d.personas)}</p>
+                <p className="truncate text-xs text-slate-500">{quienes(d.personas)}</p>
               </Link>
             </li>
           ))}

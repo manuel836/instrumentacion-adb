@@ -131,7 +131,7 @@ export function Catalogo() {
         />
         <div className="flex gap-2">
           <select
-            className="campo py-2 text-sm"
+            className="campo min-h-11 py-2 text-sm"
             value={area}
             onChange={(e) =>
               setParams(
@@ -153,7 +153,7 @@ export function Catalogo() {
               <option key={a}>{a}</option>
             ))}
           </select>
-          <select className="campo py-2 text-sm" value={estado} onChange={(e) => cambiar('estado', e.target.value)} aria-label="Estado">
+          <select className="campo min-h-11 py-2 text-sm" value={estado} onChange={(e) => cambiar('estado', e.target.value)} aria-label="Estado">
             <option value="">Todos los estados</option>
             {ESTADOS_INSTRUMENTO.map((a) => (
               <option key={a}>{a}</option>
@@ -161,7 +161,7 @@ export function Catalogo() {
           </select>
         </div>
         {area && subsDelArea.length > 0 && (
-          <select className="campo py-2 text-sm" value={sub} onChange={(e) => cambiar('sub', e.target.value)} aria-label="Sub área">
+          <select className="campo min-h-11 py-2 text-sm" value={sub} onChange={(e) => cambiar('sub', e.target.value)} aria-label="Sub área">
             <option value="">Todas las sub áreas</option>
             {subsDelArea.map((s) => (
               <option key={s}>{s}</option>
@@ -169,7 +169,7 @@ export function Catalogo() {
             <option value={SIN_SUB}>Sin sub área</option>
           </select>
         )}
-        <select className="campo py-2 text-sm" value={tipo} onChange={(e) => cambiar('tipo', e.target.value)} aria-label="Tipo">
+        <select className="campo min-h-11 py-2 text-sm" value={tipo} onChange={(e) => cambiar('tipo', e.target.value)} aria-label="Tipo">
           <option value="">Todos los tipos</option>
           {TIPOS_INSTRUMENTO.map((g) => (
             <optgroup key={g.grupo} label={g.grupo}>
@@ -182,7 +182,7 @@ export function Catalogo() {
           ))}
           <option value={SIN_SUB}>Sin tipo</option>
         </select>
-        <select className="campo py-2 text-sm" value={filtro} onChange={(e) => cambiar('filtro', e.target.value)} aria-label="Otros filtros">
+        <select className="campo min-h-11 py-2 text-sm" value={filtro} onChange={(e) => cambiar('filtro', e.target.value)} aria-label="Otros filtros">
           <option value="">Sin otros filtros</option>
           {(Object.keys(OTROS_FILTROS) as OtroFiltro[]).map((k) => (
             <option key={k} value={k}>
@@ -200,7 +200,8 @@ export function Catalogo() {
         </div>
       </div>
 
-      <div ref={contenedor}>
+      {/* Con el botón Alta, espacio extra al final para que no tape la última fila. */}
+      <div ref={contenedor} className={p.editarInstrumentos ? 'pb-16' : ''}>
         {lista?.length === 0 && (
           <p className="p-8 text-center text-slate-500">
             Aún no hay instrumentos.
@@ -217,7 +218,7 @@ export function Catalogo() {
         )}
         <div style={{ height: virtual.getTotalSize(), position: 'relative' }}>
           {virtual.getVirtualItems().map((v) => (
-            <Fila key={filtrados[v.index].id} i={filtrados[v.index]} alto={v.size} y={v.start - virtual.options.scrollMargin} />
+            <Fila key={filtrados[v.index].id} i={filtrados[v.index]} indice={v.index} medir={virtual.measureElement} y={v.start - virtual.options.scrollMargin} />
           ))}
         </div>
       </div>
@@ -225,13 +226,16 @@ export function Catalogo() {
   )
 }
 
-function Fila({ i, alto, y }: { i: ConPendiente<Instrumento>; alto: number; y: number }) {
+/** Cada fila se mide al dibujarse: con la letra grande del teléfono crece en lugar de encimarse. */
+function Fila({ i, indice, medir, y }: { i: ConPendiente<Instrumento>; indice: number; medir: (el: Element | null) => void; y: number }) {
   const v = vencimiento(i.proximaCalibracion)
   return (
     <Link
+      ref={medir}
+      data-index={indice}
       to={`/instrumentos/${i.id}`}
-      className="absolute inset-x-0 flex items-center gap-3 border-b border-slate-100 bg-white px-3 active:bg-slate-50"
-      style={{ height: alto, transform: `translateY(${y}px)` }}
+      className="absolute inset-x-0 top-0 flex min-h-19 items-center gap-3 border-b border-slate-100 bg-white px-3 py-2 active:bg-slate-50"
+      style={{ transform: `translateY(${y}px)` }}
     >
       <span className="relative shrink-0">
         <FotoImg url={i.portadaMiniatura} alt="" className="h-14 w-14 rounded-lg object-cover" />
@@ -242,14 +246,14 @@ function Fila({ i, alto, y }: { i: ConPendiente<Instrumento>; alto: number; y: n
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-mono font-bold">{i.tagISA}</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-mono font-bold whitespace-nowrap">{i.tagISA}</span>
           {i.subArea && <span className="truncate rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700">{i.subArea}</span>}
           <Estado estado={i.estado} />
           {i.sinSincronizar && <Pendiente />}
         </div>
         <p className="truncate text-sm text-slate-600">{i.servicio}</p>
-        <p className="truncate text-xs text-slate-400">
+        <p className="truncate text-xs text-slate-500">
           {i.disparaCaldera && <span className="font-semibold text-red-700">Dispara caldera · </span>}
           {i.tipo && `${i.tipo} · `}
           {i.area}

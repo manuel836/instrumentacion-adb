@@ -7,7 +7,7 @@ import { Chat } from '../components/Chat'
 import { Pendiente } from '../components/Estado'
 import { EstadoFalla, fechaCorta } from '../components/EstadoFalla'
 import { FotoImg } from '../components/FotoImg'
-import { Visor } from '../components/Visor'
+import { nombreFoto, Visor } from '../components/Visor'
 import { RefaccionesUsadas } from '../components/RefaccionesUsadas'
 import { dondeEsta } from '../types'
 import { useInstrumento } from '../lib/instrumentos'
@@ -59,7 +59,7 @@ export function DetalleFalla() {
         {falla.fotos.length > 0 && (
           <div className="grid grid-cols-4 gap-2 pt-1">
             {falla.fotos.map((f, i) => (
-              <button key={f.ruta} onClick={() => setVisor(i)} className="overflow-hidden rounded">
+              <button key={f.ruta} onClick={() => setVisor(i)} className="overflow-hidden rounded" aria-label={nombreFoto(i, falla.fotos.length)}>
                 <FotoImg url={f.miniaturaUrl} ruta={f.miniatura} alt="" className="aspect-square w-full object-cover" />
               </button>
             ))}

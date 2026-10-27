@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
 import { useCalibraciones } from '../lib/calibraciones'
-import { useFallasDeInstrumento } from '../lib/fallas'
+import { duracionCierre, useFallasDeInstrumento } from '../lib/fallas'
 import { useFotosUbicacion, useInstrumento } from '../lib/instrumentos'
 import { useRefacciones } from '../lib/refacciones'
 import { errorMaximo, textoError, textoTolerancia, vencimiento } from '../lib/tolerancia'
@@ -33,7 +33,7 @@ function textoErrorMaximo(c: Calibracion, cual: 'asFound' | 'asLeft'): string {
 function Dato({ k, v }: { k: string; v: ReactNode }) {
   return (
     <div className="break-inside-avoid">
-      <dt className="text-[11px] text-slate-500">{k}</dt>
+      <dt className="text-xs text-slate-500 print:text-[11px]">{k}</dt>
       <dd className="font-medium">{v === null || v === undefined || v === '' ? '—' : v}</dd>
     </div>
   )
@@ -125,7 +125,7 @@ export function HojaDeVida() {
           {portada && (
             <figure className="shrink-0 sm:w-56 print:w-56">
               <FotoImg url={portada.url ?? portada.miniaturaUrl} ruta={portada.ruta} alt={portada.pie || 'Ubicación'} className="max-h-72 w-full rounded border border-slate-300 object-cover sm:max-h-none print:max-h-none" />
-              {portada.pie && <figcaption className="mt-1 text-[11px] text-slate-600">{portada.pie}</figcaption>}
+              {portada.pie && <figcaption className="mt-1 text-xs text-slate-600 print:text-[11px]">{portada.pie}</figcaption>}
             </figure>
           )}
           <dl className="grid flex-1 grid-cols-2 content-start gap-x-4 gap-y-2 sm:grid-cols-3 print:grid-cols-3">
@@ -167,7 +167,7 @@ export function HojaDeVida() {
             {fallas.length === 0
               ? 'Sin fallas registradas.'
               : `${fallas.length} ${fallas.length === 1 ? 'falla' : 'fallas'}: ${cuantas(cerradas.length, 'cerrada', 'cerradas')}, ${cuantas(fallas.length - cerradas.length, 'abierta o en proceso', 'abiertas o en proceso')}.`}
-            {promedio !== null && ` Tiempo promedio para cerrar una falla: ${promedio < 48 ? `${promedio.toFixed(1)} horas` : `${(promedio / 24).toFixed(1)} días`}.`}
+            {promedio !== null && ` Tiempo promedio para cerrar una falla: ${duracionCierre(promedio)}.`}
           </p>
         </Seccion>
 
@@ -296,7 +296,7 @@ export function HojaDeVida() {
               {otras.map((f) => (
                 <figure key={f.id} className="break-inside-avoid">
                   <FotoImg url={f.miniaturaUrl ?? f.url} ruta={f.miniatura} alt={f.pie || 'Ubicación'} className="aspect-square w-full rounded border border-slate-300 object-cover" />
-                  {f.pie && <figcaption className="mt-0.5 text-[10px] leading-tight text-slate-600">{f.pie}</figcaption>}
+                  {f.pie && <figcaption className="mt-0.5 text-xs leading-tight text-slate-600 print:text-[10px]">{f.pie}</figcaption>}
                 </figure>
               ))}
             </div>

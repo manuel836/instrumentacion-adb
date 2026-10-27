@@ -10,7 +10,7 @@ import {
 } from '../lib/instrumentos'
 import { useAuth } from '../auth/AuthContext'
 import { FotoImg } from './FotoImg'
-import { Visor } from './Visor'
+import { nombreFoto, Visor } from './Visor'
 import { SelectorFotos, type FotoNueva } from './SelectorFotos'
 import { Pendiente } from './Estado'
 import { Icono } from './Icono'
@@ -59,7 +59,7 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">Ubicación en campo</h2>
         {editable && (
-          <button className="text-sm font-semibold text-marca-700" onClick={() => setEditando((e) => !e)}>
+          <button className="accion" onClick={() => setEditando((e) => !e)}>
             {editando ? 'Listo' : fotos.length === 0 ? '+ Agregar fotos' : 'Editar fotos'}
           </button>
         )}
@@ -69,15 +69,15 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
 
       {!editando && vista.length > 0 && (
         <>
-          <button className="block w-full overflow-hidden rounded-lg" onClick={() => setVisor(0)}>
-            <FotoImg url={vista[0].url ?? vista[0].miniaturaUrl} ruta={vista[0].ruta} alt={vista[0].pie} className="aspect-[4/3] w-full object-cover" />
+          <button className="block w-full overflow-hidden rounded-lg" onClick={() => setVisor(0)} aria-label={nombreFoto(0, vista.length, vista[0].pie)}>
+            <FotoImg url={vista[0].url ?? vista[0].miniaturaUrl} ruta={vista[0].ruta} alt="" className="aspect-[4/3] w-full object-cover" />
           </button>
           {vista[0].pie && <p className="text-sm text-slate-700">{vista[0].pie}</p>}
           {vista.length > 1 && (
             <div className="grid grid-cols-5 gap-2">
               {vista.slice(1).map((f, i) => (
-                <button key={f.id} onClick={() => setVisor(i + 1)} className="overflow-hidden rounded">
-                  <FotoImg url={f.miniaturaUrl} ruta={f.miniatura} alt={f.pie} className="aspect-square w-full object-cover" />
+                <button key={f.id} onClick={() => setVisor(i + 1)} className="overflow-hidden rounded" aria-label={nombreFoto(i + 1, vista.length, f.pie)}>
+                  <FotoImg url={f.miniaturaUrl} ruta={f.miniatura} alt="" className="aspect-square w-full object-cover" />
                 </button>
               ))}
             </div>
@@ -95,6 +95,7 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
                   className="campo py-2 text-sm"
                   defaultValue={f.pie}
                   placeholder="Pie de foto"
+                  aria-label={`Pie de la foto ${idx + 1}`}
                   onBlur={(e) => e.target.value !== f.pie && editarPie(instrumentoId, f.id, e.target.value)}
                 />
                 <div className="flex flex-wrap items-center gap-3 text-sm">

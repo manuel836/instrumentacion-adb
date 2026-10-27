@@ -94,7 +94,7 @@ export function ChatsPrivados() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className={`truncate ${nuevo ? 'font-bold' : 'font-semibold'}`}>{nombres.get(otro) || c.nombres[otro] || 'Usuario'}</span>
-                      <span className="shrink-0 text-xs text-slate-400">{cuando(c.ultimo?.fecha)}</span>
+                      <span className="shrink-0 text-xs text-slate-500">{cuando(c.ultimo?.fecha)}</span>
                     </span>
                     <span className={`block truncate text-sm ${nuevo ? 'font-medium text-slate-800' : 'text-slate-500'}`}>
                       {c.ultimo?.autor === yo && 'Tú: '}

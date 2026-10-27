@@ -169,7 +169,7 @@ export function Vincular() {
           </button>
         )}
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        <p className="break-all text-xs text-slate-400">
+        <p className="break-all text-xs text-slate-500">
           {url} · {bytesNdef(url)} de 144 bytes
         </p>
       </section>

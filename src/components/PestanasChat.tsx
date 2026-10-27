@@ -7,7 +7,7 @@ const clase = ({ isActive }: { isActive: boolean }) =>
   `flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold ${isActive ? 'bg-white text-marca-700 shadow-sm' : 'text-slate-600'}`
 
 function Cuantos({ n }: { n: number }) {
-  return <span className="rounded-full bg-red-600 px-1.5 text-[11px] leading-4 font-bold text-white">{n > 99 ? '99+' : n}</span>
+  return <span className="rounded-full bg-red-600 px-1.5 text-xs leading-4 font-bold text-white">{n > 99 ? '99+' : n}</span>
 }
 
 /** Canal general de hoy, chats privados e historial de días anteriores. */

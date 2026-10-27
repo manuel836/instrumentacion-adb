@@ -28,7 +28,7 @@ export function ListaMovimientos({
           <span className={`w-14 shrink-0 text-right text-lg font-bold ${colores[m.tipo]}`}>
             {m.cantidad > 0 ? '+' : ''}
             {m.cantidad}
-            {unidadDe(m) && <span className="ml-0.5 text-[11px] font-normal">{unidadDe(m)}</span>}
+            {unidadDe(m) && <span className="ml-0.5 text-xs font-normal">{unidadDe(m)}</span>}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-medium">
@@ -106,7 +106,7 @@ export function RefaccionesUsadas({ falla }: { falla: Falla }) {
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">Refacciones usadas</h2>
         {p.refacciones && !abierto && (
-          <button className="text-sm font-semibold text-marca-700" onClick={() => setAbierto(true)}>
+          <button className="accion" onClick={() => setAbierto(true)}>
             + Registrar
           </button>
         )}
@@ -184,7 +184,7 @@ export function RefaccionesDelInstrumento({ instrumentoId }: { instrumentoId: st
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">Refacciones</h2>
         {p.refacciones && (
-          <Link to={`/refacciones/nueva?instrumento=${instrumentoId}`} className="text-sm font-semibold text-marca-700">
+          <Link to={`/refacciones/nueva?instrumento=${instrumentoId}`} className="accion">
             + Agregar
           </Link>
         )}

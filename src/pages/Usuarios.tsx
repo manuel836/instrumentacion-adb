@@ -104,14 +104,14 @@ export function Usuarios() {
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
         <div className="grid grid-cols-2 gap-2">
-          <select className="campo" value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value as Rol })}>
+          <select className="campo" aria-label="Rol del usuario nuevo" value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value as Rol })}>
             {ROLES.map((r) => (
               <option key={r.v} value={r.v}>
                 {r.t}
               </option>
             ))}
           </select>
-          <select className="campo" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })}>
+          <select className="campo" aria-label="Área del usuario nuevo" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })}>
             <option value="">Todas las áreas</option>
             {AREAS.map((a) => (
               <option key={a}>{a}</option>
@@ -138,7 +138,8 @@ export function Usuarios() {
                 <p className="truncate text-sm text-slate-500">{u.email}</p>
               </div>
               <select
-                className="campo w-auto py-1.5 text-sm"
+                className="campo min-h-11 w-auto py-1.5 text-sm"
+                aria-label={`Rol de ${u.nombre}`}
                 value={u.rol}
                 disabled={!online || u.uid === user?.uid}
                 onChange={(e) => void accion(() => asignarRol({ uid: u.uid, rol: e.target.value as Rol }), 'Rol actualizado.')}
@@ -152,7 +153,7 @@ export function Usuarios() {
             </div>
             <div className="space-y-1">
               <select
-                className="campo py-1.5 text-sm"
+                className="campo min-h-11 py-1.5 text-sm"
                 aria-label={`Área de ${u.nombre}`}
                 value={u.area ?? ''}
                 disabled={!online}
