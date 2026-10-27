@@ -131,7 +131,7 @@ export function FormRefaccion() {
       <Campo label="Notas">
         <textarea className="campo" rows={3} maxLength={1000} value={datos.notas} onChange={(e) => set('notas', e.target.value)} />
       </Campo>
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
       <div className="flex gap-2">
         <button type="button" className="btn-secundario" onClick={() => navigate(-1)}>
           Cancelar

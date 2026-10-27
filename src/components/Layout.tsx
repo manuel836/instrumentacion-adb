@@ -19,14 +19,14 @@ export function BarraConexion() {
   return (
     <>
       {(!online || subidas > 0) && (
-        <div className={`px-4 py-1.5 text-center text-sm font-medium ${online ? 'bg-sky-100 text-sky-900' : 'bg-amber-100 text-amber-900'}`}>
+        <div className={`px-4 py-1.5 text-center text-sm font-medium ${online ? 'bg-info-100 text-info-900' : 'bg-aviso-100 text-aviso-900'}`}>
           {!online && 'Sin conexión: los cambios se guardan en el teléfono'}
           {!online && subidas > 0 && ' · '}
           {subidas > 0 && `${subidas} ${subidas === 1 ? 'archivo' : 'archivos'} por subir`}
         </div>
       )}
       {detenidas > 0 && (
-        <button className="block w-full bg-red-100 px-4 py-1.5 text-center text-sm font-medium text-red-900" onClick={() => setVerDetenidas(true)}>
+        <button className="block w-full bg-peligro-100 px-4 py-1.5 text-center text-sm font-medium text-peligro-900" onClick={() => setVerDetenidas(true)}>
           {detenidas === 1 ? '1 archivo no se pudo subir' : `${detenidas} archivos no se pudieron subir`} · Ver
         </button>
       )}
@@ -41,7 +41,7 @@ function AvisoContrasena() {
   const { pathname } = useLocation()
   if (!cambiarContrasena || pathname === '/cuenta') return null
   return (
-    <Link to="/cuenta" className="block bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900">
+    <Link to="/cuenta" className="block bg-aviso-100 px-4 py-2 text-sm font-medium text-aviso-900">
       Entraste con una contraseña temporal. Toca aquí para elegir la tuya.
     </Link>
   )
@@ -66,7 +66,7 @@ function Menu({
   const clase = 'block px-4 py-3 text-left text-slate-800 active:bg-slate-100'
   return (
     <div className="relative shrink-0">
-      <button className="-my-2 rounded-lg px-2 py-3 text-sm font-medium text-white/90" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
+      <button className="-my-2 rounded-lg px-2 py-3 text-sm font-medium text-white" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
         <span className="flex items-center gap-1">
           Menú <Icono nombre="abajo" className="size-4" />
         </span>
@@ -106,7 +106,7 @@ function Menu({
                 Exportar Excel / PDF
               </Link>
             )}
-            <button className={`${clase} w-full text-red-700`} onClick={onSalir}>
+            <button className={`${clase} w-full text-peligro-700`} onClick={onSalir}>
               Salir
             </button>
           </div>
@@ -118,7 +118,7 @@ function Menu({
 
 function Globo({ n }: { n: number }) {
   return (
-    <span className="absolute -top-1 -right-3 rounded-full bg-red-600 px-1.5 text-xs leading-4 font-bold text-white">
+    <span className="absolute -top-1 -right-3 rounded-full bg-peligro-600 px-1.5 text-xs leading-4 font-bold text-white">
       {n > 99 ? '99+' : n}
     </span>
   )

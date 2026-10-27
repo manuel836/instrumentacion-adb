@@ -101,15 +101,15 @@ export function DetalleRefaccion() {
             <p className="text-sm text-slate-600">{[r.numeroParte, r.marca].filter(Boolean).join(' · ') || 'Sin número de parte'}</p>
             {r.ubicacion && <p className="text-sm text-slate-500">{r.ubicacion}</p>}
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {sinExistencia(r) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">Sin existencia</span>}
-              {!sinExistencia(r) && porPedir(r) && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Por pedir</span>}
+              {sinExistencia(r) && <span className="rounded-full bg-peligro-100 px-2 py-0.5 text-xs font-semibold text-peligro-800">Sin existencia</span>}
+              {!sinExistencia(r) && porPedir(r) && <span className="rounded-full bg-aviso-100 px-2 py-0.5 text-xs font-semibold text-aviso-800">Por pedir</span>}
               {r.sinSincronizar && <Pendiente />}
             </div>
           </div>
           <Existencia r={r} grande />
         </div>
         {r.notas && <p className="text-sm whitespace-pre-wrap text-slate-700">{r.notas}</p>}
-        {aviso && <p className="rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">{aviso}</p>}
+        {aviso && <p className="rounded-lg bg-bien-50 p-3 text-sm font-medium text-bien-800">{aviso}</p>}
         {p.refacciones && !modo && (
           <div className="grid grid-cols-3 gap-2">
             <button className="btn-secundario px-2" onClick={() => abrir('entrada')}>
@@ -155,7 +155,7 @@ export function DetalleRefaccion() {
               />
             </label>
             {modo === 'conteo' && <p className="text-xs text-slate-500">Se registra la diferencia contra lo que dice el sistema. Necesita señal.</p>}
-            {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+            {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
             <div className="flex gap-2">
               <button type="button" className="btn-secundario" onClick={() => setModo(null)}>
                 Cancelar
@@ -209,7 +209,7 @@ export function DetalleRefaccion() {
               Borrar refacción
             </button>
           ) : (
-            <div className="space-y-2 rounded-lg bg-red-50 p-3 text-sm text-red-900">
+            <div className="space-y-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
               <p>
                 ¿Borrar <b>{r.nombre}</b>? Sus movimientos se conservan en las fallas donde se usó.
               </p>

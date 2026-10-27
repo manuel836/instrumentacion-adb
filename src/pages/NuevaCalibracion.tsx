@@ -272,7 +272,7 @@ export function NuevaCalibracion() {
           {datosTipo.length > 0 && <p className="text-slate-600">{datosTipo.map((d) => `${d.k}: ${d.v}`).join(' · ')}</p>}
         </div>
       ) : (
-        <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
+        <div className="space-y-2 rounded-lg border border-aviso-300 bg-aviso-50 p-3">
           <Campo label="Tipo de instrumento">
             <SelectorTipo value={cap.tipo} onChange={cambiarTipo} />
           </Campo>
@@ -520,7 +520,7 @@ export function NuevaCalibracion() {
         <textarea className="campo min-h-20" value={observaciones} maxLength={2000} onChange={(e) => setObservaciones(e.target.value)} />
       </Campo>
 
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
       <p className="text-xs text-slate-500">Sin señal se guarda en el teléfono y se sincroniza al reconectar.</p>
       <div className="flex gap-2">
         <button type="button" className="btn-secundario flex-1" onClick={() => navigate(-1)}>

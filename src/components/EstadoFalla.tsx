@@ -1,9 +1,9 @@
 import type { EstadoFalla as Estado } from '../types'
 
 const colores: Record<Estado, string> = {
-  Abierta: 'bg-red-100 text-red-800',
-  'En proceso': 'bg-amber-100 text-amber-800',
-  Cerrada: 'bg-emerald-100 text-emerald-800',
+  Abierta: 'bg-peligro-100 text-peligro-800',
+  'En proceso': 'bg-aviso-100 text-aviso-800',
+  Cerrada: 'bg-bien-100 text-bien-800',
 }
 
 export function EstadoFalla({ estado }: { estado: Estado }) {

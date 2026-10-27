@@ -13,7 +13,7 @@ function Celda({ v, err, cal }: { v: number | null; err: number | null; cal: Cal
   return (
     <td className="py-2">
       {v}
-      {err !== null && <span className={`block text-xs ${fuera ? 'font-semibold text-red-700' : 'text-slate-500'}`}>{textoError(err, cal)}</span>}
+      {err !== null && <span className={`block text-xs ${fuera ? 'font-semibold text-peligro-700' : 'text-slate-500'}`}>{textoError(err, cal)}</span>}
     </td>
   )
 }
@@ -28,8 +28,8 @@ function Dato({ k, v }: { k: string; v: string }) {
 }
 
 const COLOR: Record<EstadoRevision | '', string> = {
-  Bien: 'bg-emerald-100 text-emerald-800',
-  Mal: 'bg-red-100 text-red-800',
+  Bien: 'bg-bien-100 text-bien-800',
+  Mal: 'bg-peligro-100 text-peligro-800',
   'No aplica': 'bg-slate-100 text-slate-600',
   '': 'bg-slate-100 text-slate-600',
 }

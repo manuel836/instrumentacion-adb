@@ -49,8 +49,8 @@ export function Segmentado<T extends string>({
 }
 
 const COLOR: Record<EstadoRevision, string> = {
-  Bien: 'border-emerald-600 bg-emerald-600 text-white',
-  Mal: 'border-red-600 bg-red-600 text-white',
+  Bien: 'border-bien-600 bg-bien-600 text-white',
+  Mal: 'border-peligro-600 bg-peligro-600 text-white',
   'No aplica': 'border-slate-500 bg-slate-500 text-white',
 }
 
@@ -60,7 +60,7 @@ export function ListaRevisiones({ revisiones, onChange }: { revisiones: Revision
     <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
       {revisiones.map((r, i) => (
         <li key={r.nombre} className="space-y-2 p-3">
-          <p className={`text-sm ${r.estado === 'Mal' ? 'font-semibold text-red-700' : ''}`}>{r.nombre}</p>
+          <p className={`text-sm ${r.estado === 'Mal' ? 'font-semibold text-peligro-700' : ''}`}>{r.nombre}</p>
           <div role="radiogroup" aria-label={r.nombre} className="grid grid-cols-3 gap-2">
             {ESTADOS_REVISION.map((e) => (
               <button
@@ -134,7 +134,7 @@ export function TablaPuntos({
               <input className="campo px-2 py-2" inputMode="decimal" aria-label={`As-Left ${i + 1}`} value={f.asLeft} onChange={(ev) => setFila(i, 'asLeft', ev.target.value)} />
               {calcular && e !== null && <ErrorBajo v={errorLectura(medida, numero(f.asLeft), e)} m={medida} />}
             </div>
-            <button type="button" aria-label="Quitar punto" className="w-6 py-2 text-red-700" onClick={() => onChange(filas.filter((_, j) => j !== i))}>
+            <button type="button" aria-label="Quitar punto" className="w-6 py-2 text-peligro-700" onClick={() => onChange(filas.filter((_, j) => j !== i))}>
               ×
             </button>
           </div>

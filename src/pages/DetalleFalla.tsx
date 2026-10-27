@@ -124,7 +124,7 @@ export function DetalleFalla() {
             <span className="etiqueta">Acción correctiva *</span>
             <textarea className="campo min-h-20" value={accion} onChange={(e) => setAccion(e.target.value)} />
           </label>
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
           <div className="flex gap-2">
             <button type="button" className="btn-secundario flex-1" onClick={() => setCerrando(false)}>
               Cancelar

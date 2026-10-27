@@ -120,7 +120,7 @@ export function Catalogo() {
   return (
     <div>
       <div className="space-y-2 border-b border-slate-200 bg-white p-3">
-        {aviso && <p className="rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">{aviso}</p>}
+        {aviso && <p className="rounded-lg bg-bien-50 p-3 text-sm font-medium text-bien-800">{aviso}</p>}
         <input
           className="campo"
           type="search"
@@ -240,7 +240,7 @@ function Fila({ i, indice, medir, y }: { i: ConPendiente<Instrumento>; indice: n
       <span className="relative shrink-0">
         <FotoImg url={i.portadaMiniatura} alt="" className="h-14 w-14 rounded-lg object-cover" />
         {i.disparaCaldera && (
-          <span className="absolute -top-1 -left-1 rounded-full border-2 border-white bg-red-600 p-0.5 text-white" title="Puede disparar la caldera">
+          <span className="absolute -top-1 -left-1 rounded-full border-2 border-white bg-peligro-600 p-0.5 text-white" title="Puede disparar la caldera">
             <Icono nombre="rayo" className="size-3.5" />
           </span>
         )}
@@ -254,12 +254,12 @@ function Fila({ i, indice, medir, y }: { i: ConPendiente<Instrumento>; indice: n
         </div>
         <p className="truncate text-sm text-slate-600">{i.servicio}</p>
         <p className="truncate text-xs text-slate-500">
-          {i.disparaCaldera && <span className="font-semibold text-red-700">Dispara caldera · </span>}
+          {i.disparaCaldera && <span className="font-semibold text-peligro-700">Dispara caldera · </span>}
           {i.tipo && `${i.tipo} · `}
           {i.area}
           {!i.nfcToken && ' · sin tag'}
-          {v === 'vencida' && <span className="text-red-700"> · calibración vencida</span>}
-          {v === 'pronto' && <span className="text-amber-700"> · calibración por vencer</span>}
+          {v === 'vencida' && <span className="text-peligro-700"> · calibración vencida</span>}
+          {v === 'pronto' && <span className="text-aviso-700"> · calibración por vencer</span>}
         </p>
       </div>
     </Link>

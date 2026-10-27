@@ -62,7 +62,7 @@ export function BorrarInstrumento({
   ]
 
   return (
-    <section className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+    <section className="space-y-3 rounded-xl border border-peligro-200 bg-peligro-50 p-4 text-sm text-peligro-900">
       <h2 className="font-semibold">¿Borrar {inst.tagISA} para siempre?</h2>
       <p>Se borrará la ficha junto con:</p>
       <ul className="list-disc pl-5">
@@ -87,7 +87,7 @@ export function BorrarInstrumento({
         />
       </label>
       {!online && <p className="font-medium">Borrar necesita señal.</p>}
-      {error && <p className="rounded-lg bg-white p-3 text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-white p-3 text-peligro-700">{error}</p>}
       <div className="flex gap-2">
         <button
           className="btn-secundario flex-1"
@@ -99,7 +99,7 @@ export function BorrarInstrumento({
         >
           Cancelar
         </button>
-        <button className="btn flex-1 bg-red-700 text-white" disabled={!coincide || !online || borrando} onClick={() => void borrar()}>
+        <button className="btn flex-1 bg-peligro-700 text-white" disabled={!coincide || !online || borrando} onClick={() => void borrar()}>
           {borrando ? 'Borrando…' : 'Sí, borrar'}
         </button>
       </div>

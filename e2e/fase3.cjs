@@ -91,15 +91,15 @@ async function abrirPT101(page) {
   await tec.page.click('nav >> text=Chat')
   await tec.page.waitForSelector('text=Canal general')
   await escribir(tec.page, 'Mañana paro de caldera B a las 7:00')
-  await op.page.locator('nav a[href="/chat"] span.bg-red-600', { hasText: '1' }).waitFor({ timeout: 20000 })
+  await op.page.locator('nav a[href="/chat"] span.bg-peligro-600', { hasText: '1' }).waitFor({ timeout: 20000 })
   console.log('globo de no leídos en el operador ok')
   await op.page.click('nav >> text=Chat')
   await op.page.waitForSelector('text=Mañana paro de caldera B')
   await shot(op.page, '22-canal-general')
-  await op.page.locator('nav a[href="/chat"] span.bg-red-600').waitFor({ state: 'detached' })
+  await op.page.locator('nav a[href="/chat"] span.bg-peligro-600').waitFor({ state: 'detached' })
   await op.page.goto(`${BASE}/catalogo`)
   await op.page.waitForSelector('text=instrumentos')
-  const globo = await op.page.locator('nav a[href="/chat"] span.bg-red-600').count()
+  const globo = await op.page.locator('nav a[href="/chat"] span.bg-peligro-600').count()
   console.log('el globo se apaga al leer:', globo === 0)
 
   // ---------- Calibraciones ----------

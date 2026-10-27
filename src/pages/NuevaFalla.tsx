@@ -109,7 +109,7 @@ export function NuevaFalla() {
         <SelectorFotos fotos={fotos} onChange={setFotos} max={6} />
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
       <p className="text-xs text-slate-500">Sin señal se guarda en el teléfono y se avisa a los técnicos al reconectar.</p>
       <button className="btn-primario w-full" disabled={!inst || enviando}>
         {enviando ? 'Guardando…' : 'Reportar'}

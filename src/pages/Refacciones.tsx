@@ -11,7 +11,7 @@ const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 
 /** Existencia con color: rojo sin existencia, ámbar por pedir. */
 export function Existencia({ r, grande = false }: { r: Refaccion; grande?: boolean }) {
-  const color = sinExistencia(r) ? 'text-red-700' : porPedir(r) ? 'text-amber-700' : 'text-slate-800'
+  const color = sinExistencia(r) ? 'text-peligro-700' : porPedir(r) ? 'text-aviso-700' : 'text-slate-800'
   return (
     <span className={`block text-right leading-tight ${color}`}>
       <span className={`font-bold ${grande ? 'text-4xl' : 'text-xl'}`}>{r.existencia}</span>
@@ -58,7 +58,7 @@ export function Refacciones() {
   return (
     <div>
       <div className="space-y-2 border-b border-slate-200 bg-white p-3">
-        {aviso && <p className="rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">{aviso}</p>}
+        {aviso && <p className="rounded-lg bg-bien-50 p-3 text-sm font-medium text-bien-800">{aviso}</p>}
         <input
           className="campo"
           type="search"

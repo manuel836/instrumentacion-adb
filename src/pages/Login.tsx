@@ -50,7 +50,7 @@ export function Login() {
             <label className="etiqueta" htmlFor="pass">Contraseña</label>
             <input id="pass" className="campo" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
           <button className="btn-primario w-full" disabled={enviando}>
             {enviando ? 'Entrando…' : 'Entrar'}
           </button>

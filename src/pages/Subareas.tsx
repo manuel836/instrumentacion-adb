@@ -105,14 +105,14 @@ export function Subareas() {
                         </div>
                       )}
                       {editando?.id === s.id && n > 0 && <p className="text-xs text-slate-500">El nombre nuevo se pasa a sus {plural(n)}.</p>}
-                      {error?.donde === s.id && <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{error.texto}</p>}
+                      {error?.donde === s.id && <p className="rounded-lg bg-peligro-50 p-2 text-sm text-peligro-700">{error.texto}</p>}
                       {quitando === s.id &&
                         (n > 0 ? (
-                          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                          <p className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">
                             {s.nombre} tiene {plural(n)}. Cámbialos a otra sub área (o a “Sin sub área”) antes de quitarla.
                           </p>
                         ) : (
-                          <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-900">
+                          <div className="flex items-center gap-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
                             <span className="flex-1">¿Quitar {s.nombre}?</span>
                             <button className="btn-secundario px-3 py-1.5 text-sm" onClick={() => setQuitando(null)}>
                               No
@@ -144,7 +144,7 @@ export function Subareas() {
               />
               <button className="btn-primario shrink-0 px-4 py-2">Agregar</button>
             </form>
-            {error?.donde === area && <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{error.texto}</p>}
+            {error?.donde === area && <p className="rounded-lg bg-peligro-50 p-2 text-sm text-peligro-700">{error.texto}</p>}
           </section>
         )
       })}
