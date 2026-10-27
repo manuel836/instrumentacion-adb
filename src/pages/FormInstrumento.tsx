@@ -28,6 +28,8 @@ import { SelectorTipo } from '../components/SelectorTipo'
 import { Segmentado } from '../components/PruebasCalibracion'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type InstrumentoNuevo } from '../types'
+import { avisarGuardado } from '../components/Listo'
+import { Silueta } from '../components/Silueta'
 
 function Campo({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -135,9 +137,11 @@ export function FormInstrumento() {
       if (id) {
         const { nfcToken: _t, docs: _d, portadaMiniatura: _p, ...editables } = limpio
         actualizarInstrumento(id, editables)
+        avisarGuardado('Cambios guardados.', 'Cambios guardados en el teléfono. Se envía cuando haya señal.')
         navigate(`/instrumentos/${id}`, { replace: true })
       } else {
         const nuevoId = crearInstrumento(limpio)
+        avisarGuardado(`${tagISA} dado de alta.`, `${tagISA} dado de alta en el teléfono. Se envía cuando haya señal.`)
         // Alta rápida en campo: después del alta se ofrece vincular el tag y tomar fotos.
         navigate(conTagYFotos ? `/instrumentos/${nuevoId}/vincular` : `/instrumentos/${nuevoId}`, { replace: true })
       }
@@ -146,7 +150,7 @@ export function FormInstrumento() {
     }
   }
 
-  if (id && existente === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (id && existente === undefined) return <Silueta />
 
   const sugerido = tipoSugerido(datos.tagISA)
   const campos = camposDeTipo(datos.tipo, datos.accionValvula)

@@ -22,6 +22,8 @@ import { SelectorUnidades } from '../components/SelectorUnidades'
 import { SelectorTipo } from '../components/SelectorTipo'
 import { ListaRevisiones, Segmentado, TablaPuntos, numero, type Fila } from '../components/PruebasCalibracion'
 import { unidadConocida } from '../lib/unidades'
+import { avisarGuardado } from '../components/Listo'
+import { Silueta } from '../components/Silueta'
 
 const MAX_PUNTOS = 11
 
@@ -161,7 +163,7 @@ export function NuevaCalibracion() {
     [cap?.filas],
   )
 
-  if (inst === undefined || (inst && !cap)) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (inst === undefined || (inst && !cap)) return <Silueta />
   if (inst === null || !cap || !medida) return <p className="p-6 text-slate-500">Este instrumento no existe.</p>
 
   const set = <K extends keyof Captura>(k: K, v: Captura[K]) => {
@@ -248,6 +250,7 @@ export function NuevaCalibracion() {
     }
     const masReciente = (anteriores ?? []).every((c) => c.fecha.toMillis() <= datos.fecha.toMillis())
     registrarCalibracion(inst.id, datos, masReciente, paraLaFicha)
+    avisarGuardado('Calibración guardada.', 'Calibración guardada en el teléfono. Se envía cuando haya señal.')
     navigate(`/instrumentos/${inst.id}`, { replace: true })
   }
 

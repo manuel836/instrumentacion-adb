@@ -1,11 +1,12 @@
 import { useDeferredValue, useMemo } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useInstrumentos } from '../lib/instrumentos'
 import { FILTROS_REFACCION, porPedir, sinExistencia, useRefacciones, type FiltroRefaccion } from '../lib/refacciones'
 import type { Refaccion } from '../types'
 import { Pendiente } from '../components/Estado'
 import { Icono } from '../components/Icono'
+import { Silueta } from '../components/Silueta'
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
@@ -14,7 +15,7 @@ export function Existencia({ r, grande = false }: { r: Refaccion; grande?: boole
   const color = sinExistencia(r) ? 'text-peligro-700' : porPedir(r) ? 'text-aviso-700' : 'text-slate-800'
   return (
     <span className={`block text-right leading-tight ${color}`}>
-      <span className={`font-bold ${grande ? 'text-4xl' : 'text-xl'}`}>{r.existencia}</span>
+      <span className={`font-bold tabular-nums ${grande ? 'text-4xl' : 'text-xl'}`}>{r.existencia}</span>
       <span className="ml-1 text-xs">{r.unidad}</span>
       {r.minimo > 0 && <span className="block text-xs text-slate-500">mínimo {r.minimo}</span>}
     </span>
@@ -27,7 +28,6 @@ export function Refacciones() {
   const instrumentos = useInstrumentos()
   const { rol } = useAuth()
   const p = permisos(rol)
-  const aviso = (useLocation().state as { aviso?: string } | null)?.aviso
   const [params, setParams] = useSearchParams()
   const texto = params.get('q') ?? ''
   const filtro = (params.get('filtro') ?? '') as FiltroRefaccion | ''
@@ -58,7 +58,6 @@ export function Refacciones() {
   return (
     <div>
       <div className="space-y-2 border-b border-slate-200 bg-white p-3">
-        {aviso && <p className="rounded-lg bg-bien-50 p-3 text-sm font-medium text-bien-800">{aviso}</p>}
         <input
           className="campo"
           type="search"
@@ -84,6 +83,11 @@ export function Refacciones() {
         <p className="text-xs text-slate-500">{lista === null ? 'Cargando…' : `${filtrados.length} de ${lista.length} refacciones`}</p>
       </div>
 
+      {lista === null && (
+        <div className="bg-white px-4">
+          <Silueta forma="lista" />
+        </div>
+      )}
       {lista?.length === 0 && (
         <p className="p-8 text-center text-slate-500">
           Aún no hay refacciones.{p.refacciones && ' Da de alta la primera con el botón Nueva.'}

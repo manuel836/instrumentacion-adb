@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthContext'
 import { actualizarRefaccion, crearRefaccion, useRefaccion } from '../lib/refacciones'
 import type { RefaccionNueva } from '../types'
 import { SelectorInstrumentos } from '../components/SelectorInstrumentos'
+import { avisarGuardado } from '../components/Listo'
+import { Silueta } from '../components/Silueta'
 
 function Campo({ label, ayuda, children }: { label: string; ayuda?: string; children: ReactNode }) {
   return (
@@ -51,7 +53,7 @@ export function FormRefaccion() {
     }
   }, [existente])
 
-  if (id && existente === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (id && existente === undefined) return <Silueta />
   if (id && existente === null) return <p className="p-6 text-slate-500">Esta refacción no existe.</p>
 
   const set = <K extends keyof RefaccionNueva>(k: K, v: RefaccionNueva[K]) => setDatos((d) => ({ ...d, [k]: v }))
@@ -78,10 +80,12 @@ export function FormRefaccion() {
     }
     if (id) {
       actualizarRefaccion(id, limpio)
+      avisarGuardado('Cambios guardados.', 'Cambios guardados en el teléfono. Se envía cuando haya señal.')
       navigate(`/refacciones/${id}`, { replace: true })
     } else {
       const quien = { uid: user?.uid ?? '', nombre: user?.displayName || user?.email || 'Técnico' }
       const nuevoId = crearRefaccion(limpio, n ?? 0, quien)
+      avisarGuardado(`${nombre} dada de alta.`, `${nombre} dada de alta en el teléfono. Se envía cuando haya señal.`)
       navigate(`/refacciones/${nuevoId}`, { replace: true })
     }
   }

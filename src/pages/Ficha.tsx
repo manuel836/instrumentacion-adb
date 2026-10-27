@@ -14,6 +14,7 @@ import { dondeEsta } from '../types'
 import { AvisoDisparo } from '../components/AvisoDisparo'
 import { Documentos } from '../components/Documentos'
 import { datosDelTipo, pruebaDe } from '../lib/tipos'
+import { Silueta } from '../components/Silueta'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -32,7 +33,7 @@ export function Ficha() {
   const fallas = useFallasDeInstrumento(id)
   const calibraciones = useCalibraciones(id)
 
-  if (inst === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (inst === undefined) return <Silueta forma="ficha" />
   if (inst === null) return <p className="p-6 text-slate-500">Este instrumento no existe.</p>
 
   const rango =

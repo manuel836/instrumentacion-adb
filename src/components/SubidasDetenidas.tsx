@@ -35,8 +35,8 @@ export function SubidasDetenidas({ onCerrar }: { onCerrar: () => void }) {
 
   // Va directo en <body>: dentro del encabezado quedaría debajo de la barra de abajo.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" role="dialog" aria-modal="true">
-      <div className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-slate-900 sm:rounded-2xl">
+    <div className="fixed inset-0 z-50 flex animate-aparecer items-end justify-center bg-black/40 sm:items-center" role="dialog" aria-modal="true">
+      <div className="max-h-[85dvh] w-full max-w-lg animate-subir overflow-y-auto rounded-t-2xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-slate-900 sm:rounded-2xl">
         <h2 className="text-lg font-semibold">Archivos que no se pudieron subir</h2>
         <p className="mt-1 text-sm text-slate-600">
           Siguen guardados en este teléfono. Puedes intentarlo otra vez o descartarlos; si los descartas, los demás no los verán.

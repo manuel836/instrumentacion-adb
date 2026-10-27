@@ -7,6 +7,8 @@ import { useOnline } from '../hooks/useOnline'
 import { Pendiente } from '../components/Estado'
 import { ListaMovimientos } from '../components/RefaccionesUsadas'
 import { Existencia } from './Refacciones'
+import { avisar, avisarGuardado } from '../components/Listo'
+import { Silueta } from '../components/Silueta'
 
 type Modo = 'entrada' | 'salida' | 'conteo'
 
@@ -31,7 +33,6 @@ export function DetalleRefaccion() {
   const [nota, setNota] = useState('')
   const [instrumento, setInstrumento] = useState('')
   const [error, setError] = useState('')
-  const [aviso, setAviso] = useState('')
   const [borrando, setBorrando] = useState(false)
   const [enviando, setEnviando] = useState(false)
 
@@ -40,7 +41,7 @@ export function DetalleRefaccion() {
     [instrumentos, r?.instrumentos],
   )
 
-  if (r === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (r === undefined) return <Silueta />
   if (r === null) return <p className="p-6 text-slate-500">Esta refacción no existe.</p>
 
   const quien = { uid: user?.uid ?? '', nombre: user?.displayName || user?.email || 'Técnico' }
@@ -51,7 +52,6 @@ export function DetalleRefaccion() {
     setNota('')
     setInstrumento('')
     setError('')
-    setAviso('')
   }
 
   async function onRegistrar(e: FormEvent) {
@@ -65,7 +65,7 @@ export function DetalleRefaccion() {
       setEnviando(true)
       try {
         const dif = await ajustarExistencia(r, n, nota, quien)
-        setAviso(dif === 0 ? 'La existencia ya cuadraba: no hubo cambio.' : `Existencia ajustada a ${n} (${dif > 0 ? '+' : ''}${dif}).`)
+        avisar(dif === 0 ? 'La existencia ya cuadraba: no hubo cambio.' : `Existencia ajustada a ${n} (${dif > 0 ? '+' : ''}${dif}).`)
         setModo(null)
       } catch {
         setError('No se pudo leer la existencia del servidor. El conteo necesita señal.')
@@ -82,14 +82,18 @@ export function DetalleRefaccion() {
       quien,
       instrumento: inst ? { id: inst.id, tagISA: inst.tagISA } : null,
     })
-    setAviso(modo === 'entrada' ? `Entrada de ${n} ${r.unidad} registrada.` : `Salida de ${n} ${r.unidad} registrada.`)
+    avisarGuardado(
+      modo === 'entrada' ? `Entrada de ${n} ${r.unidad} registrada.` : `Salida de ${n} ${r.unidad} registrada.`,
+      `${modo === 'entrada' ? 'Entrada' : 'Salida'} de ${n} ${r.unidad} guardada en el teléfono. Se envía cuando haya señal.`,
+    )
     setModo(null)
   }
 
   async function onBorrar() {
     if (!r) return
     await borrarRefaccion(r.id)
-    navigate('/refacciones', { replace: true, state: { aviso: `Se borró ${r.nombre}.` } })
+    avisar(`Se borró ${r.nombre}.`)
+    navigate('/refacciones', { replace: true })
   }
 
   return (
@@ -109,7 +113,6 @@ export function DetalleRefaccion() {
           <Existencia r={r} grande />
         </div>
         {r.notas && <p className="text-sm whitespace-pre-wrap text-slate-700">{r.notas}</p>}
-        {aviso && <p className="rounded-lg bg-bien-50 p-3 text-sm font-medium text-bien-800">{aviso}</p>}
         {p.refacciones && !modo && (
           <div className="grid grid-cols-3 gap-2">
             <button className="btn-secundario px-2" onClick={() => abrir('entrada')}>
@@ -124,7 +127,7 @@ export function DetalleRefaccion() {
           </div>
         )}
         {modo && (
-          <form onSubmit={(e) => void onRegistrar(e)} className="space-y-3 rounded-lg bg-slate-50 p-3">
+          <form onSubmit={(e) => void onRegistrar(e)} className="origin-top animate-desplegar space-y-3 rounded-lg bg-slate-50 p-3">
             <h2 className="font-semibold">{TITULOS[modo].titulo}</h2>
             <label className="block">
               <span className="etiqueta">{TITULOS[modo].pregunta}</span>
@@ -189,7 +192,7 @@ export function DetalleRefaccion() {
       <section className="tarjeta space-y-2">
         <h2 className="font-semibold">Movimientos</h2>
         {movimientos === null ? (
-          <p className="text-sm text-slate-500">Cargando…</p>
+          <Silueta forma="lista" />
         ) : movimientos.length === 0 ? (
           <p className="text-sm text-slate-500">Sin entradas ni salidas todavía.</p>
         ) : (
@@ -209,7 +212,7 @@ export function DetalleRefaccion() {
               Borrar refacción
             </button>
           ) : (
-            <div className="space-y-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
+            <div className="origin-top animate-desplegar space-y-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
               <p>
                 ¿Borrar <b>{r.nombre}</b>? Sus movimientos se conservan en las fallas donde se usó.
               </p>

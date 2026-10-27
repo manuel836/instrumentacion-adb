@@ -8,6 +8,7 @@ import { useNoLeidosPrivados } from '../lib/privados'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
 import { ConCarga } from './Diferida'
 import { Icono } from './Icono'
+import { AvisoListo } from './Listo'
 import { SubidasDetenidas } from './SubidasDetenidas'
 
 export function BarraConexion() {
@@ -74,7 +75,7 @@ function Menu({
       {abierto && (
         <>
           <button className="fixed inset-0 z-30 cursor-default" aria-label="Cerrar menú" onClick={() => setAbierto(false)} />
-          <div className="absolute right-0 z-40 mt-2 w-48 divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-lg">
+          <div className="absolute right-0 z-40 mt-2 w-48 origin-top-right animate-desplegar divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-lg">
             {usuarios && (
               <Link to="/usuarios" className={clase}>
                 Usuarios
@@ -125,7 +126,32 @@ function Globo({ n }: { n: number }) {
 }
 
 const claseNav = ({ isActive }: { isActive: boolean }) =>
-  `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${isActive ? 'text-marca-700' : 'text-slate-500'}`
+  `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs ${isActive ? 'font-semibold text-marca-700' : 'font-medium text-slate-500'}`
+
+const PESTANAS = ['/', '/catalogo', '/fallas', '/chat', '/escanear']
+
+/** Qué pestaña de abajo está abierta (la misma regla de NavLink), o -1 si ninguna. */
+function pestanaActiva(pathname: string) {
+  if (pathname === '/') return 0
+  return PESTANAS.findIndex((p, i) => i > 0 && (pathname === p || pathname.startsWith(p + '/')))
+}
+
+/** La marca verde detrás del ícono de la pestaña abierta: se desliza a la que se toca. */
+function MarcaPestana({ activa }: { activa: number }) {
+  const [ultima, setUltima] = useState(Math.max(activa, 0))
+  useEffect(() => {
+    if (activa >= 0) setUltima(activa)
+  }, [activa])
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute inset-y-0 left-0 w-1/5 motion-safe:transition-[translate,opacity] motion-safe:duration-300 motion-safe:ease-frenar ${activa < 0 ? 'opacity-0' : ''}`}
+      style={{ translate: `${ultima * 100}% 0` }}
+    >
+      <span className="mx-auto mt-1 block h-8 w-14 rounded-full bg-marca-100" />
+    </span>
+  )
+}
 
 /** Cada pantalla nueva abre desde arriba; al regresar (Atrás) cada una decide. */
 function ArribaAlNavegar() {
@@ -157,13 +183,19 @@ export function Layout() {
         <BarraConexion />
         <AvisoContrasena />
         <AvisoNotificaciones />
+        <AvisoListo />
       </header>
+      {/* Cada pantalla entra con un fundido corto. Solo opacidad: un movimiento haría que los
+          botones fijos (Alta, Reportar falla) se movieran con la pantalla mientras entra. */}
       <main className="flex-1 pb-24">
         <ConCarga key={pathname}>
-          <Outlet />
+          <div className="animate-pantalla">
+            <Outlet />
+          </div>
         </ConCarga>
       </main>
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-2xl border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
+        <MarcaPestana activa={pestanaActiva(pathname)} />
         <NavLink to="/" end className={claseNav}>
           <Icono nombre="inicio" className="size-6" />
           Inicio

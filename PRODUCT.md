@@ -64,6 +64,8 @@ Vocabulario de la planta que la interfaz ya usa: Ficha, Hoja de vida, Vincular t
 - Nombre: **Instrumentación ADB**, con "Agroindustrias del Balsas" como subtítulo en el acceso; nombre corto al instalar: "Instrumentos".
 - Ícono: `public/icons/icon.svg` (y sus PNG de 192 y 512 px).
 - Color: el verde del logo de Fertinal (#238029) es el color de la app (encabezado, botón principal, enlaces, ícono y barra del teléfono). Los colores van por su papel en `src/index.css`: `marca`, `bien` (el mismo verde), `aviso` (ámbar), `peligro` (rojo) e `info` (azul); en el código se usan esos nombres, no `red-`, `amber-` ni `emerald-`.
+- Letra (elegida por Manuel el 27 de octubre de 2026): **Figtree** para todo el texto y **Atkinson Hyperlegible Mono** para tags ISA, series y códigos (clase `font-mono`), donde 0 y O, o 1, l e I, no deben confundirse. Van dentro de la app (`@fontsource-variable`, precacheadas), no la letra del sistema.
+- Movimiento: ligero y con un propósito (confirmar, abrir, leer el tag). Duraciones de 150 a 300 ms con frenado suave; las animaciones son tokens `--animate-*` en `src/index.css` y respetan "Quitar animaciones" (`prefers-reduced-motion`). Lo que se guarda se confirma con `avisar()` / `avisarGuardado()` de `src/components/Listo.tsx`; lo que carga se muestra con `Silueta`, no con "Cargando…".
 - Voz: español sencillo y directo, de tú, que dice qué pasa y qué hacer ("Sin conexión: los cambios se guardan en el teléfono", "Toca aquí para elegir la tuya").
 - La app debe llevar el **logo oficial de Fertinal** (lo pidió Manuel el 27 de octubre de 2026 y mandó el archivo): `docs/marca/logo-fertinal.png`, símbolo arriba y la palabra "Fertinal" abajo, con ®. Usar ese archivo tal cual; no redibujarlo, recortarle partes ni cambiarle los colores.
 

@@ -5,6 +5,7 @@ import { hiloDeFalla, useMensajes } from '../lib/chat'
 import { borrarFalla } from '../lib/fallas'
 import { useMovimientosDeFalla } from '../lib/refacciones'
 import type { Falla } from '../types'
+import { avisar } from './Listo'
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 
@@ -43,14 +44,13 @@ function Confirmar({ falla, onCancelar }: { falla: Falla; onCancelar: () => void
   function eliminar() {
     // Desaparece al momento; sin señal, el servidor la borra al reconectar.
     borrarFalla(falla.id).catch((err) => console.error('No se pudo eliminar la falla', err))
-    navigate(`/fallas?estado=${encodeURIComponent(falla.estado)}`, {
-      replace: true,
-      state: { aviso: online ? `Se eliminó la falla de ${falla.tagISA}.` : `La falla de ${falla.tagISA} se eliminará al recuperar la señal.` },
-    })
+    if (online) avisar(`Se eliminó la falla de ${falla.tagISA}.`)
+    else avisar(`La falla de ${falla.tagISA} se eliminará al recuperar la señal.`, 'espera')
+    navigate(`/fallas?estado=${encodeURIComponent(falla.estado)}`, { replace: true })
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-peligro-200 bg-peligro-50 p-4 text-sm text-peligro-900">
+    <section className="origin-top animate-desplegar space-y-3 rounded-xl border border-peligro-200 bg-peligro-50 p-4 text-sm text-peligro-900">
       <h2 className="font-semibold">¿Eliminar esta falla de {falla.tagISA}?</h2>
       <p>Úsalo si se reportó por error. Se borrará para siempre junto con:</p>
       <ul className="list-disc pl-5">

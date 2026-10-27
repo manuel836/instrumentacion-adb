@@ -244,7 +244,7 @@ export function Usuarios() {
               </form>
             )}
             {porEliminar === u.uid && (
-              <div className="space-y-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
+              <div className="origin-top animate-desplegar space-y-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
                 <p>
                   ¿Eliminar a <b>{u.nombre}</b> para siempre? Ya no podrá entrar. Sus fallas, mensajes y calibraciones se conservan con su
                   nombre.

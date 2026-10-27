@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { useOnline } from '../hooks/useOnline'
 import { borrarInstrumento, useFotosUbicacion, type ConPendiente } from '../lib/instrumentos'
 import type { Calibracion, Falla, Instrumento } from '../types'
+import { avisar } from './Listo'
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 
@@ -34,7 +35,8 @@ export function BorrarInstrumento({
     setError('')
     try {
       await borrarInstrumento(inst.id)
-      navigate('/catalogo', { replace: true, state: { aviso: `${inst.tagISA} se borró.` } })
+      avisar(`${inst.tagISA} se borró.`)
+      navigate('/catalogo', { replace: true })
     } catch (err) {
       const code = (err as { code?: string }).code
       setError(
@@ -62,7 +64,7 @@ export function BorrarInstrumento({
   ]
 
   return (
-    <section className="space-y-3 rounded-xl border border-peligro-200 bg-peligro-50 p-4 text-sm text-peligro-900">
+    <section className="origin-top animate-desplegar space-y-3 rounded-xl border border-peligro-200 bg-peligro-50 p-4 text-sm text-peligro-900">
       <h2 className="font-semibold">¿Borrar {inst.tagISA} para siempre?</h2>
       <p>Se borrará la ficha junto con:</p>
       <ul className="list-disc pl-5">

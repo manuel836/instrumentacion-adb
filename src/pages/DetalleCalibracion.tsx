@@ -6,6 +6,7 @@ import { diferencial, pruebaDe } from '../lib/tipos'
 import { fechaDia, ResultadoCal } from '../components/Calibracion'
 import { Pendiente } from '../components/Estado'
 import type { Calibracion, EstadoRevision } from '../types'
+import { Silueta } from '../components/Silueta'
 
 function Celda({ v, err, cal }: { v: number | null; err: number | null; cal: Calibracion }) {
   if (v === null) return <td className="py-2 text-slate-500">—</td>
@@ -41,7 +42,7 @@ export function DetalleCalibracion() {
   const inst = useInstrumento(id)
   const cal = useCalibracion(id, calId)
 
-  if (cal === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (cal === undefined) return <Silueta />
   if (cal === null) return <p className="p-6 text-slate-500">Esta calibración no existe.</p>
 
   const p = pruebaDe(cal.tipo)
