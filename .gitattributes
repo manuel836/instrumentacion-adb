@@ -1,0 +1,4 @@
+# Impeccable: cmd.exe necesita fin de línea CRLF en los .cmd
+*.cmd text eol=crlf
+# Archivos de Impeccable copiados tal cual (se ocultan en los diffs de GitHub)
+.claude/** linguist-generated
