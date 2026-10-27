@@ -48,3 +48,8 @@ body {
 @utility tarjeta {
   @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
 }
+/* Enlace de texto junto a un título ("+ Registrar", "Ver todas"): el área que se toca mide 44 px
+   de alto, pero los márgenes negativos dejan el renglón del mismo tamaño. */
+@utility accion {
+  @apply -mx-2 -my-3 inline-flex items-center gap-1 px-2 py-3 text-sm font-semibold text-marca-700;
+}

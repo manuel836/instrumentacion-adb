@@ -10,6 +10,11 @@ export interface FotoVisor {
   pie: string
 }
 
+/** Nombre del botón que abre una foto, para el lector de pantalla: "Ver foto 2 de 4: Lado norte". */
+export function nombreFoto(i: number, total: number, pie?: string) {
+  return `Ver foto${total > 1 ? ` ${i + 1} de ${total}` : ''}${pie ? `: ${pie}` : ''}`
+}
+
 /** Fotos a pantalla completa con zoom (doble toque o pellizco) y paso entre fotos. */
 export function Visor({ fotos, inicio, onCerrar }: { fotos: FotoVisor[]; inicio: number; onCerrar: () => void }) {
   const [i, setI] = useState(inicio)

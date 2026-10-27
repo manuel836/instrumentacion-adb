@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { BarraConexion } from '../components/Layout'
+import logoFertinal from '../assets/logo-fertinal.png'
 
 const mensajes: Record<string, string> = {
   'auth/invalid-credential': 'Correo o contraseña incorrectos.',
@@ -36,7 +37,7 @@ export function Login() {
       <BarraConexion />
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center p-6">
         <div className="mb-8 text-center">
-          <img src="/icons/icon.svg" alt="" className="mx-auto mb-4 h-16 w-16" />
+          <img src={logoFertinal} alt="Fertinal" width={480} height={369} className="mx-auto mb-6 h-auto w-28" />
           <h1 className="text-2xl font-bold">Instrumentación ADB</h1>
           <p className="text-slate-500">Agroindustrias del Balsas</p>
         </div>

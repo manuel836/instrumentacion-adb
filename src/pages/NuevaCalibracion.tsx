@@ -554,7 +554,7 @@ function PruebaInterruptor({
   const err = (v: number | null) => {
     if (!calcula || ajuste === null) return null
     const e = errorLectura(medida, v, ajuste)
-    return e === null ? null : <span className="block text-[11px] text-slate-500">{textoError(e, medida)}</span>
+    return e === null ? null : <span className="block text-xs text-slate-500">{textoError(e, medida)}</span>
   }
   const dif = (k: 'asFound' | 'asLeft') => {
     const d = diferencial(disparo[k], reposicion[k])

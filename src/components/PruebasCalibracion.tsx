@@ -38,7 +38,7 @@ export function Segmentado<T extends string>({
           type="button"
           role="radio"
           aria-checked={valor === o.valor}
-          className={`flex-1 rounded-md px-2 py-2 text-sm ${valor === o.valor ? 'bg-white font-semibold text-marca-800 shadow-sm' : 'text-slate-600'}`}
+          className={`min-h-10 flex-1 rounded-md px-2 py-2 text-sm ${valor === o.valor ? 'bg-white font-semibold text-marca-800 shadow-sm' : 'text-slate-600'}`}
           onClick={() => onChange(o.valor)}
         >
           {o.texto}
@@ -68,7 +68,7 @@ export function ListaRevisiones({ revisiones, onChange }: { revisiones: Revision
                 type="button"
                 role="radio"
                 aria-checked={r.estado === e}
-                className={`rounded-lg border py-1.5 text-sm ${r.estado === e ? `${COLOR[e]} font-semibold` : 'border-slate-300 text-slate-700'}`}
+                className={`min-h-11 rounded-lg border py-2 text-sm ${r.estado === e ? `${COLOR[e]} font-semibold` : 'border-slate-300 text-slate-700'}`}
                 onClick={() => onChange(revisiones.map((x, j) => (j === i ? { ...x, estado: e } : x)))}
               >
                 {e}
@@ -83,7 +83,7 @@ export function ListaRevisiones({ revisiones, onChange }: { revisiones: Revision
 
 function ErrorBajo({ v, m }: { v: number | null; m: Medida & { unidades: string } }) {
   if (v === null) return null
-  return <span className="block text-[11px] text-slate-500">{textoError(v, m)}</span>
+  return <span className="block text-xs text-slate-500">{textoError(v, m)}</span>
 }
 
 /**
@@ -124,7 +124,7 @@ export function TablaPuntos({
           <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] items-start gap-2">
             <div>
               <input className="campo px-2 py-2" inputMode="decimal" aria-label={`Entrada ${i + 1}`} value={f.entrada} onChange={(ev) => setFila(i, 'entrada', ev.target.value)} />
-              {e !== null && bajoEntrada && <span className="block text-[11px] text-slate-500">{bajoEntrada(e)}</span>}
+              {e !== null && bajoEntrada && <span className="block text-xs text-slate-500">{bajoEntrada(e)}</span>}
             </div>
             <div>
               <input className="campo px-2 py-2" inputMode="decimal" aria-label={`As-Found ${i + 1}`} value={f.asFound} onChange={(ev) => setFila(i, 'asFound', ev.target.value)} />

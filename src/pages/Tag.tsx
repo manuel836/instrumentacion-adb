@@ -7,10 +7,11 @@ import { buscarPorToken } from '../lib/instrumentos'
 import { dondeEsta, type Publico } from '../types'
 import { Estado } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
-import { Visor } from '../components/Visor'
+import { nombreFoto, Visor } from '../components/Visor'
 import { ordenarConPortada } from '../components/Galeria'
 import { Icono } from '../components/Icono'
 import { AvisoDisparo } from '../components/AvisoDisparo'
+import logoFertinal from '../assets/logo-fertinal.png'
 
 /** Destino de la URL grabada en el tag: ficha completa con sesión, vista de invitado sin ella. */
 export function Tag() {
@@ -79,15 +80,15 @@ function VistaInvitado({ token }: { token: string }) {
       {fotos.length > 0 && (
         <section className="tarjeta space-y-3">
           <h2 className="font-semibold">Ubicación en campo</h2>
-          <button className="block w-full overflow-hidden rounded-lg" onClick={() => setVisor(0)}>
-            <FotoImg url={fotos[0].url ?? fotos[0].miniaturaUrl} alt={fotos[0].pie} className="aspect-[4/3] w-full object-cover" />
+          <button className="block w-full overflow-hidden rounded-lg" onClick={() => setVisor(0)} aria-label={nombreFoto(0, fotos.length, fotos[0].pie)}>
+            <FotoImg url={fotos[0].url ?? fotos[0].miniaturaUrl} alt="" className="aspect-[4/3] w-full object-cover" />
           </button>
           {fotos[0].pie && <p className="text-sm">{fotos[0].pie}</p>}
           {fotos.length > 1 && (
             <div className="grid grid-cols-5 gap-2">
               {fotos.slice(1).map((f, i) => (
-                <button key={i} onClick={() => setVisor(i + 1)} className="overflow-hidden rounded">
-                  <FotoImg url={f.miniaturaUrl} alt={f.pie} className="aspect-square w-full object-cover" />
+                <button key={i} onClick={() => setVisor(i + 1)} className="overflow-hidden rounded" aria-label={nombreFoto(i + 1, fotos.length, f.pie)}>
+                  <FotoImg url={f.miniaturaUrl} alt="" className="aspect-square w-full object-cover" />
                 </button>
               ))}
             </div>
@@ -95,9 +96,16 @@ function VistaInvitado({ token }: { token: string }) {
         </section>
       )}
 
-      <p className="px-2 text-center text-xs text-slate-400">
-        Vista pública de Instrumentación ADB. <a href="/login" className="underline">Entrar</a> para ver la ficha completa.
-      </p>
+      <footer className="space-y-3 px-2 pt-4 text-center">
+        <img src={logoFertinal} alt="Fertinal" width={480} height={369} className="mx-auto h-auto w-20" />
+        <p className="text-xs text-slate-600">
+          Vista pública de Instrumentación ADB.{' '}
+          <a href="/login" className="font-semibold text-marca-700 underline underline-offset-2">
+            Entrar
+          </a>{' '}
+          para ver la ficha completa.
+        </p>
+      </footer>
 
       {visor !== null && <Visor fotos={fotos} inicio={visor} onCerrar={() => setVisor(null)} />}
     </div>

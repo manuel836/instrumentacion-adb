@@ -64,12 +64,18 @@ export function Ficha() {
         <div className="mt-2">
           <ProximaCalibracion proxima={inst.proximaCalibracion} />
         </div>
+        {/* Escanear, ver la ficha y reportar: la acción principal va arriba, a la vista. */}
+        {p.reportarFallas && (
+          <Link to={`/fallas/nueva?instrumento=${inst.id}`} className="btn-primario mt-4 w-full">
+            <Icono nombre="falla" /> Reportar falla
+          </Link>
+        )}
         {p.editarInstrumentos && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <Link to={`/instrumentos/${inst.id}/editar`} className="btn-secundario">
               Editar
             </Link>
-            <Link to={`/instrumentos/${inst.id}/vincular`} className="btn-primario">
+            <Link to={`/instrumentos/${inst.id}/vincular`} className="btn-secundario">
               {inst.nfcToken ? 'Regrabar tag' : 'Vincular tag'}
             </Link>
           </div>
@@ -103,7 +109,7 @@ export function Ficha() {
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Calibraciones</h2>
           {p.registrarCalibraciones && (
-            <Link to={`/instrumentos/${inst.id}/calibrar`} className="text-sm font-semibold text-marca-700">
+            <Link to={`/instrumentos/${inst.id}/calibrar`} className="accion">
               + Registrar
             </Link>
           )}
@@ -127,14 +133,7 @@ export function Ficha() {
       </section>
 
       <section className="tarjeta">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Historial de fallas</h2>
-          {p.reportarFallas && (
-            <Link to={`/fallas/nueva?instrumento=${inst.id}`} className="flex items-center gap-1 text-sm font-semibold text-red-700">
-              <Icono nombre="falla" className="size-4" /> Reportar falla
-            </Link>
-          )}
-        </div>
+        <h2 className="font-semibold">Historial de fallas</h2>
         {fallas.length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">Sin fallas registradas.</p>
         ) : (
@@ -146,7 +145,7 @@ export function Ficha() {
         <Icono nombre="documento" /> Hoja de vida (imprimir o PDF)
       </Link>
       {p.verBitacora && (
-        <Link to={`/bitacora?instrumento=${inst.id}`} className="block py-2 text-center text-sm font-semibold text-marca-700">
+        <Link to={`/bitacora?instrumento=${inst.id}`} className="block py-3 text-center text-sm font-semibold text-marca-700">
           Ver bitácora de cambios de {inst.tagISA}
         </Link>
       )}

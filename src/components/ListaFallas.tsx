@@ -15,7 +15,7 @@ export function ListaFallas({ fallas, conTag = true }: { fallas: ConPendiente<Fa
               {conTag && f.subArea && <span className="truncate rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700">{f.subArea}</span>}
               <EstadoFalla estado={f.estado} />
               {f.sinSincronizar && <Pendiente />}
-              <span className="ml-auto text-xs text-slate-400">{fechaCorta(f.fechas.creada)}</span>
+              <span className="ml-auto shrink-0 text-xs text-slate-500">{fechaCorta(f.fechas.creada)}</span>
             </div>
             <p className="line-clamp-2 text-sm text-slate-700">{f.descripcion}</p>
             <p className="text-xs text-slate-500">

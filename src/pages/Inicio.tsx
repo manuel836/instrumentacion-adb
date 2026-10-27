@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
-import { useFallas } from '../lib/fallas'
+import { duracionCierre, useFallas } from '../lib/fallas'
 import { useInstrumentos } from '../lib/instrumentos'
 import { porPedir, sinExistencia, useRefacciones } from '../lib/refacciones'
 import { vencimiento } from '../lib/tolerancia'
@@ -9,18 +9,23 @@ import { AREAS } from '../types'
 import { ListaFallas } from '../components/ListaFallas'
 import { Icono, type NombreIcono } from '../components/Icono'
 
-/** Un número grande que lleva a la lista filtrada. */
+/**
+ * Un número grande que lleva a la lista filtrada. Sin marco: solo lo que pide acción
+ * (rojo o ámbar con algo pendiente) lleva fondo de color, para que resalte entre los ceros.
+ */
 function Cifra({ n, texto, a, tono = 'normal' }: { n: number; texto: string; a: string; tono?: 'normal' | 'rojo' | 'ambar' | 'verde' }) {
+  const pendiente = n > 0 && (tono === 'rojo' || tono === 'ambar')
   const color = {
     normal: 'text-slate-800',
     rojo: n > 0 ? 'text-red-700' : 'text-slate-800',
     ambar: n > 0 ? 'text-amber-700' : 'text-slate-800',
     verde: 'text-emerald-700',
   }[tono]
+  const fondo = pendiente ? (tono === 'rojo' ? 'bg-red-50 active:bg-red-100' : 'bg-amber-50 active:bg-amber-100') : 'active:bg-slate-100'
   return (
-    <Link to={a} data-cifra className="block rounded-lg border border-slate-200 p-3 active:bg-slate-50">
+    <Link to={a} data-cifra className={`block rounded-lg px-3 py-2.5 ${fondo}`}>
       <span className={`block text-2xl font-bold ${color}`}>{n}</span>
-      <span className="block text-xs leading-tight text-slate-600">{texto}</span>
+      <span className={`block text-xs leading-tight ${pendiente ? 'font-medium text-slate-800' : 'text-slate-600'}`}>{texto}</span>
     </Link>
   )
 }
@@ -31,7 +36,7 @@ function Tarjeta({ titulo, children, enlace }: { titulo: string; children: React
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">{titulo}</h2>
         {enlace && (
-          <Link to={enlace.a} className="text-sm font-semibold text-marca-700">
+          <Link to={enlace.a} className="accion">
             {enlace.texto}
           </Link>
         )}
@@ -108,7 +113,7 @@ export function Inicio() {
           <p className="text-sm text-slate-500 first-letter:uppercase">{hoy}</p>
         </div>
         <select
-          className="campo w-auto max-w-[55%] py-1.5 text-sm"
+          className="campo min-h-11 w-auto max-w-[55%] py-1.5 text-sm"
           value={filtroArea}
           onChange={(e) => setParams({ area: e.target.value || 'todas' }, { replace: true })}
           aria-label="Área del resumen"
@@ -151,7 +156,7 @@ export function Inicio() {
             {r.horasPromedio !== null && (
               <p className="text-sm text-slate-600">
                 En los últimos 30 días una falla tardó en promedio{' '}
-                <b>{r.horasPromedio < 48 ? `${r.horasPromedio.toFixed(1)} horas` : `${(r.horasPromedio / 24).toFixed(1)} días`}</b> en cerrarse.
+                <b>{duracionCierre(r.horasPromedio)}</b> en cerrarse.
               </p>
             )}
           </Tarjeta>

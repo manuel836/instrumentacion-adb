@@ -65,8 +65,8 @@ function Menu({
   useEffect(() => setAbierto(false), [pathname])
   const clase = 'block px-4 py-3 text-left text-slate-800 active:bg-slate-100'
   return (
-    <div className="relative">
-      <button className="rounded-lg px-2 py-1 text-sm font-medium text-white/90" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
+    <div className="relative shrink-0">
+      <button className="-my-2 rounded-lg px-2 py-3 text-sm font-medium text-white/90" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
         <span className="flex items-center gap-1">
           Menú <Icono nombre="abajo" className="size-4" />
         </span>
@@ -118,7 +118,7 @@ function Menu({
 
 function Globo({ n }: { n: number }) {
   return (
-    <span className="absolute -top-1 -right-3 rounded-full bg-red-600 px-1.5 text-[10px] leading-4 font-bold text-white">
+    <span className="absolute -top-1 -right-3 rounded-full bg-red-600 px-1.5 text-xs leading-4 font-bold text-white">
       {n > 99 ? '99+' : n}
     </span>
   )
@@ -150,8 +150,8 @@ export function Layout() {
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
       <ArribaAlNavegar />
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
-        <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <span className="text-lg font-bold">Instrumentación ADB</span>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <span className="min-w-0 text-lg font-bold">Instrumentación ADB</span>
           <Menu bitacora={p.verBitacora} exportar={p.exportar} importar={p.editarInstrumentos} usuarios={p.gestionarUsuarios} onSalir={() => void salir()} />
         </div>
         <BarraConexion />
