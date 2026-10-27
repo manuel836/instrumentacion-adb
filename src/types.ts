@@ -51,6 +51,22 @@ export interface Instrumento {
   disparaCaldera: boolean
   /** Qué cuidar antes de intervenirlo (bypass, avisar a operación…). */
   notaDisparo: string
+  /** Tipo de instrumento ('' = sin tipo: calibración general). La lista está en lib/tipos. */
+  tipo: string
+  /** Válvulas: 'Aire para abrir' (sin aire cierra) o 'Aire para cerrar' (sin aire abre). */
+  accionValvula: string
+  /** Válvula de control. */
+  posicionador: string
+  rangoResorte: string
+  presionSuministro: string
+  /** Válvula de corte: qué finales de carrera tiene. */
+  finalesCarrera: string
+  /** Transmisor de temperatura: RTD o termopar. */
+  sensor: string
+  /** Interruptores: punto de ajuste (en sus unidades), si dispara al subir o al bajar, y su contacto. */
+  puntoAjuste: number | null
+  disparaAl: string
+  contacto: string
   proximaCalibracion: Timestamp | null
   docs: DocAdjunto[]
   /** Ruta y URL de la miniatura de portada, copiadas aquí para listas y precarga offline. */
@@ -149,13 +165,23 @@ export interface PuntoCalibracion {
   asLeft: number | null
 }
 
+export type EstadoRevision = 'Bien' | 'Mal' | 'No aplica'
+
+/** Una revisión de la prueba de una válvula ('' mientras no se marca). */
+export interface Revision {
+  nombre: string
+  estado: EstadoRevision | ''
+}
+
 export interface Calibracion {
   id: string
   fecha: Timestamp
   tecnico: Persona
+  /** En interruptores, el único punto es el de ajuste (entrada) con sus disparos (lecturas). */
   puntos: PuntoCalibracion[]
-  /** Tolerancia en % del span. */
+  /** En % del span, o en unidades si `toleranciaEn` es 'unidades'. 0 en la válvula de corte. */
   tolerancia: number
+  /** 0 y 0 cuando no aplica (válvula de corte, interruptor sin rango). */
   rangoMin: number
   rangoMax: number
   unidades: string
@@ -163,6 +189,26 @@ export interface Calibracion {
   resultado: ResultadoCalibracion
   observaciones: string
   proxima: Timestamp | null
+  // Lo que sigue lo tienen solo las calibraciones hechas con tipo (las de antes no).
+  /** Tipo del instrumento al calibrarlo ('' = calibración general). */
+  tipo: string
+  /** Transmisores: las lecturas son la salida en mA (4-20) y no el valor en unidades de proceso. */
+  lecturaEn: 'mA' | 'unidades'
+  /** Interruptores y analizadores: tolerancia y error en unidades de proceso. */
+  toleranciaEn: '%' | 'unidades'
+  /** Válvula de control: con 4 mA queda 100 % abierta. */
+  senalInvertida: boolean
+  /** Interruptores. */
+  disparaAl: string
+  reposicion: { asFound: number | null; asLeft: number | null } | null
+  /** Válvulas: cada revisión con Bien, Mal o No aplica. */
+  revisiones: Revision[]
+  /** Válvula de corte, en segundos. */
+  tiempoApertura: number | null
+  tiempoCierre: number | null
+  /** Analizadores de pH: pendiente en % y offset en mV. */
+  pendiente: number | null
+  offset: number | null
 }
 
 /** Refacción del almacén: cuántas hay, cuándo pedir y para qué instrumentos sirve. */

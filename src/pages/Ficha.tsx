@@ -13,6 +13,7 @@ import { Icono } from '../components/Icono'
 import { dondeEsta } from '../types'
 import { AvisoDisparo } from '../components/AvisoDisparo'
 import { Documentos } from '../components/Documentos'
+import { datosDelTipo, pruebaDe } from '../lib/tipos'
 
 function Dato({ k, v }: { k: string; v: string | number | null | undefined }) {
   return (
@@ -45,6 +46,7 @@ export function Ficha() {
           <div>
             <h1 className="font-mono text-2xl font-bold">{inst.tagISA}</h1>
             <p className="text-slate-700">{inst.servicio}</p>
+            {inst.tipo && <p className="text-sm font-medium text-slate-700">{inst.tipo}</p>}
             <p className="text-sm text-slate-500">{dondeEsta(inst)}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -79,12 +81,17 @@ export function Ficha() {
       <section className="tarjeta">
         <h2 className="mb-3 font-semibold">Datos técnicos</h2>
         <dl className="grid grid-cols-2 gap-3 text-sm">
+          <Dato k="Tipo" v={inst.tipo || 'Sin tipo'} />
+          {datosDelTipo(inst).map((d) => (
+            <Dato key={d.k} k={d.k} v={d.v} />
+          ))}
           <Dato k="Lazo" v={inst.lazo} />
           <Dato k="P&ID" v={inst.pid} />
           <Dato k="Marca" v={inst.marca} />
           <Dato k="Modelo" v={inst.modelo} />
           <Dato k="Serie" v={inst.serie} />
-          <Dato k="Rango" v={rango} />
+          {/* La válvula se calibra en % de carrera: no tiene rango. */}
+          {!['carrera', 'funcional'].includes(pruebaDe(inst.tipo)) && <Dato k="Rango" v={rango} />}
           <Dato k="Señal" v={inst.senal} />
           <Dato k="Alimentación" v={inst.alimentacion} />
         </dl>
@@ -109,7 +116,7 @@ export function Ficha() {
               <li key={c.id}>
                 <Link to={`/instrumentos/${inst.id}/calibraciones/${c.id}`} className="flex items-center gap-2 py-3 text-sm active:bg-slate-50">
                   <span className="font-medium">{fechaDia(c.fecha)}</span>
-                  <ResultadoCal resultado={c.resultado} />
+                  <ResultadoCal resultado={c.resultado} tipo={c.tipo} />
                   {c.sinSincronizar && <Pendiente />}
                   <span className="ml-auto truncate text-xs text-slate-500">{c.tecnico.nombre}</span>
                 </Link>

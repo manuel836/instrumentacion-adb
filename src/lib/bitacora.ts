@@ -122,6 +122,16 @@ const CAMPOS: Record<string, string> = {
   subArea: 'Sub área',
   disparaCaldera: 'Puede disparar la caldera',
   notaDisparo: 'Precauciones de disparo',
+  tipo: 'Tipo de instrumento',
+  accionValvula: 'Acción de la válvula',
+  posicionador: 'Posicionador',
+  rangoResorte: 'Rango del resorte',
+  presionSuministro: 'Presión de suministro',
+  finalesCarrera: 'Finales de carrera',
+  sensor: 'Sensor',
+  puntoAjuste: 'Punto de ajuste',
+  disparaAl: 'Dispara',
+  contacto: 'Contacto',
   proximaCalibracion: 'Próxima calibración',
   docs: 'Documentos',
   pie: 'Pie de foto',
@@ -131,7 +141,16 @@ const CAMPOS: Record<string, string> = {
   fecha: 'Fecha',
   tecnico: 'Técnico',
   puntos: 'Puntos (entrada: As-Found / As-Left)',
-  tolerancia: 'Tolerancia (± % span)',
+  tolerancia: 'Tolerancia (±)',
+  lecturaEn: 'Salida leída en',
+  toleranciaEn: 'Tolerancia en',
+  senalInvertida: 'Señal invertida',
+  reposicion: 'Reposición (As-Found / As-Left)',
+  revisiones: 'Revisiones',
+  tiempoApertura: 'Tiempo para abrir (s)',
+  tiempoCierre: 'Tiempo para cerrar (s)',
+  pendiente: 'Pendiente (%)',
+  offset: 'Offset (mV)',
   patron: 'Patrón',
   resultado: 'Resultado',
   observaciones: 'Observaciones',
@@ -168,5 +187,17 @@ export function textoValor(campo: string, v: unknown): string {
   }
   // El token del tag no aporta nada a la vista; basta con saber si cambió.
   if (campo === 'nfcToken') return 'grabado'
+  // Las Functions guardan revisiones y reposición como JSON: se muestran como texto.
+  if ((campo === 'revisiones' || campo === 'reposicion') && typeof v === 'string') {
+    try {
+      if (campo === 'reposicion') {
+        const r = JSON.parse(v) as { asFound: number | null; asLeft: number | null }
+        return `${r.asFound ?? '—'} / ${r.asLeft ?? '—'}`
+      }
+      return (JSON.parse(`[${v}]`) as { nombre: string; estado: string }[]).map((r) => `${r.nombre}: ${r.estado || '—'}`).join('; ')
+    } catch {
+      return v
+    }
+  }
   return String(v)
 }

@@ -14,11 +14,19 @@ service cloud.firestore {
     function cambian() { return request.resource.data.diff(resource.data).affectedKeys(); }
 
     function calibracionValida(d) {
+      // La válvula de corte se prueba solo con revisiones (abre, cierra, finales de carrera…).
+      let soloRevisiones = d.puntos is list && d.puntos.size() == 0
+        && d.get('revisiones', []) is list && d.get('revisiones', []).size() >= 1;
+      // Interruptores y analizadores se evalúan en unidades: el rango puede no conocerse (0 a 0).
+      let enUnidades = d.get('toleranciaEn', '%') == 'unidades';
       return d.fecha is timestamp
-        && d.puntos is list && d.puntos.size() >= 1 && d.puntos.size() <= 11
+        && d.puntos is list && d.puntos.size() <= 11 && (d.puntos.size() >= 1 || soloRevisiones)
+        && d.get('revisiones', []) is list && d.get('revisiones', []).size() <= 20
+        && d.get('tipo', '') is string && d.get('tipo', '').size() <= 60
         && d.resultado in ['Aprobada sin ajuste', 'Ajustada', 'Fuera de tolerancia']
-        && d.tolerancia is number && d.tolerancia > 0
-        && d.rangoMin is number && d.rangoMax is number && d.rangoMax > d.rangoMin
+        && d.tolerancia is number && (d.tolerancia > 0 || soloRevisiones)
+        && d.rangoMin is number && d.rangoMax is number
+        && (d.rangoMax > d.rangoMin || enUnidades || soloRevisiones)
         && (d.proxima == null || d.proxima is timestamp)
         && d.observaciones is string && d.observaciones.size() <= 2000;
     }
@@ -40,6 +48,9 @@ service cloud.firestore {
         && d.get('subArea', '') is string && d.get('subArea', '').size() <= 60
         && d.get('disparaCaldera', false) is bool
         && d.get('notaDisparo', '') is string && d.get('notaDisparo', '').size() <= 300
+        && d.get('tipo', '') is string && d.get('tipo', '').size() <= 60
+        && d.get('accionValvula', '') in ['', 'Aire para abrir', 'Aire para cerrar']
+        && (d.get('puntoAjuste', null) == null || d.get('puntoAjuste', null) is number)
         && d.estado in ['Operando', 'Con falla', 'Fuera de servicio']
         && (d.nfcToken == null || (d.nfcToken is string && d.nfcToken.matches('^[A-Za-z0-9]{16,22}$')))
         && d.docs is list && d.docs.size() <= 30;

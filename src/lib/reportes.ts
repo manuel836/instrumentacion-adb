@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState } from 'react'
 import { collection, collectionGroup, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { TIPOS_MOVIMIENTO, type Calibracion, type Falla, type Instrumento, type Movimiento, type Refaccion } from '../types'
+import { aCalibracion } from './calibraciones'
 import { useFallas } from './fallas'
 import { useInstrumentos } from './instrumentos'
 import { porPedir, useRefacciones } from './refacciones'
-import { errorPct } from './tolerancia'
+import { errorLectura, errorMaximo, esperado, textoTolerancia } from './tolerancia'
+import { detallePrueba, textoResultado } from './tipos'
 
 export type TipoReporte = 'instrumentos' | 'fallas' | 'calibraciones' | 'refacciones'
 
 export const TIPOS_REPORTE: Record<TipoReporte, { titulo: string; descripcion: string; conPeriodo: boolean }> = {
   instrumentos: { titulo: 'Listado de instrumentos', descripcion: 'Todos los datos de la ficha, estado y próxima calibración.', conPeriodo: false },
   fallas: { titulo: 'Fallas por periodo', descripcion: 'Reportadas en el periodo, con quién atendió, causa raíz y acción correctiva.', conPeriodo: true },
-  calibraciones: { titulo: 'Calibraciones', descripcion: 'Registradas en el periodo, con resultado y puntos As-Found / As-Left.', conPeriodo: true },
+  calibraciones: { titulo: 'Calibraciones', descripcion: 'Registradas en el periodo, con resultado, lo propio de cada tipo y puntos As-Found / As-Left.', conPeriodo: true },
   refacciones: {
     titulo: 'Inventario de refacciones',
     descripcion: 'Existencia, mínimo y cuáles hay que pedir. En Excel también todas las entradas y salidas.',
@@ -65,6 +67,7 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
     .map((i): Valor[] => [
       i.tagISA,
       i.servicio,
+      i.tipo,
       i.area,
       i.subArea,
       i.ubicacionTexto,
@@ -78,6 +81,15 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
       i.unidades,
       i.senal,
       i.alimentacion,
+      i.accionValvula,
+      i.posicionador,
+      i.rangoResorte,
+      i.presionSuministro,
+      i.finalesCarrera,
+      i.sensor,
+      num(i.puntoAjuste),
+      i.disparaAl,
+      i.contacto,
       i.estado,
       i.disparaCaldera ? 'Sí' : 'No',
       i.notaDisparo,
@@ -92,6 +104,7 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
         columnas: [
           c('Tag ISA', 12),
           c('Servicio', 30),
+          c('Tipo', 22),
           c('Área', 24),
           c('Sub área', 16),
           c('Ubicación', 24),
@@ -105,6 +118,15 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
           c('Unidades', 10),
           c('Señal'),
           c('Alimentación'),
+          c('Acción de válvula', 16),
+          c('Posicionador'),
+          c('Rango del resorte', 12),
+          c('Presión de suministro', 12),
+          c('Finales de carrera', 16),
+          c('Sensor', 12),
+          c('Punto de ajuste', 10),
+          c('Dispara al', 10),
+          c('Contacto', 8),
           c('Estado', 16),
           c('Dispara caldera', 10),
           c('Precauciones de disparo', 30),
@@ -176,9 +198,10 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
     .sort((a, b) => a.cal.fecha.toMillis() - b.cal.fecha.toMillis())
 
   const maxError = (cal: Calibracion, k: 'asFound' | 'asLeft') => {
-    const errs = cal.puntos.map((p) => errorPct(p[k], p.entrada, cal.rangoMin, cal.rangoMax)).filter((e): e is number => e !== null)
-    return errs.length ? redondear(Math.max(...errs.map(Math.abs))) : null
+    const e = errorMaximo(cal, k)
+    return e === null ? null : redondear(Math.abs(e))
   }
+  const rango = (cal: Calibracion) => (cal.rangoMax > cal.rangoMin ? `${cal.rangoMin} a ${cal.rangoMax} ${cal.unidades}`.trim() : '')
 
   return {
     titulo: TIPOS_REPORTE.calibraciones.titulo,
@@ -189,13 +212,15 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
           c('Tag ISA', 12),
           c('Área', 24),
           c('Sub área', 16),
+          c('Tipo', 22),
           c('Fecha', 12),
           c('Técnico', 18),
           c('Resultado', 18),
           c('Rango', 16),
-          c('Tolerancia ± %', 10),
-          c('Error máx. As-Found %', 12),
-          c('Error máx. As-Left %', 12),
+          c('Tolerancia', 14),
+          c('Error máx. As-Found', 12),
+          c('Error máx. As-Left', 12),
+          c('Detalle de la prueba', 40),
           c('Patrón', 18),
           c('Próxima', 12),
           c('Observaciones', 36),
@@ -204,13 +229,15 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
           inst!.tagISA,
           inst!.area,
           inst!.subArea,
+          cal.tipo,
           fecha(cal.fecha),
           cal.tecnico.nombre,
-          cal.resultado,
-          `${cal.rangoMin} a ${cal.rangoMax} ${cal.unidades}`.trim(),
-          cal.tolerancia,
+          textoResultado(cal.resultado, cal.tipo),
+          rango(cal),
+          cal.tolerancia > 0 ? textoTolerancia(cal) : '',
           maxError(cal, 'asFound'),
           maxError(cal, 'asLeft'),
+          detallePrueba(cal),
           cal.patron,
           fecha(cal.proxima),
           cal.observaciones,
@@ -218,17 +245,30 @@ function reporteCalibraciones(lista: CalibracionConInstrumento[], instrumentos: 
       },
       {
         nombre: 'Puntos',
-        columnas: [c('Tag ISA', 12), c('Sub área', 16), c('Fecha', 12), c('Entrada', 10), c('As-Found', 10), c('As-Left', 10), c('Error As-Found %', 12), c('Error As-Left %', 12)],
+        columnas: [
+          c('Tag ISA', 12),
+          c('Sub área', 16),
+          c('Fecha', 12),
+          c('Entrada', 10),
+          c('Debe marcar', 10),
+          c('As-Found', 10),
+          c('As-Left', 10),
+          c('Lectura en', 10),
+          c('Error As-Found', 12),
+          c('Error As-Left', 12),
+        ],
         filas: vista.flatMap(({ cal, inst }) =>
           cal.puntos.map((p): Valor[] => [
             inst!.tagISA,
             inst!.subArea,
             fecha(cal.fecha),
             p.entrada,
+            redondear(esperado(cal, p.entrada), 3),
             num(p.asFound),
             num(p.asLeft),
-            redondear(errorPct(p.asFound, p.entrada, cal.rangoMin, cal.rangoMax)),
-            redondear(errorPct(p.asLeft, p.entrada, cal.rangoMin, cal.rangoMax)),
+            cal.lecturaEn === 'mA' ? 'mA' : cal.unidades,
+            redondear(errorLectura(cal, p.asFound, p.entrada)),
+            redondear(errorLectura(cal, p.asLeft, p.entrada)),
           ]),
         ),
       },
@@ -319,7 +359,7 @@ function useTodasLasCalibraciones(activo: boolean) {
     let vivo = true
     getDocs(collectionGroup(db, 'calibraciones'))
       .then((snap) => {
-        if (vivo) setLista(snap.docs.map((d) => ({ ...(d.data() as Calibracion), id: d.id, instrumentoId: d.ref.parent.parent!.id })))
+        if (vivo) setLista(snap.docs.map((d) => ({ ...aCalibracion(d.id, d.data(), false), instrumentoId: d.ref.parent.parent!.id })))
       })
       .catch((e: Error) => vivo && setError(e.message))
     return () => {

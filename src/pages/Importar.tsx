@@ -15,10 +15,23 @@ async function descargarPlantilla() {
   const ejemplo2: Record<string, string | number> = {
     tagISA: 'TT-202',
     servicio: 'Temperatura agua de alimentación',
+    tipo: 'Transmisor de temperatura',
     area: 'Tratamiento de agua',
     senal: '4-20 mA',
+    sensor: 'RTD Pt100',
     estado: 'Operando',
   }
+  const ejemplo3: Record<string, string | number> = {
+    tagISA: 'KV-12',
+    servicio: 'Corte de gas a quemador',
+    tipo: 'Válvula de corte',
+    area: 'Generación de vapor',
+    senal: 'Discreta',
+    alimentacion: '120 VCA',
+    accionValvula: 'Aire para abrir',
+    finalesCarrera: 'Abierta y cerrada',
+  }
+  const fila = (ejemplo: Record<string, string | number>) => COLUMNAS.map((c) => (ejemplo[c.campo] === undefined ? null : { value: ejemplo[c.campo] }))
   await writeXlsxFile(
     [
       {
@@ -27,8 +40,10 @@ async function descargarPlantilla() {
         columns: COLUMNAS.map((c) => ({ width: Math.max(12, c.titulo.length + 4) })),
         data: [
           COLUMNAS.map((c) => negrita(c.titulo)),
-          COLUMNAS.map((c) => ({ value: c.ejemplo })),
-          COLUMNAS.map((c) => (ejemplo2[c.campo] === undefined ? null : { value: ejemplo2[c.campo] })),
+          // El primer ejemplo es un transmisor de presión: las columnas de otros tipos van vacías.
+          COLUMNAS.map((c) => (c.deTipo ? null : { value: c.ejemplo })),
+          fila(ejemplo2),
+          fila(ejemplo3),
         ],
       },
       {
@@ -36,7 +51,7 @@ async function descargarPlantilla() {
         columns: [{ width: 22 }, { width: 80 }, { width: 28 }],
         data: [
           [negrita('Cómo llenar la plantilla'), null, null],
-          [{ value: 'Una fila por instrumento. Borra las dos filas de ejemplo antes de importar (o cámbialas por tus datos).' }, null, null],
+          [{ value: 'Una fila por instrumento. Borra las filas de ejemplo antes de importar (o cámbialas por tus datos).' }, null, null],
           [{ value: 'Si un tag ya existe en la app, puedes elegir actualizar sus datos: las celdas vacías no borran nada.' }, null, null],
           [
             {
@@ -47,6 +62,7 @@ async function descargarPlantilla() {
             null,
           ],
           [{ value: 'El tag NFC y las fotos no van en el Excel: se agregan después desde la ficha de cada instrumento.' }, null, null],
+          [{ value: 'Las columnas de válvulas, interruptores y sensor solo se llenan en esos tipos; en los demás se dejan vacías.' }, null, null],
           [null, null, null],
           [negrita('Columna'), negrita('Qué poner'), negrita('Ejemplo')],
           ...COLUMNAS.map((c) => [{ value: c.titulo }, { value: c.ayuda }, { value: String(c.ejemplo) }]),

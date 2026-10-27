@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore'
+import { textoResultado } from '../lib/tipos'
 import { vencimiento } from '../lib/tolerancia'
 import type { ResultadoCalibracion } from '../types'
 
@@ -8,8 +9,9 @@ const colores: Record<ResultadoCalibracion, string> = {
   'Fuera de tolerancia': 'bg-red-100 text-red-800',
 }
 
-export function ResultadoCal({ resultado }: { resultado: ResultadoCalibracion }) {
-  return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colores[resultado] ?? colores.Ajustada}`}>{resultado}</span>
+/** `tipo` cambia cómo se lee: en la válvula de corte "Fuera de tolerancia" es "No pasó la prueba". */
+export function ResultadoCal({ resultado, tipo }: { resultado: ResultadoCalibracion; tipo?: string }) {
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colores[resultado] ?? colores.Ajustada}`}>{textoResultado(resultado, tipo)}</span>
 }
 
 export const fechaDia = (t: Timestamp | null | undefined) => t?.toDate().toLocaleDateString('es-MX', { dateStyle: 'medium' })
