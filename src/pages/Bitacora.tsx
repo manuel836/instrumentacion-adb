@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import { NOMBRE_COLECCION, useBitacora, useBitacoraDeInstrumento, type ColeccionBitacora, type EntradaBitacora } from '../lib/bitacora'
 import { useInstrumento } from '../lib/instrumentos'
 import { ListaBitacora } from '../components/ListaBitacora'
+import { Silueta } from '../components/Silueta'
 
 function Filtrada({ entradas, conEtiqueta }: { entradas: EntradaBitacora[]; conEtiqueta: boolean }) {
   const [tipo, setTipo] = useState<ColeccionBitacora | ''>('')
@@ -44,7 +45,7 @@ function DeInstrumento({ id }: { id: string }) {
       <h1 className="text-xl font-bold">
         Bitácora de <span className="font-mono">{inst?.tagISA ?? '…'}</span>
       </h1>
-      {entradas === null ? <p className="text-slate-500">Cargando…</p> : <Filtrada entradas={entradas} conEtiqueta={false} />}
+      {entradas === null ? <Silueta forma="lista" /> : <Filtrada entradas={entradas} conEtiqueta={false} />}
     </div>
   )
 }
@@ -57,7 +58,7 @@ function General() {
         <h1 className="text-xl font-bold">Bitácora de cambios</h1>
         <p className="text-sm text-slate-500">Quién cambió qué y cuándo, con el valor anterior y el nuevo. Nadie puede editarla.</p>
       </div>
-      {entradas === null ? <p className="text-slate-500">Cargando…</p> : <Filtrada entradas={entradas} conEtiqueta />}
+      {entradas === null ? <Silueta forma="lista" /> : <Filtrada entradas={entradas} conEtiqueta />}
       {hayMas && (
         <button className="btn-secundario w-full" disabled={cargando} onClick={() => void cargarMas()}>
           {cargando ? 'Cargando…' : 'Cargar cambios anteriores'}

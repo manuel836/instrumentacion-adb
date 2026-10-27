@@ -1,5 +1,5 @@
 import { useDeferredValue, useLayoutEffect, useMemo, useRef } from 'react'
-import { Link, useLocation, useNavigationType, useSearchParams } from 'react-router'
+import { Link, useNavigationType, useSearchParams } from 'react-router'
 import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useInstrumentos, type ConPendiente } from '../lib/instrumentos'
@@ -10,6 +10,7 @@ import { FotoImg } from '../components/FotoImg'
 import { vencimiento } from '../lib/tolerancia'
 import { Icono } from '../components/Icono'
 import { TIPOS_INSTRUMENTO } from '../lib/tipos'
+import { Silueta } from '../components/Silueta'
 
 function normalizar(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -39,8 +40,6 @@ export function Catalogo() {
   const subareas = useSubareas()
   const { rol } = useAuth()
   const p = permisos(rol)
-  const location = useLocation()
-  const aviso = (location.state as { aviso?: string } | null)?.aviso
   const navegacion = useNavigationType()
 
   // La búsqueda y los filtros viven en la dirección (?q=…&area=…): al abrir una ficha y
@@ -107,6 +106,9 @@ export function Catalogo() {
   // más corta, mueva el scroll y se guarde una altura equivocada.
   useLayoutEffect(() => {
     const guardar = () => {
+      // Mientras llega la lista solo se ven las siluetas: la página es más corta y el navegador
+      // mueve el scroll solo. Esa altura no sirve; se guarda hasta que la lista ya está.
+      if (!restaurado.current) return
       try {
         sessionStorage.setItem(CLAVE_SCROLL, String(window.scrollY))
       } catch {
@@ -120,7 +122,6 @@ export function Catalogo() {
   return (
     <div>
       <div className="space-y-2 border-b border-slate-200 bg-white p-3">
-        {aviso && <p className="rounded-lg bg-bien-50 p-3 text-sm font-medium text-bien-800">{aviso}</p>}
         <input
           className="campo"
           type="search"
@@ -202,6 +203,7 @@ export function Catalogo() {
 
       {/* Con el botón Alta, espacio extra al final para que no tape la última fila. */}
       <div ref={contenedor} className={p.editarInstrumentos ? 'pb-16' : ''}>
+        {lista === null && <Silueta forma="catalogo" />}
         {lista?.length === 0 && (
           <p className="p-8 text-center text-slate-500">
             Aún no hay instrumentos.

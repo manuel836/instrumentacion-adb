@@ -8,6 +8,7 @@ import { vencimiento } from '../lib/tolerancia'
 import { AREAS } from '../types'
 import { ListaFallas } from '../components/ListaFallas'
 import { Icono, type NombreIcono } from '../components/Icono'
+import { Silueta } from '../components/Silueta'
 
 /**
  * Un número grande que lleva a la lista filtrada. Sin marco: solo lo que pide acción
@@ -24,7 +25,7 @@ function Cifra({ n, texto, a, tono = 'normal' }: { n: number; texto: string; a: 
   const fondo = pendiente ? (tono === 'peligro' ? 'bg-peligro-50 active:bg-peligro-100' : 'bg-aviso-50 active:bg-aviso-100') : 'active:bg-slate-100'
   return (
     <Link to={a} data-cifra className={`block rounded-lg px-3 py-2.5 ${fondo}`}>
-      <span className={`block text-2xl font-bold ${color}`}>{n}</span>
+      <span className={`block text-2xl font-bold tabular-nums ${color}`}>{n}</span>
       <span className={`block text-xs leading-tight ${pendiente ? 'font-medium text-slate-800' : 'text-slate-600'}`}>{texto}</span>
     </Link>
   )
@@ -132,7 +133,7 @@ export function Inicio() {
         {p.editarInstrumentos && <Atajo a="/instrumentos/importar" icono="importar" texto="Importar Excel" />}
       </div>
 
-      {cargando && <p className="p-4 text-center text-slate-500">Cargando…</p>}
+      {cargando && <Silueta forma="inicio" />}
 
       {!cargando && (
         <>

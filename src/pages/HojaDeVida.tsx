@@ -11,6 +11,7 @@ import { fechaDia } from '../components/Calibracion'
 import { FotoImg } from '../components/FotoImg'
 import type { Calibracion, Falla } from '../types'
 import { AvisoDisparo } from '../components/AvisoDisparo'
+import { Silueta } from '../components/Silueta'
 
 const HORA = 3_600_000
 const cuantas = (n: number, una: string, varias: string) => `${n} ${n === 1 ? una : varias}`
@@ -66,7 +67,7 @@ export function HojaDeVida() {
   const refacciones = (useRefacciones() ?? []).filter((r) => id && r.instrumentos.includes(id))
   const [preparando, setPreparando] = useState(false)
 
-  if (inst === undefined || calibraciones === null) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (inst === undefined || calibraciones === null) return <Silueta />
   if (inst === null) return <p className="p-6 text-slate-500">Este instrumento no existe.</p>
 
   const rango = inst.rangoMin !== null || inst.rangoMax !== null ? `${inst.rangoMin ?? '?'} a ${inst.rangoMax ?? '?'} ${inst.unidades}` : ''

@@ -4,6 +4,7 @@ import { Chat } from '../components/Chat'
 import { PestanasChat } from '../components/PestanasChat'
 import { claveDia, desdeClave, useInicioDelDia } from '../hooks/useHoy'
 import { CANAL_GENERAL, useDiasDelCanal } from '../lib/chat'
+import { Silueta } from '../components/Silueta'
 
 const POR_PAGINA = 300
 
@@ -48,7 +49,7 @@ export function HistorialChat() {
       </label>
 
       {r === null ? (
-        <p className="text-sm text-slate-500">Cargando…</p>
+        <Silueta forma="lista" />
       ) : r.dias.length === 0 ? (
         <p className="text-sm text-slate-500">Aún no hay días anteriores con mensajes.</p>
       ) : (

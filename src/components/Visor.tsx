@@ -35,7 +35,7 @@ export function Visor({ fotos, inicio, onCerrar }: { fotos: FotoVisor[]; inicio:
 
   if (!foto) return null
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95 text-white" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex animate-aparecer flex-col bg-black/95 text-white" role="dialog" aria-modal="true">
       <div className="flex items-center justify-between p-3">
         <span className="text-sm text-white/70">
           {i + 1} de {fotos.length}
@@ -46,7 +46,7 @@ export function Visor({ fotos, inicio, onCerrar }: { fotos: FotoVisor[]; inicio:
       </div>
       <div className="relative flex-1 overflow-auto" style={{ touchAction: zoom ? 'pan-x pan-y' : 'pinch-zoom' }}>
         <div
-          className={zoom ? 'w-[250%]' : 'flex h-full w-full items-center justify-center'}
+          className={`animate-acercar ${zoom ? 'w-[250%]' : 'flex h-full w-full items-center justify-center'}`}
           onDoubleClick={() => setZoom((z) => !z)}
         >
           <FotoImg

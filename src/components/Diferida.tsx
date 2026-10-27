@@ -1,4 +1,5 @@
 import { Component, lazy, Suspense, type ComponentType, type ReactNode } from 'react'
+import { Silueta } from './Silueta'
 
 const MARCA = 'recargo-por-version'
 
@@ -58,11 +59,11 @@ class SiFalla extends Component<{ children: ReactNode }, { error: boolean }> {
   }
 }
 
-/** Muestra "Cargando…" mientras baja una pantalla diferida y un aviso si no se pudo. */
+/** Muestra siluetas mientras baja una pantalla diferida y un aviso si no se pudo. */
 export function ConCarga({ children }: { children: ReactNode }) {
   return (
     <SiFalla>
-      <Suspense fallback={<p className="p-6 text-center text-slate-500">Cargando…</p>}>{children}</Suspense>
+      <Suspense fallback={<Silueta />}>{children}</Suspense>
     </SiFalla>
   )
 }

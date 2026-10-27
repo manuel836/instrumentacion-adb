@@ -5,6 +5,7 @@ import { reportarFalla } from '../lib/fallas'
 import { useInstrumentos } from '../lib/instrumentos'
 import { SelectorFotos, type FotoNueva } from '../components/SelectorFotos'
 import { dondeEsta } from '../types'
+import { avisarGuardado } from '../components/Listo'
 
 export function NuevaFalla() {
   const [params] = useSearchParams()
@@ -42,6 +43,7 @@ export function NuevaFalla() {
         fotos.map((f) => f.archivo),
         { uid: user.uid, nombre: user.displayName || user.email || 'Usuario' },
       )
+      avisarGuardado('Falla reportada.', 'Falla guardada en el teléfono. Se envía cuando haya señal.')
       navigate(`/fallas/${id}`, { replace: true })
     } catch (err) {
       setError(`No se pudo guardar: ${(err as Error).message}`)

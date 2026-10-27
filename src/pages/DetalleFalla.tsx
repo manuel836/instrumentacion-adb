@@ -13,6 +13,8 @@ import { dondeEsta } from '../types'
 import { useInstrumento } from '../lib/instrumentos'
 import { AvisoDisparo } from '../components/AvisoDisparo'
 import { BorrarFalla } from '../components/BorrarFalla'
+import { avisarGuardado } from '../components/Listo'
+import { Silueta } from '../components/Silueta'
 
 export function DetalleFalla() {
   const { id } = useParams()
@@ -27,7 +29,7 @@ export function DetalleFalla() {
   const [accion, setAccion] = useState('')
   const [error, setError] = useState('')
 
-  if (falla === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (falla === undefined) return <Silueta />
   if (falla === null) return <p className="p-6 text-slate-500">Esta falla no existe. Puede que el administrador la haya eliminado.</p>
 
   const yo = { uid: user?.uid ?? '', nombre: user?.displayName || user?.email || 'Técnico' }
@@ -40,6 +42,7 @@ export function DetalleFalla() {
       return
     }
     cerrarFalla(falla.id, causa, accion, yo, !!falla.tecnicoAsignado)
+    avisarGuardado('Falla cerrada.', 'Falla cerrada en el teléfono. Se envía cuando haya señal.')
     setCerrando(false)
   }
 
@@ -101,7 +104,13 @@ export function DetalleFalla() {
       {p.atenderFallas && falla.estado !== 'Cerrada' && !cerrando && (
         <div className="grid grid-cols-2 gap-2">
           {falla.estado === 'Abierta' ? (
-            <button className="btn-primario" onClick={() => tomarFalla(falla.id, yo)}>
+            <button
+              className="btn-primario"
+              onClick={() => {
+                tomarFalla(falla.id, yo)
+                avisarGuardado('Tomaste la falla: ahora está En proceso.', 'Tomaste la falla en el teléfono. Se envía cuando haya señal.')
+              }}
+            >
               Tomar falla
             </button>
           ) : (
@@ -114,7 +123,7 @@ export function DetalleFalla() {
       )}
 
       {cerrando && (
-        <form onSubmit={onCerrar} className="tarjeta space-y-3">
+        <form onSubmit={onCerrar} className="tarjeta origin-top animate-desplegar space-y-3">
           <h2 className="font-semibold">Cerrar falla</h2>
           <label className="block">
             <span className="etiqueta">Causa raíz *</span>

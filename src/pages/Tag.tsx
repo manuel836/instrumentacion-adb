@@ -12,6 +12,7 @@ import { ordenarConPortada } from '../components/Galeria'
 import { Icono } from '../components/Icono'
 import { AvisoDisparo } from '../components/AvisoDisparo'
 import logoFertinal from '../assets/logo-fertinal.png'
+import { Silueta } from '../components/Silueta'
 
 /** Destino de la URL grabada en el tag: ficha completa con sesión, vista de invitado sin ella. */
 export function Tag() {
@@ -52,7 +53,7 @@ function VistaInvitado({ token }: { token: string }) {
       .catch(() => setPub(null))
   }, [token])
 
-  if (pub === undefined) return <p className="p-6 text-center text-slate-500">Cargando…</p>
+  if (pub === undefined) return <Silueta forma="ficha" />
   if (pub === null) return <TagDesconocido />
 
   const fotos = ordenarConPortada(pub.fotosUbicacion.map((f, i) => ({ ...f, orden: i })))

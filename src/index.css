@@ -71,6 +71,120 @@
   --color-info-800: oklch(44.3% 0.11 240.79);
   --color-info-900: oklch(39.1% 0.09 240.876);
   --color-info-950: oklch(29.3% 0.066 243.157);
+
+  /*
+   * Letras: Figtree para todo el texto (redondita y fácil de leer) y Atkinson Hyperlegible Mono
+   * para tags ISA, series y códigos, donde 0 y O, o 1, l e I, no deben confundirse. Las dos van
+   * dentro de la app (main.tsx), así que se ven igual en todos los teléfonos y sin señal.
+   */
+  --font-sans: 'Figtree Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, 'Roboto Mono', monospace;
+
+  /*
+   * Movimiento: corto y solo para explicar algo (qué se guardó, qué se abrió, qué está leyendo).
+   * Todo entra frenando suave; lo que sale lo hace más rápido de lo que entró.
+   */
+  --ease-frenar: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pantalla: aparecer 180ms ease-out;
+  --animate-aparecer: aparecer 200ms ease-out both;
+  /* Las siluetas de carga esperan un instante: si los datos ya están en el teléfono, ni se ven. */
+  --animate-aparecer-tarde: aparecer 200ms 150ms ease-out both;
+  --animate-desplegar: desplegar 160ms var(--ease-frenar);
+  --animate-bajar: bajar 260ms var(--ease-frenar);
+  --animate-salir: salir 160ms ease-in forwards;
+  --animate-subir: subir 280ms var(--ease-frenar);
+  --animate-acercar: acercar 220ms var(--ease-frenar);
+  --animate-onda: onda 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  --animate-palomita: palomita 320ms var(--ease-frenar);
+  --animate-trazo: trazo 220ms 80ms ease-out both;
+  --animate-silueta: silueta 1.4s ease-in-out infinite;
+
+  @keyframes aparecer {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes desplegar {
+    from {
+      opacity: 0;
+      transform: translateY(-0.25rem) scale(0.97);
+    }
+  }
+  @keyframes bajar {
+    from {
+      opacity: 0;
+      transform: translateY(-0.75rem);
+    }
+  }
+  @keyframes salir {
+    to {
+      opacity: 0;
+      transform: translateY(-0.5rem);
+    }
+  }
+  @keyframes subir {
+    from {
+      opacity: 0;
+      transform: translateY(1.5rem);
+    }
+  }
+  @keyframes acercar {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+  /* Las ondas salen del ícono de NFC, como la señal que busca el tag. */
+  @keyframes onda {
+    from {
+      opacity: 0.55;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.25);
+    }
+  }
+  @keyframes palomita {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+  /* Dibuja la palomita de principio a fin (pathLength="1" en el trazo). */
+  @keyframes trazo {
+    from {
+      stroke-dashoffset: 1;
+    }
+  }
+  @keyframes silueta {
+    50% {
+      opacity: 0.55;
+    }
+  }
+}
+
+/*
+ * "Quitar animaciones" de Android (y "Reducir movimiento" del iPhone): nada se desliza ni crece,
+ * solo aparece con un fundido. Lo que confirma algo (el aviso, la palomita) se sigue viendo.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --animate-desplegar: aparecer 160ms ease-out;
+    --animate-bajar: aparecer 200ms ease-out;
+    --animate-salir: salir-quieto 160ms ease-in forwards;
+    --animate-subir: aparecer 200ms ease-out;
+    --animate-acercar: aparecer 200ms ease-out;
+    --animate-onda: silueta 2s ease-in-out infinite;
+    --animate-palomita: aparecer 200ms ease-out;
+    --animate-trazo: none;
+    --animate-silueta: none;
+  }
+}
+@keyframes salir-quieto {
+  to {
+    opacity: 0;
+  }
 }
 
 html,
@@ -80,9 +194,39 @@ body,
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   color: #0f172a;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Lo que el navegador dibuja solo (selección, cursor, casillas, foco) también va en verde. */
+:root {
+  accent-color: var(--color-marca-700);
+}
+::selection {
+  background: var(--color-marca-200);
+  color: var(--color-marca-950);
+}
+input,
+textarea {
+  caret-color: var(--color-marca-700);
+}
+:focus-visible {
+  outline: 2px solid var(--color-marca-600);
+  outline-offset: 2px;
+}
+
+/* Títulos sin una palabra sola en el último renglón; números alineados en las tablas. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+table {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Hojas impresas (reportes y hoja de vida): sin el gris de fondo de la app. */

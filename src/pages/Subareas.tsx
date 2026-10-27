@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { useInstrumentos } from '../lib/instrumentos'
 import { borrarSubarea, crearSubarea, enUso, renombrarSubarea, revisarNombre, useSubareas } from '../lib/subareas'
 import { AREAS, type Area, type Subarea } from '../types'
+import { Silueta } from '../components/Silueta'
 
 const plural = (n: number) => `${n} ${n === 1 ? 'instrumento' : 'instrumentos'}`
 
@@ -15,7 +16,7 @@ export function Subareas() {
   const [quitando, setQuitando] = useState<string | null>(null)
   const [error, setError] = useState<{ donde: string; texto: string } | null>(null)
 
-  if (!subareas || !instrumentos) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (!subareas || !instrumentos) return <Silueta />
 
   function agregar(e: FormEvent, area: Area) {
     e.preventDefault()
@@ -112,7 +113,7 @@ export function Subareas() {
                             {s.nombre} tiene {plural(n)}. Cámbialos a otra sub área (o a “Sin sub área”) antes de quitarla.
                           </p>
                         ) : (
-                          <div className="flex items-center gap-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
+                          <div className="flex origin-top animate-desplegar items-center gap-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
                             <span className="flex-1">¿Quitar {s.nombre}?</span>
                             <button className="btn-secundario px-3 py-1.5 text-sm" onClick={() => setQuitando(null)}>
                               No

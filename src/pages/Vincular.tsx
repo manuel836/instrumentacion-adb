@@ -6,8 +6,10 @@ import { agregarFotosUbicacion, asignarToken, instrumentoPorToken, quitarToken, 
 import { grabarUrl, leerYGrabar, nfcDisponible, type Revision } from '../lib/nfc'
 import { bytesNdef, generarToken, tokenDeUrl, urlDeTag } from '../lib/token'
 import { SelectorFotos, type FotoNueva } from '../components/SelectorFotos'
-import { Icono } from '../components/Icono'
+import { OndasNfc, PalomitaNfc, vibrar } from '../components/Nfc'
+import { avisarGuardado } from '../components/Listo'
 import { dondeEsta } from '../types'
+import { Silueta } from '../components/Silueta'
 
 type EstadoNfc = 'inicio' | 'esperando' | 'conflicto' | 'grabado' | 'error'
 type Conflicto = Extract<Revision, { grabar: false }>
@@ -31,7 +33,7 @@ export function Vincular() {
   const [portada, setPortada] = useState(0)
   const [guardando, setGuardando] = useState(false)
 
-  if (inst === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (inst === undefined) return <Silueta />
   if (inst === null) return <p className="p-6 text-slate-500">Este instrumento no existe.</p>
 
   /** Antes de grabar se lee lo que trae el tag, para no quitarle el tag a otro instrumento sin aviso. */
@@ -75,6 +77,7 @@ export function Vincular() {
       }
       abortar.current.abort()
       asignarToken(inst.id, token)
+      vibrar()
       setEstado('grabado')
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
@@ -97,6 +100,10 @@ export function Vincular() {
       // La portada elegida va primero para que quede marcada como tal.
       const ordenadas = [fotos[portada], ...fotos.filter((_, i) => i !== portada)]
       await agregarFotosUbicacion(inst.id, ordenadas, user?.displayName || user?.email || '', 0, false)
+      avisarGuardado(
+        ordenadas.length === 1 ? 'Foto guardada.' : 'Fotos guardadas.',
+        `${ordenadas.length === 1 ? 'Foto guardada' : 'Fotos guardadas'} en el teléfono. Se suben cuando haya señal.`,
+      )
       navigate(`/instrumentos/${inst.id}`, { replace: true })
     } finally {
       setGuardando(false)
@@ -124,11 +131,12 @@ export function Vincular() {
             Este navegador no puede grabar tags. Usa Chrome en un teléfono Android con NFC activado.
           </p>
         ) : estado === 'grabado' ? (
-          <p className="flex items-center gap-2 rounded-lg bg-bien-50 p-3 font-medium text-bien-800">
-              <Icono nombre="listo" /> Tag grabado y vinculado.
-            </p>
+          <div className="space-y-2 text-center">
+            <PalomitaNfc chico />
+            <p className="font-medium text-bien-800">Tag grabado y vinculado.</p>
+          </div>
         ) : estado === 'conflicto' && conflicto ? (
-          <div className="space-y-3 rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">
+          <div className="origin-top animate-desplegar space-y-3 rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">
             <p className="font-semibold">No se grabó.</p>
             <p>{conflicto.motivo}</p>
             {conflicto.otroTag ? (
@@ -155,7 +163,7 @@ export function Vincular() {
           </div>
         ) : estado === 'esperando' ? (
           <div className="space-y-3 text-center">
-            <div className="mx-auto h-20 w-20 animate-pulse rounded-full bg-marca-100" />
+            <OndasNfc chico />
             <p className="font-medium">
               {conflicto ? 'Acerca otra vez el mismo tag…' : 'Acerca el tag a la parte trasera del teléfono…'}
             </p>

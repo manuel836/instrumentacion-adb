@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { escanearUrl, nfcDisponible } from '../lib/nfc'
 import { tokenDeUrl } from '../lib/token'
+import { Icono } from '../components/Icono'
+import { OndasNfc, PalomitaNfc, vibrar } from '../components/Nfc'
 
 export function Escanear() {
   const navigate = useNavigate()
   const [leyendo, setLeyendo] = useState(false)
+  const [leido, setLeido] = useState(false)
   const [error, setError] = useState('')
   const abortar = useRef<AbortController | null>(null)
 
@@ -20,6 +23,10 @@ export function Escanear() {
       const token = tokenDeUrl(url)
       if (!token) throw new Error('Este tag no pertenece a la app de instrumentación.')
       abortar.current.abort()
+      // Vibra y se ve la palomita un instante antes de abrir la ficha.
+      vibrar()
+      setLeido(true)
+      await new Promise((r) => setTimeout(r, 500))
       navigate(`/t/${token}`)
     } catch (err) {
       if ((err as Error).name !== 'AbortError') setError((err as Error).message)
@@ -34,9 +41,14 @@ export function Escanear() {
         <p className="rounded-lg bg-slate-100 p-4">
           Este navegador no lee tags NFC. Usa Chrome en Android, o acerca el teléfono al tag con la app cerrada.
         </p>
+      ) : leido ? (
+        <>
+          <PalomitaNfc />
+          <p className="text-lg font-medium">Tag leído</p>
+        </>
       ) : leyendo ? (
         <>
-          <div className="h-32 w-32 animate-pulse rounded-full bg-marca-100" />
+          <OndasNfc />
           <p className="text-lg font-medium">Acerca el tag del instrumento…</p>
           <button className="btn-secundario" onClick={() => abortar.current?.abort()}>
             Cancelar
@@ -45,9 +57,12 @@ export function Escanear() {
       ) : (
         <>
           <p className="text-slate-600">Lee el tag NFC de un instrumento para abrir su ficha. Funciona sin señal.</p>
-          <button className="btn-primario h-32 w-32 rounded-full text-lg" onClick={() => void escanear()}>
-            Escanear
-          </button>
+          <div className="grid size-44 place-items-center">
+            <button className="btn-primario size-32 flex-col gap-1 rounded-full text-lg shadow-md" onClick={() => void escanear()}>
+              <Icono nombre="escanear" className="size-9" />
+              Escanear
+            </button>
+          </div>
         </>
       )}
       {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}

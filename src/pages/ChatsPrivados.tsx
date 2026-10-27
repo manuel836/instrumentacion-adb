@@ -8,6 +8,7 @@ import { PestanasChat } from '../components/PestanasChat'
 import { hiloPrivado, idChatPrivado } from '../lib/chat'
 import { otroDe, resumenDelChat, sinLeer, useChatPrivado, useChatsPrivados, useDirectorio, useMarcarLeido } from '../lib/privados'
 import type { Rol } from '../types'
+import { Silueta } from '../components/Silueta'
 
 const ROL: Record<Rol, string> = { admin: 'Admin', tecnico: 'Técnico', operador: 'Operador' }
 
@@ -54,7 +55,7 @@ export function ChatsPrivados() {
           </div>
           <input className="campo" type="search" placeholder="Buscar por nombre" value={texto} onChange={(e) => setTexto(e.target.value)} />
           {contactos === null ? (
-            <p className="text-sm text-slate-500">Cargando…</p>
+            <Silueta forma="lista" />
           ) : opciones.length === 0 ? (
             <p className="text-sm text-slate-500">{q ? 'Nadie coincide con ese nombre.' : 'Aún no hay más personas en la app.'}</p>
           ) : (
@@ -79,7 +80,7 @@ export function ChatsPrivados() {
       )}
 
       {chats === null ? (
-        <p className="text-sm text-slate-500">Cargando…</p>
+        <Silueta forma="lista" />
       ) : chats.length === 0 ? (
         <p className="text-sm text-slate-500">Aún no tienes chats privados.</p>
       ) : (
@@ -127,7 +128,7 @@ export function ConversacionPrivada() {
   const tambien = useMemo(() => resumenDelChat({ uid: yo, nombre: miNombre }, { uid: otro, nombre: nombre || 'Usuario' }), [yo, miNombre, otro, nombre])
 
   if (!chatId) return <Navigate to="/chat/privados" replace />
-  if (contactos === null || chat === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
+  if (contactos === null || chat === undefined) return <Silueta />
   if (!contacto && !chat) return <p className="p-6 text-slate-500">Esta persona no está en la app.</p>
 
   return (

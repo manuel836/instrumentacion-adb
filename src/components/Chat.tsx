@@ -4,6 +4,7 @@ import { enviarMensaje, MAX_FOTOS_MENSAJE, useMensajes, type Tambien } from '../
 import { FotoImg } from './FotoImg'
 import { nombreFoto, Visor, type FotoVisor } from './Visor'
 import { Icono } from './Icono'
+import { Silueta } from './Silueta'
 
 function dia(d: Date): string {
   const hoy = new Date()
@@ -81,7 +82,7 @@ export function Chat({
   return (
     <div className="space-y-3">
       {mensajes === null ? (
-        <p className="text-sm text-slate-500">Cargando…</p>
+        <Silueta forma="chat" />
       ) : mensajes.length === 0 ? (
         <p className="text-sm text-slate-500">{vacio}</p>
       ) : (
