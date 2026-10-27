@@ -93,7 +93,8 @@ Pruebas:
 - `node e2e/tipos-calibracion.cjs`: tipo de instrumento sugerido por el tag y sus datos (válvula de
   corte con aire para abrir, sensor del transmisor de temperatura), y la calibración de cada tipo:
   prueba funcional de la KV con revisiones y tiempos, transmisor leído en mA, interruptor con disparo,
-  reposición y diferencial, y válvula de control con señal invertida. Crea sus propios datos.
+  reposición y diferencial, válvula de control con señal invertida, y válvulas de doble efecto (aire
+  para abrir y cerrar: revisiones propias y sin rango del resorte). Crea sus propios datos.
 
 Con los emuladores recién arrancados y el admin creado, el orden que funciona es: fase1, fase2, fase3,
 fase4, usuarios, restablecer, borrar, borrar-falla, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,

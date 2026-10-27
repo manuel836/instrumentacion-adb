@@ -220,6 +220,8 @@ describe('tipo de instrumento', () => {
         ['TT-4', 'Temperatura', 'vapor', 'Transmisor de temperatura', 'Aire para abrir', null, null, null],
         ['FCV-70', null, 'vapor', 'Válvula de control', 'aire para cerrar', null, null, null],
         ['XX-5', 'Otra cosa', 'agua', 'bomba', null, null, null, null],
+        ['KV-13', 'Corte de vapor', 'vapor', 'KV', 'aire para abrir y cerrar', null, null, null],
+        ['XV-14', 'Corte de amoniaco', 'amoniaco', 'XV', 'Doble efecto', null, null, null],
       ]),
       existentes,
       true,
@@ -230,6 +232,8 @@ describe('tipo de instrumento', () => {
       // La acción de válvula no es de un transmisor: no se guarda.
       ['TT-4', 'Transmisor de temperatura', '', null, '', ''],
       ['XX-5', '', '', null, '', ''],
+      ['KV-13', 'Válvula de corte', 'Aire para abrir y cerrar', null, '', ''],
+      ['XV-14', 'Válvula de corte', 'Aire para abrir y cerrar', null, '', ''],
     ])
     expect(a.actualizar).toEqual([{ fila: 5, id: 'i1', tagISA: 'FCV-70', cambios: { tipo: 'Válvula de control', accionValvula: 'Aire para cerrar' } }])
     expect(a.avisos.map((x) => [x.tag, x.mensaje])).toEqual([['XX-5', 'Tipo "bomba" no está en la lista: se deja como estaba.']])

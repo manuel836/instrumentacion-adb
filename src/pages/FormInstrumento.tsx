@@ -149,7 +149,7 @@ export function FormInstrumento() {
   if (id && existente === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
 
   const sugerido = tipoSugerido(datos.tagISA)
-  const campos = camposDeTipo(datos.tipo)
+  const campos = camposDeTipo(datos.tipo, datos.accionValvula)
   const prueba = pruebaDe(datos.tipo)
   const esValvula = prueba === 'carrera' || prueba === 'funcional'
   const delArea = (subareas ?? []).filter((s) => s.area === datos.area).map((s) => s.nombre)
@@ -216,7 +216,7 @@ export function FormInstrumento() {
                     type="button"
                     role="radio"
                     aria-checked={datos.accionValvula === a.valor}
-                    className={`rounded-lg border p-2 text-left text-sm ${datos.accionValvula === a.valor ? 'border-marca-700 bg-marca-50' : 'border-slate-300'}`}
+                    className={`rounded-lg border p-2 text-left text-sm last:odd:col-span-2 ${datos.accionValvula === a.valor ? 'border-marca-700 bg-marca-50' : 'border-slate-300'}`}
                     onClick={() => set('accionValvula', datos.accionValvula === a.valor ? '' : a.valor)}
                   >
                     <span className="block font-semibold">{a.valor}</span>
@@ -231,11 +231,13 @@ export function FormInstrumento() {
               <Opciones label="Posicionador" value={datos.posicionador} onChange={(v) => set('posicionador', v)} opciones={comoOpciones(POSICIONADORES)} vacio="Sin especificar" />
             </Campo>
           )}
-          {campos.includes('rangoResorte') && (
+          {campos.includes('presionSuministro') && (
             <div className="grid grid-cols-2 gap-3">
-              <Campo label="Rango del resorte">
-                <input className="campo" placeholder="3-15 psi" maxLength={60} value={datos.rangoResorte} onChange={(e) => set('rangoResorte', e.target.value)} />
-              </Campo>
+              {campos.includes('rangoResorte') && (
+                <Campo label="Rango del resorte">
+                  <input className="campo" placeholder="3-15 psi" maxLength={60} value={datos.rangoResorte} onChange={(e) => set('rangoResorte', e.target.value)} />
+                </Campo>
+              )}
               <Campo label="Presión de suministro">
                 <input className="campo" placeholder="20 psi" maxLength={60} value={datos.presionSuministro} onChange={(e) => set('presionSuministro', e.target.value)} />
               </Campo>

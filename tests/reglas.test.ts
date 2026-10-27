@@ -79,6 +79,7 @@ describe('instrumentos', () => {
 
   it('el tipo y la acción de la válvula se validan', async () => {
     await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { tipo: 'Válvula de corte', accionValvula: 'Aire para abrir' }))
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { accionValvula: 'Aire para abrir y cerrar' }))
     await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { tipo: 'Interruptor de presión', puntoAjuste: 10.5 }))
     await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { accionValvula: 'Neumática' }))
     await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { puntoAjuste: '10' }))

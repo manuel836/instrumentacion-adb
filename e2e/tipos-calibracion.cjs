@@ -1,6 +1,6 @@
 // Prueba de punta a punta del tipo de instrumento: el formulario lo sugiere por el tag y pide
 // los datos de su tipo, y Registrar calibración cambia la prueba según el tipo (válvula de corte,
-// transmisor leído en mA, interruptor, válvula de control con señal invertida).
+// transmisor leído en mA, interruptor, válvula de control con señal invertida, válvulas de doble efecto).
 // Requiere el admin manuel@adb.test / Prueba1234 y los emuladores corriendo.
 // Uso: node e2e/tipos-calibracion.cjs
 const { chromium, devices } = require('playwright')
@@ -77,7 +77,7 @@ const sugerencia = (page) => page.locator('label:has-text("Resultado *") select 
   if (tipo !== 'Válvula de corte') throw new Error(`el tag ${KV} no sugirió válvula de corte: "${tipo}"`)
   await page.waitForSelector('text=Sugerido por el tag')
   await page.fill('input[placeholder="Presión de vapor a cabezal"]', 'Corte de gas a quemador')
-  await page.click('[role="radiogroup"][aria-label="Acción"] button:has-text("Aire para abrir")')
+  await page.click('[role="radiogroup"][aria-label="Acción"] button:has-text("Sin aire cierra")')
   await page.selectOption('select[aria-label="Finales de carrera"]', 'Solo cerrada')
   await page.selectOption('select[aria-label="Alimentación del solenoide"]', '120 VCA')
   await shot(page, '200-alta-valvula-corte')
@@ -124,6 +124,45 @@ const sugerencia = (page) => page.locator('label:has-text("Resultado *") select 
   await page.goto(`${BASE}/instrumentos/${idKV}/hoja-de-vida`)
   await page.waitForSelector('text=Revisiones: 6 bien, 1 mal (Cierra completo).')
   console.log(`calibración de KV: ${nRev} revisiones, tiempos y "No pasó la prueba" ok`)
+
+  // ---------- Válvulas de doble efecto: abren y cierran con aire, sin resorte ----------
+  const KV2 = `KV-${n + 1}`
+  const idKV2 = await instrumento({ tagISA: KV2, servicio: 'Corte de vapor', tipo: 'Válvula de corte', accionValvula: 'Aire para abrir' })
+  await page.goto(`${BASE}/instrumentos/${idKV2}/editar`)
+  await page.click('[role="radiogroup"][aria-label="Acción"] button:has-text("Doble efecto")')
+  await shot(page, '209-editar-doble-efecto')
+  await page.click('button:has-text("Guardar")')
+  await page.waitForURL(/\/instrumentos\/[^/]+$/)
+  await page.waitForSelector('text=Aire para abrir y cerrar · doble efecto, sin resorte')
+  await page.goto(`${BASE}/instrumentos/${idKV2}/calibrar`)
+  await page.waitForSelector('text=Al desenergizar el solenoide va a su posición segura')
+  await page.waitForSelector('text=Sin paso de aire entre cámaras (diafragma o pistón sano)')
+  if (await page.locator('text=Sin aire cierra sola').count()) throw new Error('la de doble efecto pidió que cierre sola sin aire')
+  const nRev2 = await revisar(page)
+  await shot(page, '210-calibrar-doble-efecto')
+  await page.click('button:has-text("Guardar")')
+  await page.waitForURL(/\/instrumentos\/[^/]+$/)
+  const [calKV2] = await hasta(() => calibraciones(idKV2).then((c) => (c.length ? c : null)), 'calibración de la KV de doble efecto')
+  if (calKV2.revisiones.length !== nRev2 || !calKV2.revisiones.some((r) => r.nombre.startsWith('Sin paso de aire entre cámaras')))
+    throw new Error(`calibración de la KV de doble efecto: ${JSON.stringify(calKV2.revisiones)}`)
+
+  // La de control de doble efecto no tiene resorte: el campo se quita y se vacía al guardar.
+  const FCV2 = `FCV-${n + 1}`
+  const idFCV2 = await instrumento({ tagISA: FCV2, servicio: 'Agua a deareador', tipo: 'Válvula de control', accionValvula: 'Aire para abrir', rangoResorte: '3-15 psi', presionSuministro: '60 psi' })
+  await page.goto(`${BASE}/instrumentos/${idFCV2}/editar`)
+  await page.waitForSelector('text=Rango del resorte')
+  await page.click('[role="radiogroup"][aria-label="Acción"] button:has-text("Doble efecto")')
+  if (await page.locator('text=Rango del resorte').count()) throw new Error('la de doble efecto sigue pidiendo rango del resorte')
+  await page.click('button:has-text("Guardar")')
+  await page.waitForURL(/\/instrumentos\/[^/]+$/)
+  const fcv2Doc = await hasta(async () => {
+    const d = (await firestore().doc(`instrumentos/${idFCV2}`).get()).data()
+    return d.accionValvula === 'Aire para abrir y cerrar' ? d : null
+  }, 'la FCV de doble efecto en el servidor')
+  if (fcv2Doc.rangoResorte !== '' || fcv2Doc.presionSuministro !== '60 psi') throw new Error(`la FCV de doble efecto se guardó mal: ${JSON.stringify(fcv2Doc)}`)
+  await page.goto(`${BASE}/instrumentos/${idFCV2}/calibrar`)
+  await page.waitForSelector('text=Al quitar la señal va a su posición segura')
+  console.log(`doble efecto: KV con ${nRev2} revisiones propias y FCV sin resorte ok`)
 
   // ---------- Transmisor de antes, sin tipo: se sugiere al calibrar y se lee en mA ----------
   const PT = `PT-${n}`
