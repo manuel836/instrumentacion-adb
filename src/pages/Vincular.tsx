@@ -115,7 +115,7 @@ export function Vincular() {
       <section className="tarjeta space-y-3">
         <h2 className="font-semibold">1. Grabar el tag (opcional)</h2>
         {inst.nfcToken && estado !== 'grabado' && (
-          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">
             Este instrumento ya tiene un tag. Si grabas uno nuevo, el anterior deja de funcionar.
           </p>
         )}
@@ -124,11 +124,11 @@ export function Vincular() {
             Este navegador no puede grabar tags. Usa Chrome en un teléfono Android con NFC activado.
           </p>
         ) : estado === 'grabado' ? (
-          <p className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 font-medium text-emerald-800">
+          <p className="flex items-center gap-2 rounded-lg bg-bien-50 p-3 font-medium text-bien-800">
               <Icono nombre="listo" /> Tag grabado y vinculado.
             </p>
         ) : estado === 'conflicto' && conflicto ? (
-          <div className="space-y-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="space-y-3 rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">
             <p className="font-semibold">No se grabó.</p>
             <p>{conflicto.motivo}</p>
             {conflicto.otroTag ? (
@@ -168,7 +168,7 @@ export function Vincular() {
             Grabar tag
           </button>
         )}
-        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
         <p className="break-all text-xs text-slate-500">
           {url} · {bytesNdef(url)} de 144 bytes
         </p>

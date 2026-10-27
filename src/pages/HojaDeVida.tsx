@@ -151,8 +151,8 @@ export function HojaDeVida() {
               v={
                 <>
                   {fechaDia(inst.proximaCalibracion) ?? 'sin programar'}
-                  {v === 'vencida' && <span className="font-semibold text-red-700"> (vencida)</span>}
-                  {v === 'pronto' && <span className="font-semibold text-amber-700"> (vence pronto)</span>}
+                  {v === 'vencida' && <span className="font-semibold text-peligro-700"> (vencida)</span>}
+                  {v === 'pronto' && <span className="font-semibold text-aviso-700"> (vence pronto)</span>}
                 </>
               }
             />
@@ -195,7 +195,7 @@ export function HojaDeVida() {
                     <tr key={c.id} className="break-inside-avoid">
                       <td className={`${td} whitespace-nowrap`}>{fechaDia(c.fecha)}</td>
                       <td className={`${td} min-w-28`}>
-                        <span className={c.resultado === 'Fuera de tolerancia' ? 'font-semibold text-red-700' : ''}>{textoResultado(c.resultado, c.tipo)}</span>
+                        <span className={c.resultado === 'Fuera de tolerancia' ? 'font-semibold text-peligro-700' : ''}>{textoResultado(c.resultado, c.tipo)}</span>
                         {detallePrueba(c) && <span className="block text-slate-600">{detallePrueba(c)}</span>}
                       </td>
                       <td className={`${td} whitespace-nowrap`}>{textoErrorMaximo(c, 'asFound')}</td>

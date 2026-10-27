@@ -7,7 +7,7 @@ import type { ConPendiente } from '../lib/instrumentos'
 import { Pendiente } from './Estado'
 import { fechaCorta } from './EstadoFalla'
 
-const colores = { entrada: 'text-emerald-700', salida: 'text-red-700', ajuste: 'text-sky-700' }
+const colores = { entrada: 'text-bien-700', salida: 'text-peligro-700', ajuste: 'text-info-700' }
 
 /** Kardex: fecha, tipo, cantidad, quién y para qué. */
 export function ListaMovimientos({
@@ -158,7 +158,7 @@ export function RefaccionesUsadas({ falla }: { falla: Falla }) {
               <input className="campo" maxLength={300} value={nota} onChange={(e) => setNota(e.target.value)} />
             </label>
           </div>
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
           <div className="flex gap-2">
             <button type="button" className="btn-secundario" onClick={() => setAbierto(false)}>
               Cancelar
@@ -200,7 +200,7 @@ export function RefaccionesDelInstrumento({ instrumentoId }: { instrumentoId: st
                   <span className="block truncate font-medium">{r.nombre}</span>
                   {r.numeroParte && <span className="block truncate text-xs text-slate-500">{r.numeroParte}</span>}
                 </span>
-                <span className={`shrink-0 font-semibold ${sinExistencia(r) ? 'text-red-700' : porPedir(r) ? 'text-amber-700' : 'text-slate-700'}`}>
+                <span className={`shrink-0 font-semibold ${sinExistencia(r) ? 'text-peligro-700' : porPedir(r) ? 'text-aviso-700' : 'text-slate-700'}`}>
                   {r.existencia} {r.unidad}
                 </span>
               </Link>

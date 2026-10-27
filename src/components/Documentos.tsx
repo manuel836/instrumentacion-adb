@@ -78,7 +78,7 @@ export function Documentos({ inst, editable }: { inst: Instrumento; editable: bo
             )}
           </span>
           {editable && (
-            <button className="shrink-0 text-red-700" onClick={() => quitarDocumento(inst, d.ruta)}>
+            <button className="shrink-0 text-peligro-700" onClick={() => quitarDocumento(inst, d.ruta)}>
               Quitar
             </button>
           )}
@@ -104,7 +104,7 @@ export function Documentos({ inst, editable }: { inst: Instrumento; editable: bo
           {entrada(camara, { accept: 'image/*', capture: 'environment' })}
           {entrada(galeria, { accept: 'image/*', multiple: true })}
           {entrada(archivo, { accept: ACEPTA_ARCHIVO, multiple: true })}
-          {aviso && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{aviso}</p>}
+          {aviso && <p className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso-800">{aviso}</p>}
         </>
       )}
     </section>

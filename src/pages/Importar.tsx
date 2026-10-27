@@ -174,15 +174,15 @@ export function Importar() {
         {archivo && !instrumentos && <p className="text-sm text-slate-500">Cargando el catálogo para comparar…</p>}
       </section>
 
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      {typeof analisis === 'string' && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{analisis}</p>}
+      {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
+      {typeof analisis === 'string' && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{analisis}</p>}
 
       {listo && (
-        <section className="tarjeta space-y-3 border-emerald-300 bg-emerald-50">
-          <p className="font-semibold text-emerald-800">
+        <section className="tarjeta space-y-3 border-bien-300 bg-bien-50">
+          <p className="font-semibold text-bien-800">
             Listo: {plural(listo.nuevos, 'instrumento nuevo', 'instrumentos nuevos')} y {plural(listo.actualizados, 'actualizado', 'actualizados')}.
           </p>
-          <p className="text-sm text-emerald-900">Ahora puedes grabarles el tag NFC y tomarles fotos desde la ficha de cada uno.</p>
+          <p className="text-sm text-bien-900">Ahora puedes grabarles el tag NFC y tomarles fotos desde la ficha de cada uno.</p>
           <Link to="/catalogo?filtro=sin-tag" className="btn-primario w-full">
             Ver instrumentos sin tag
           </Link>
@@ -193,15 +193,15 @@ export function Importar() {
         <section className="tarjeta space-y-4">
           <h2 className="font-semibold">3. Revisa antes de importar</h2>
           <div className="flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-800">{plural(a.nuevos.length, 'nuevo', 'nuevos')}</span>
+            <span className="rounded-full bg-bien-100 px-3 py-1 font-semibold text-bien-800">{plural(a.nuevos.length, 'nuevo', 'nuevos')}</span>
             {actualizar ? (
-              <span className="rounded-full bg-sky-100 px-3 py-1 font-semibold text-sky-800">{plural(a.actualizar.length, 'se actualiza', 'se actualizan')}</span>
+              <span className="rounded-full bg-info-100 px-3 py-1 font-semibold text-info-800">{plural(a.actualizar.length, 'se actualiza', 'se actualizan')}</span>
             ) : (
               <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">{plural(a.existentesOmitidos, 'ya existía', 'ya existían')}</span>
             )}
             {a.sinCambios > 0 && <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">{a.sinCambios} sin cambios</span>}
             {a.errores.length > 0 && (
-              <span className="rounded-full bg-red-100 px-3 py-1 font-semibold text-red-800">{plural(a.errores.length, 'fila con error', 'filas con error')}</span>
+              <span className="rounded-full bg-peligro-100 px-3 py-1 font-semibold text-peligro-800">{plural(a.errores.length, 'fila con error', 'filas con error')}</span>
             )}
           </div>
 
@@ -224,8 +224,8 @@ export function Importar() {
 
           {a.errores.length > 0 && (
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-red-800">Filas con error (no se importan)</h3>
-              <ul className="max-h-60 space-y-1 overflow-auto rounded-lg bg-red-50 p-2 text-sm text-red-900">
+              <h3 className="text-sm font-semibold text-peligro-800">Filas con error (no se importan)</h3>
+              <ul className="max-h-60 space-y-1 overflow-auto rounded-lg bg-peligro-50 p-2 text-sm text-peligro-900">
                 {a.errores.map((e) => (
                   <li key={e.fila}>
                     <b>Fila {e.fila}</b>
@@ -238,7 +238,7 @@ export function Importar() {
           )}
 
           {a.avisos.length > 0 && (
-            <ul className="space-y-1 rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
+            <ul className="space-y-1 rounded-lg bg-aviso-50 p-2 text-sm text-aviso-900">
               {a.avisos.map((e) => (
                 <li key={`${e.fila}-${e.mensaje}`}>
                   <b>Fila {e.fila}</b> · <span className="font-mono">{e.tag}</span>: {e.mensaje}
@@ -280,7 +280,7 @@ export function Importar() {
             </details>
           )}
 
-          {!online && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Importar necesita señal.</p>}
+          {!online && <p className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">Importar necesita señal.</p>}
           {avance && (
             <div className="space-y-1">
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">

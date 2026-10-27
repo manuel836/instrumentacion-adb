@@ -11,17 +11,17 @@ import { Icono, type NombreIcono } from '../components/Icono'
 
 /**
  * Un número grande que lleva a la lista filtrada. Sin marco: solo lo que pide acción
- * (rojo o ámbar con algo pendiente) lleva fondo de color, para que resalte entre los ceros.
+ * (peligro o aviso con algo pendiente) lleva fondo de color, para que resalte entre los ceros.
  */
-function Cifra({ n, texto, a, tono = 'normal' }: { n: number; texto: string; a: string; tono?: 'normal' | 'rojo' | 'ambar' | 'verde' }) {
-  const pendiente = n > 0 && (tono === 'rojo' || tono === 'ambar')
+function Cifra({ n, texto, a, tono = 'normal' }: { n: number; texto: string; a: string; tono?: 'normal' | 'peligro' | 'aviso' | 'bien' }) {
+  const pendiente = n > 0 && (tono === 'peligro' || tono === 'aviso')
   const color = {
     normal: 'text-slate-800',
-    rojo: n > 0 ? 'text-red-700' : 'text-slate-800',
-    ambar: n > 0 ? 'text-amber-700' : 'text-slate-800',
-    verde: 'text-emerald-700',
+    peligro: n > 0 ? 'text-peligro-700' : 'text-slate-800',
+    aviso: n > 0 ? 'text-aviso-700' : 'text-slate-800',
+    bien: 'text-bien-700',
   }[tono]
-  const fondo = pendiente ? (tono === 'rojo' ? 'bg-red-50 active:bg-red-100' : 'bg-amber-50 active:bg-amber-100') : 'active:bg-slate-100'
+  const fondo = pendiente ? (tono === 'peligro' ? 'bg-peligro-50 active:bg-peligro-100' : 'bg-aviso-50 active:bg-aviso-100') : 'active:bg-slate-100'
   return (
     <Link to={a} data-cifra className={`block rounded-lg px-3 py-2.5 ${fondo}`}>
       <span className={`block text-2xl font-bold ${color}`}>{n}</span>
@@ -149,9 +149,9 @@ export function Inicio() {
 
           <Tarjeta titulo="Fallas" enlace={{ a: q('/fallas', {}), texto: 'Ver todas' }}>
             <div className="grid grid-cols-3 gap-2">
-              <Cifra n={r.abiertas} texto="abiertas, sin atender" a={q('/fallas', { estado: 'Abierta' })} tono="rojo" />
-              <Cifra n={r.enProceso} texto="en proceso" a={q('/fallas', { estado: 'En proceso' })} tono="ambar" />
-              <Cifra n={r.cerradas30} texto="cerradas en 30 días" a={q('/fallas', { estado: 'Cerrada' })} tono="verde" />
+              <Cifra n={r.abiertas} texto="abiertas, sin atender" a={q('/fallas', { estado: 'Abierta' })} tono="peligro" />
+              <Cifra n={r.enProceso} texto="en proceso" a={q('/fallas', { estado: 'En proceso' })} tono="aviso" />
+              <Cifra n={r.cerradas30} texto="cerradas en 30 días" a={q('/fallas', { estado: 'Cerrada' })} tono="bien" />
             </div>
             {r.horasPromedio !== null && (
               <p className="text-sm text-slate-600">
@@ -163,15 +163,15 @@ export function Inicio() {
 
           <Tarjeta titulo="Calibraciones">
             <div className="grid grid-cols-3 gap-2">
-              <Cifra n={r.vencidas} texto="vencidas" a={q('/catalogo', { filtro: 'vencidas' })} tono="rojo" />
-              <Cifra n={r.porVencer} texto="vencen en 30 días" a={q('/catalogo', { filtro: 'por-vencer' })} tono="ambar" />
+              <Cifra n={r.vencidas} texto="vencidas" a={q('/catalogo', { filtro: 'vencidas' })} tono="peligro" />
+              <Cifra n={r.porVencer} texto="vencen en 30 días" a={q('/catalogo', { filtro: 'por-vencer' })} tono="aviso" />
               <Cifra n={r.sinCal} texto="sin fecha programada" a={q('/catalogo', { filtro: 'sin-calibracion' })} />
             </div>
           </Tarjeta>
 
           <Tarjeta titulo={`Catálogo: ${r.total} ${r.total === 1 ? 'instrumento' : 'instrumentos'}`} enlace={{ a: q('/catalogo', {}), texto: 'Abrir' }}>
             <div className="grid grid-cols-2 gap-2">
-              <Cifra n={r.conFalla} texto="con falla" a={q('/catalogo', { estado: 'Con falla' })} tono="ambar" />
+              <Cifra n={r.conFalla} texto="con falla" a={q('/catalogo', { estado: 'Con falla' })} tono="aviso" />
               <Cifra n={r.fuera} texto="fuera de servicio" a={q('/catalogo', { estado: 'Fuera de servicio' })} />
               <Cifra n={r.sinTag} texto="sin tag NFC" a={q('/catalogo', { filtro: 'sin-tag' })} />
               <Cifra n={r.sinFotos} texto="sin fotos de ubicación" a={q('/catalogo', { filtro: 'sin-fotos' })} />
@@ -197,8 +197,8 @@ export function Inicio() {
           {refacciones && refacciones.length > 0 && (
             <Tarjeta titulo="Refacciones" enlace={{ a: '/refacciones', texto: 'Abrir' }}>
               <div className="grid grid-cols-2 gap-2">
-                <Cifra n={refacciones.filter(porPedir).length} texto="por pedir (llegaron al mínimo)" a="/refacciones?filtro=por-pedir" tono="ambar" />
-                <Cifra n={refacciones.filter(sinExistencia).length} texto="sin existencia" a="/refacciones?filtro=sin-existencia" tono="rojo" />
+                <Cifra n={refacciones.filter(porPedir).length} texto="por pedir (llegaron al mínimo)" a="/refacciones?filtro=por-pedir" tono="aviso" />
+                <Cifra n={refacciones.filter(sinExistencia).length} texto="sin existencia" a="/refacciones?filtro=sin-existencia" tono="peligro" />
               </div>
             </Tarjeta>
           )}

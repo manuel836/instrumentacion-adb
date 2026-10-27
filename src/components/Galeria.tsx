@@ -111,11 +111,11 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
                   </button>
                   {f.sinSincronizar || f.pendiente ? <Pendiente /> : null}
                   {borrar === f.id ? (
-                    <button className="ml-auto font-semibold text-red-700" onClick={() => void borrarFoto(instrumentoId, fotos, f.id)}>
+                    <button className="ml-auto font-semibold text-peligro-700" onClick={() => void borrarFoto(instrumentoId, fotos, f.id)}>
                       ¿Borrar? Sí
                     </button>
                   ) : (
-                    <button className="ml-auto text-red-700" onClick={() => setBorrar(f.id)}>
+                    <button className="ml-auto text-peligro-700" onClick={() => setBorrar(f.id)}>
                       Borrar
                     </button>
                   )}

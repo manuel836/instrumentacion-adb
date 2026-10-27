@@ -55,7 +55,7 @@ export function Fallas() {
             <option key={a}>{a}</option>
           ))}
         </select>
-        {aviso && <p className="rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-800">{aviso}</p>}
+        {aviso && <p className="rounded-lg bg-bien-50 p-3 text-sm font-medium text-bien-800">{aviso}</p>}
       </div>
       <div className="px-3">
         {fallas === null ? (

@@ -101,7 +101,7 @@ export function ChatsPrivados() {
                       {c.ultimo?.texto}
                     </span>
                   </span>
-                  {nuevo && <span className="size-2.5 shrink-0 rounded-full bg-red-600" aria-label="Sin leer" />}
+                  {nuevo && <span className="size-2.5 shrink-0 rounded-full bg-peligro-600" aria-label="Sin leer" />}
                 </Link>
               </li>
             )

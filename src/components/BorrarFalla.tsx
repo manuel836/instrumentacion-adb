@@ -50,7 +50,7 @@ function Confirmar({ falla, onCancelar }: { falla: Falla; onCancelar: () => void
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+    <section className="space-y-3 rounded-xl border border-peligro-200 bg-peligro-50 p-4 text-sm text-peligro-900">
       <h2 className="font-semibold">¿Eliminar esta falla de {falla.tagISA}?</h2>
       <p>Úsalo si se reportó por error. Se borrará para siempre junto con:</p>
       <ul className="list-disc pl-5">
@@ -70,7 +70,7 @@ function Confirmar({ falla, onCancelar }: { falla: Falla; onCancelar: () => void
         <button className="btn-secundario flex-1" onClick={onCancelar}>
           Cancelar
         </button>
-        <button className="btn flex-1 bg-red-700 text-white" onClick={eliminar}>
+        <button className="btn flex-1 bg-peligro-700 text-white" onClick={eliminar}>
           Sí, eliminar
         </button>
       </div>

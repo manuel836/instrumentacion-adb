@@ -102,10 +102,10 @@ async function mensajeDeAyer(texto) {
   console.log('la operadora abre un chat privado con el técnico ok')
 
   const r = await entrar(browser, rafa.email, 'Prueba1234')
-  await r.page.locator('nav a[href="/chat"] span.bg-red-600', { hasText: '1' }).waitFor({ timeout: 20000 })
+  await r.page.locator('nav a[href="/chat"] span.bg-peligro-600', { hasText: '1' }).waitFor({ timeout: 20000 })
   console.log('globo de privado sin leer en el técnico ok')
   await r.page.click('nav >> text=Chat')
-  await r.page.locator('nav[aria-label="Chats"] >> text=Privados').locator('span.bg-red-600').waitFor()
+  await r.page.locator('nav[aria-label="Chats"] >> text=Privados').locator('span.bg-peligro-600').waitFor()
   await r.page.click('nav[aria-label="Chats"] >> text=Privados')
   const conv = r.page.locator('li', { hasText: paula.nombre })
   await conv.locator('[aria-label="Sin leer"]').waitFor()
@@ -122,7 +122,7 @@ async function mensajeDeAyer(texto) {
   await r.page.goto(`${BASE}/catalogo`)
   await r.page.waitForSelector('text=instrumentos')
   await r.page.waitForTimeout(1500)
-  if (await r.page.locator('nav a[href="/chat"] span.bg-red-600').count()) throw new Error('el globo no se apagó al leer')
+  if (await r.page.locator('nav a[href="/chat"] span.bg-peligro-600').count()) throw new Error('el globo no se apagó al leer')
   console.log('el globo se apaga al leer ok')
 
   await p.page.click('text=← Chats privados')

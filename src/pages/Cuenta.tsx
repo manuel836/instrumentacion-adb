@@ -49,11 +49,11 @@ export function Cuenta() {
         <p className="text-sm text-slate-500">{user?.email}</p>
       </div>
       {cambiarContrasena && (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+        <p className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">
           El administrador te puso una contraseña temporal. Escríbela en “Contraseña actual” y elige una nueva que solo tú conozcas.
         </p>
       )}
-      {!online && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Cambiar la contraseña necesita señal.</p>}
+      {!online && <p className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">Cambiar la contraseña necesita señal.</p>}
       <form onSubmit={onSubmit} className="tarjeta space-y-3">
         <h2 className="font-semibold">Cambiar contraseña</h2>
         <div>
@@ -95,7 +95,7 @@ export function Cuenta() {
           />
         </div>
         {mensaje && (
-          <p className={`rounded-lg p-3 text-sm ${mensaje.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}>{mensaje.texto}</p>
+          <p className={`rounded-lg p-3 text-sm ${mensaje.ok ? 'bg-bien-50 text-bien-800' : 'bg-peligro-50 text-peligro-700'}`}>{mensaje.texto}</p>
         )}
         <button className="btn-primario w-full" disabled={!online || enviando}>
           {enviando ? 'Guardando…' : 'Cambiar contraseña'}

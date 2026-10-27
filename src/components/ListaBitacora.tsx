@@ -12,7 +12,7 @@ function enlace(e: EntradaBitacora): string | null {
   return null
 }
 
-const coloresAccion = { crear: 'bg-emerald-100 text-emerald-800', editar: 'bg-sky-100 text-sky-800', borrar: 'bg-red-100 text-red-800' }
+const coloresAccion = { crear: 'bg-bien-100 text-bien-800', editar: 'bg-info-100 text-info-800', borrar: 'bg-peligro-100 text-peligro-800' }
 
 export function ListaBitacora({ entradas, conEtiqueta = true }: { entradas: EntradaBitacora[]; conEtiqueta?: boolean }) {
   return (

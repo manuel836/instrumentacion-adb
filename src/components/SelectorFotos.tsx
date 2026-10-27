@@ -49,7 +49,7 @@ export function SelectorFotos({
               )}
               <button
                 type="button"
-                className="text-red-700"
+                className="text-peligro-700"
                 onClick={() => {
                   onChange(fotos.filter((_, j) => j !== i))
                   if (onPortada && portada !== undefined) onPortada(portada === i ? 0 : portada > i ? portada - 1 : portada)

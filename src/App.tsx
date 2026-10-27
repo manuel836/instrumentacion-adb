@@ -102,7 +102,7 @@ function SinRol({ onSalir }: { onSalir: () => void }) {
         <button className="text-sm text-marca-700 underline" disabled={enviando} onClick={() => void reclamar()}>
           Soy el administrador inicial
         </button>
-        {mensaje && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mensaje}</p>}
+        {mensaje && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{mensaje}</p>}
       </div>
     </div>
   )

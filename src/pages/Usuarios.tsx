@@ -87,7 +87,7 @@ export function Usuarios() {
 
   return (
     <div className="space-y-4 p-3">
-      {!online && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Gestionar usuarios necesita señal.</p>}
+      {!online && <p className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso-900">Gestionar usuarios necesita señal.</p>}
       {mensaje && <p className="rounded-lg bg-slate-100 p-3 text-sm">{mensaje}</p>}
 
       <form onSubmit={onCrear} className="tarjeta space-y-3">
@@ -129,11 +129,11 @@ export function Usuarios() {
 
       <section className="space-y-2">
         {lista.map((u) => (
-          <div key={u.uid} className={`tarjeta space-y-2 ${u.activo ? '' : 'opacity-60'}`}>
+          <div key={u.uid} className={`tarjeta space-y-2 ${u.activo ? '' : 'border-dashed bg-slate-50'}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate font-semibold">
-                  {u.nombre} {!u.activo && <span className="text-xs font-normal text-red-700">(desactivado)</span>}
+                  {u.nombre} {!u.activo && <span className="text-xs font-normal text-peligro-700">(desactivado)</span>}
                 </p>
                 <p className="truncate text-sm text-slate-500">{u.email}</p>
               </div>
@@ -244,7 +244,7 @@ export function Usuarios() {
               </form>
             )}
             {porEliminar === u.uid && (
-              <div className="space-y-2 rounded-lg bg-red-50 p-3 text-sm text-red-900">
+              <div className="space-y-2 rounded-lg bg-peligro-50 p-3 text-sm text-peligro-900">
                 <p>
                   ¿Eliminar a <b>{u.nombre}</b> para siempre? Ya no podrá entrar. Sus fallas, mensajes y calibraciones se conservan con su
                   nombre.

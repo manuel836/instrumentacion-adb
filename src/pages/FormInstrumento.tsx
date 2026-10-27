@@ -313,17 +313,17 @@ export function FormInstrumento() {
           )}
         </p>
       </div>
-      <div className={`rounded-lg border p-3 ${datos.disparaCaldera ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}>
+      <div className={`rounded-lg border p-3 ${datos.disparaCaldera ? 'border-peligro-300 bg-peligro-50' : 'border-slate-200 bg-white'}`}>
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
-            className="mt-1 size-5 accent-red-700"
+            className="mt-1 size-5 accent-peligro-700"
             checked={datos.disparaCaldera}
             onChange={(e) => set('disparaCaldera', e.target.checked)}
           />
           <span>
             <span className="flex items-center gap-1.5 font-semibold">
-              <Icono nombre="rayo" className="size-4 text-red-700" /> Puede disparar la caldera
+              <Icono nombre="rayo" className="size-4 text-peligro-700" /> Puede disparar la caldera
             </span>
             <span className="block text-xs text-slate-600">
               Medición o retroaviso de válvula de corte o de control que, al intervenirlo, puede disparar la caldera. Se verá un aviso
@@ -433,7 +433,7 @@ export function FormInstrumento() {
         </>
       )}
 
-      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
       <div className="flex gap-2">
         <button type="button" className="btn-secundario flex-1" onClick={() => navigate(-1)}>
           Cancelar

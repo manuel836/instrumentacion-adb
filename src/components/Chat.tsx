@@ -114,7 +114,7 @@ export function Chat({
                       </div>
                     )}
                     {m.texto && <p className="break-words whitespace-pre-wrap">{m.texto}</p>}
-                    <p className={`mt-0.5 text-right text-xs ${mio ? 'text-marca-100' : 'text-slate-600'}`}>
+                    <p className={`mt-0.5 text-right text-xs ${mio ? 'text-marca-50' : 'text-slate-600'}`}>
                       {m.sinSincronizar ? (
                         <span className="inline-flex items-center gap-1">
                           <Icono nombre="reloj" className="size-3" /> por enviar
@@ -193,7 +193,7 @@ export function Chat({
               Enviar
             </button>
           </div>
-          {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
         </form>
       )}
 
