@@ -76,6 +76,14 @@ describe('instrumentos', () => {
     await assertFails(deleteDoc(doc(como('tecnico'), 'instrumentos/i1')))
     await assertSucceeds(deleteDoc(doc(como('admin'), 'instrumentos/i1')))
   })
+
+  it('el tipo y la acción de la válvula se validan', async () => {
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { tipo: 'Válvula de corte', accionValvula: 'Aire para abrir' }))
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { tipo: 'Interruptor de presión', puntoAjuste: 10.5 }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { accionValvula: 'Neumática' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { puntoAjuste: '10' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'instrumentos/i1'), { tipo: 'x'.repeat(61) }))
+  })
 })
 
 describe('sub áreas', () => {
@@ -370,6 +378,20 @@ describe('calibraciones', () => {
     await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c3'), cal('otro')))
     await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c4'), cal('u-tecnico', { resultado: 'Bien' })))
     await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c5'), cal('u-tecnico', { rangoMax: 0 })))
+  })
+
+  it('la válvula de corte va sin puntos pero con revisiones', async () => {
+    const kv = { tipo: 'Válvula de corte', puntos: [], tolerancia: 0, rangoMin: 0, rangoMax: 0, revisiones: [{ nombre: 'Abre completo', estado: 'Bien' }] }
+    await assertSucceeds(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c1'), cal('u-tecnico', kv)))
+    await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c2'), cal('u-tecnico', { ...kv, revisiones: [] })))
+    // Una calibración con puntos sigue pidiendo rango y tolerancia.
+    await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c3'), cal('u-tecnico', { tolerancia: 0, revisiones: kv.revisiones })))
+  })
+
+  it('el interruptor se evalúa en unidades y puede ir sin rango', async () => {
+    const ps = { tipo: 'Interruptor de presión', puntos: [{ entrada: 10, asFound: 10.2, asLeft: null }], tolerancia: 0.3, rangoMin: 0, rangoMax: 0 }
+    await assertSucceeds(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c1'), cal('u-tecnico', { ...ps, toleranciaEn: 'unidades', reposicion: { asFound: 9.6, asLeft: null } })))
+    await assertFails(setDoc(doc(como('tecnico'), 'instrumentos/i1/calibraciones/c2'), cal('u-tecnico', ps)))
   })
 
   it('solo el admin corrige o borra un registro', async () => {

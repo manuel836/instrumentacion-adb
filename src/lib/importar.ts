@@ -5,6 +5,17 @@
 import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type Area, type EstadoInstrumento, type InstrumentoNuevo } from '../types'
 import type { Celda, HojaLeida } from './xlsx'
 import { alimentacionConocida, unidadConocida } from './unidades'
+import {
+  ACCIONES_VALVULA,
+  CONTACTOS,
+  DISPARA_AL,
+  FINALES_CARRERA,
+  POSICIONADORES,
+  SENSORES_TEMPERATURA,
+  TIPOS,
+  soloDatosDelTipo,
+  tipoConocido,
+} from './tipos'
 
 /** Datos de un instrumento tal como salen del archivo (la fecha aún como Date). */
 export type InstrumentoImportado = Omit<InstrumentoNuevo, 'proximaCalibracion' | 'nfcToken' | 'docs' | 'portadaMiniatura' | 'actualizado'> & {
@@ -12,10 +23,20 @@ export type InstrumentoImportado = Omit<InstrumentoNuevo, 'proximaCalibracion' |
 }
 export type Campo = keyof InstrumentoImportado
 
-/** Columnas de la plantilla, en orden, con su explicación. Son las mismas del Excel de Exportar. */
-export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: string | number; alias: string[] }[] = [
+/**
+ * Columnas de la plantilla, en orden, con su explicación. Son las mismas del Excel de Exportar.
+ * Las `deTipo` solo aplican a algunos tipos: en la fila de ejemplo del transmisor van vacías.
+ */
+export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: string | number; alias: string[]; deTipo?: true }[] = [
   { campo: 'tagISA', titulo: 'Tag ISA', ayuda: 'Obligatorio. Forma PT-101, FIC-2003 o TT-15A. No se puede repetir dentro de la misma área y sub área.', ejemplo: 'PT-101', alias: ['tag', 'isa', 'etiqueta'] },
   { campo: 'servicio', titulo: 'Servicio', ayuda: 'Obligatorio para instrumentos nuevos. Qué mide o controla.', ejemplo: 'Presión de vapor a cabezal', alias: ['descripcion', 'funcion'] },
+  {
+    campo: 'tipo',
+    titulo: 'Tipo',
+    ayuda: `Opcional. Define qué prueba pide su calibración. Uno de: ${TIPOS.join(', ')}. También entiende las letras del tag (PT, KV, PSH…).`,
+    ejemplo: 'Transmisor de presión',
+    alias: ['tipodeinstrumento', 'tipoinstrumento', 'clase'],
+  },
   {
     campo: 'area',
     titulo: 'Área',
@@ -41,7 +62,23 @@ export const COLUMNAS: { campo: Campo; titulo: string; ayuda: string; ejemplo: s
   { campo: 'rangoMax', titulo: 'Rango máx.', ayuda: 'Opcional. Número mayor que el mínimo.', ejemplo: 20, alias: ['rangomaximo', 'maximo', 'max'] },
   { campo: 'unidades', titulo: 'Unidades', ayuda: 'Opcional. Ej.: kg/cm², psi, °C, %, m³/h.', ejemplo: 'kg/cm²', alias: ['unidad', 'ue'] },
   { campo: 'senal', titulo: 'Señal', ayuda: `Opcional. Una de: ${SENALES.join(', ')}.`, ejemplo: '4-20 mA + HART', alias: ['salida', 'tipodesenal'] },
-  { campo: 'alimentacion', titulo: 'Alimentación', ayuda: 'Opcional. 24 VCD o 120 VCA.', ejemplo: '24 VCD', alias: ['voltaje'] },
+  { campo: 'alimentacion', titulo: 'Alimentación', ayuda: 'Opcional. 24 VCD o 120 VCA. En válvulas de corte, la del solenoide.', ejemplo: '24 VCD', alias: ['voltaje', 'solenoide'] },
+  {
+    campo: 'accionValvula',
+    titulo: 'Acción de válvula',
+    ayuda: 'Solo válvulas. Aire para abrir (sin aire cierra) o Aire para cerrar (sin aire abre).',
+    ejemplo: 'Aire para abrir',
+    alias: ['accion', 'accionvalvula', 'falla', 'posicionafalla'],
+    deTipo: true,
+  },
+  { campo: 'posicionador', titulo: 'Posicionador', ayuda: `Solo válvula de control. Uno de: ${POSICIONADORES.join(', ')}.`, ejemplo: 'Digital (HART)', alias: [], deTipo: true },
+  { campo: 'rangoResorte', titulo: 'Rango del resorte', ayuda: 'Solo válvula de control. Ej.: 3-15 psi.', ejemplo: '3-15 psi', alias: ['resorte', 'benchset'], deTipo: true },
+  { campo: 'presionSuministro', titulo: 'Presión de suministro', ayuda: 'Solo válvula de control. Ej.: 20 psi.', ejemplo: '20 psi', alias: ['suministro', 'presiondeaire'], deTipo: true },
+  { campo: 'finalesCarrera', titulo: 'Finales de carrera', ayuda: `Solo válvula de corte. Uno de: ${FINALES_CARRERA.join(', ')}.`, ejemplo: 'Abierta y cerrada', alias: ['finales', 'limitswitch'], deTipo: true },
+  { campo: 'sensor', titulo: 'Sensor', ayuda: `Solo transmisor de temperatura. Uno de: ${SENSORES_TEMPERATURA.join(', ')}.`, ejemplo: 'RTD Pt100', alias: ['elemento', 'tiposensor'], deTipo: true },
+  { campo: 'puntoAjuste', titulo: 'Punto de ajuste', ayuda: 'Solo interruptores. Número, en las unidades del instrumento.', ejemplo: 10.5, alias: ['setpoint', 'ajuste', 'puntodedisparo'], deTipo: true },
+  { campo: 'disparaAl', titulo: 'Dispara al', ayuda: 'Solo interruptores. Al subir o Al bajar.', ejemplo: 'Al subir', alias: ['dispara', 'accioninterruptor'], deTipo: true },
+  { campo: 'contacto', titulo: 'Contacto', ayuda: 'Solo interruptores. NA o NC.', ejemplo: 'NA', alias: ['tipodecontacto'], deTipo: true },
   { campo: 'estado', titulo: 'Estado', ayuda: `Opcional (si va vacío: Operando). Uno de: ${ESTADOS_INSTRUMENTO.join(', ')}.`, ejemplo: 'Operando', alias: ['estatus', 'status'] },
   {
     campo: 'disparaCaldera',
@@ -114,6 +151,48 @@ function siNo(v: string): boolean | null {
 function senal(v: string): string | null {
   const k = clave(v)
   return SENALES.find((s) => clave(s) === k) ?? null
+}
+
+/** La opción de la lista que corresponde a lo escrito ("pt100" → "RTD Pt100"); null si no hay una sola. */
+function deLista(v: string, lista: readonly string[]): string | null {
+  const k = clave(v)
+  const exacta = lista.find((x) => clave(x) === k)
+  if (exacta) return exacta
+  const parecidas = lista.filter((x) => clave(x).includes(k) || k.includes(clave(x)))
+  return parecidas.length === 1 ? parecidas[0] : null
+}
+
+function accionValvula(v: string): string | null {
+  const k = clave(v)
+  if (k.includes('abrir') || ['ato', 'fc', 'fallacerrada', 'failclose', 'failclosed'].includes(k)) return ACCIONES_VALVULA[0].valor
+  if (k.includes('cerrar') || ['atc', 'fo', 'fallaabierta', 'failopen'].includes(k)) return ACCIONES_VALVULA[1].valor
+  return null
+}
+
+function disparaAl(v: string): string | null {
+  const k = clave(v)
+  if (k.includes('subir') || ['alto', 'h', 'high', 'sube', 'ascendente'].includes(k)) return DISPARA_AL[0]
+  if (k.includes('bajar') || ['bajo', 'l', 'low', 'baja', 'descendente'].includes(k)) return DISPARA_AL[1]
+  return null
+}
+
+function contacto(v: string): string | null {
+  const k = clave(v)
+  // "NO" es "normally open" en las hojas de datos en inglés.
+  if (['na', 'no', 'normalmenteabierto', 'normallyopen'].includes(k)) return CONTACTOS[0].valor
+  if (['nc', 'normalmentecerrado', 'normallyclosed'].includes(k)) return CONTACTOS[1].valor
+  return null
+}
+
+/** Campos de la ficha que se escogen de una lista; lo que no se reconoce se avisa y se deja como estaba. */
+const DE_LISTA: Partial<Record<Campo, { nombre: string; leer: (t: string) => string | null }>> = {
+  tipo: { nombre: 'Tipo', leer: tipoConocido },
+  accionValvula: { nombre: 'Acción de válvula', leer: accionValvula },
+  posicionador: { nombre: 'Posicionador', leer: (t) => deLista(t, POSICIONADORES) },
+  finalesCarrera: { nombre: 'Finales de carrera', leer: (t) => deLista(t, FINALES_CARRERA) },
+  sensor: { nombre: 'Sensor', leer: (t) => deLista(t, SENSORES_TEMPERATURA) },
+  disparaAl: { nombre: 'Dispara al', leer: disparaAl },
+  contacto: { nombre: 'Contacto', leer: contacto },
 }
 
 function numero(v: Celda): number | null | 'malo' {
@@ -300,9 +379,15 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
           leido.alimentacion = t.slice(0, 200)
           aviso(`Alimentación "${t}" no es 24 VCD ni 120 VCA: se guarda tal cual.`)
         }
-      } else if (campo === 'rangoMin' || campo === 'rangoMax') {
+      } else if (DE_LISTA[campo]) {
+        const { nombre, leer } = DE_LISTA[campo]
+        const r = leer(t)
+        if (r) (leido as Record<string, unknown>)[campo] = r
+        else aviso(`${nombre} "${t}" no está en la lista: se deja como estaba.`)
+      } else if (campo === 'rangoMin' || campo === 'rangoMax' || campo === 'puntoAjuste') {
         const n = numero(v)
-        if (n === 'malo') errores.push(`${campo === 'rangoMin' ? 'Rango mín.' : 'Rango máx.'} "${t}" no es un número.`)
+        const nombre = { rangoMin: 'Rango mín.', rangoMax: 'Rango máx.', puntoAjuste: 'Punto de ajuste' }[campo]
+        if (n === 'malo') errores.push(`${nombre} "${t}" no es un número.`)
         else leido[campo] = n
       } else if (campo === 'proximaCalibracion') {
         const f = fecha(v)
@@ -319,6 +404,8 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
       } else if (campo === 'servicio') {
         if (t.length > 200) errores.push('El servicio pasa de 200 letras.')
         else leido.servicio = t
+      } else if (campo === 'rangoResorte' || campo === 'presionSuministro') {
+        leido[campo] = t.slice(0, 60)
       } else {
         leido[campo] = t.slice(0, 200)
       }
@@ -377,7 +464,7 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
     if (!leido.area) return error('Falta el área (obligatoria para un instrumento nuevo).')
     resultado.nuevos.push({
       fila,
-      datos: {
+      datos: soloDatosDelTipo({
         tagISA: tag,
         servicio: leido.servicio,
         area: leido.area,
@@ -396,8 +483,18 @@ export function analizar(hojas: HojaLeida[], existentes: Existente[], actualizar
         estado: leido.estado ?? 'Operando',
         disparaCaldera: leido.disparaCaldera ?? false,
         notaDisparo: leido.notaDisparo ?? '',
+        tipo: leido.tipo ?? '',
+        accionValvula: leido.accionValvula ?? '',
+        posicionador: leido.posicionador ?? '',
+        rangoResorte: leido.rangoResorte ?? '',
+        presionSuministro: leido.presionSuministro ?? '',
+        finalesCarrera: leido.finalesCarrera ?? '',
+        sensor: leido.sensor ?? '',
+        puntoAjuste: leido.puntoAjuste ?? null,
+        disparaAl: leido.disparaAl ?? '',
+        contacto: leido.contacto ?? '',
         proximaCalibracion: leido.proximaCalibracion ?? null,
-      },
+      }),
     })
   })
   return resultado

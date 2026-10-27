@@ -118,7 +118,7 @@ const nfcMock = () => {
   await page.goBack()
   await page.click('a[href="/instrumentos/nuevo"]')
   await page.fill('input[placeholder="PT-101"]', 'TT-202')
-  await page.selectOption('select', 'Tratamiento de agua')
+  await page.selectOption('label:has-text("Área *") select', 'Tratamiento de agua')
   await page.fill('input[placeholder="Presión de vapor a cabezal"]', 'Temperatura agua de alimentación')
   await page.click('button:has-text("Siguiente")')
   await page.waitForURL('**/vincular')

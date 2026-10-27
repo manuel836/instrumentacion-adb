@@ -5,7 +5,8 @@ import { useCalibraciones } from '../lib/calibraciones'
 import { useFallasDeInstrumento } from '../lib/fallas'
 import { useFotosUbicacion, useInstrumento } from '../lib/instrumentos'
 import { useRefacciones } from '../lib/refacciones'
-import { errorPct, vencimiento } from '../lib/tolerancia'
+import { errorMaximo, textoError, textoTolerancia, vencimiento } from '../lib/tolerancia'
+import { datosDelTipo, detallePrueba, pruebaDe, textoResultado } from '../lib/tipos'
 import { fechaDia } from '../components/Calibracion'
 import { FotoImg } from '../components/FotoImg'
 import type { Calibracion, Falla } from '../types'
@@ -23,12 +24,10 @@ function duracion(f: Falla): string {
   return h < 48 ? `${h.toFixed(1)} h` : `${(h / 24).toFixed(1)} días`
 }
 
-/** Mayor error (en % del span) de las lecturas antes y después del ajuste. */
-function errorMaximo(c: Calibracion, cual: 'asFound' | 'asLeft'): string {
-  const errs = c.puntos.map((p) => errorPct(p[cual], p.entrada, c.rangoMin, c.rangoMax)).filter((e): e is number => e !== null)
-  if (errs.length === 0) return '—'
-  const peor = errs.reduce((a, b) => (Math.abs(b) > Math.abs(a) ? b : a))
-  return `${peor >= 0 ? '+' : ''}${peor.toFixed(2)} %`
+/** Mayor error de las lecturas antes y después del ajuste (en % del span o en unidades). */
+function textoErrorMaximo(c: Calibracion, cual: 'asFound' | 'asLeft'): string {
+  const peor = errorMaximo(c, cual)
+  return peor === null ? '—' : textoError(peor, c)
 }
 
 function Dato({ k, v }: { k: string; v: ReactNode }) {
@@ -130,6 +129,10 @@ export function HojaDeVida() {
             </figure>
           )}
           <dl className="grid flex-1 grid-cols-2 content-start gap-x-4 gap-y-2 sm:grid-cols-3 print:grid-cols-3">
+            {inst.tipo && <Dato k="Tipo" v={inst.tipo} />}
+            {datosDelTipo(inst).map((d) => (
+              <Dato key={d.k} k={d.k} v={d.v} />
+            ))}
             <Dato k="Área" v={inst.area} />
             {inst.subArea && <Dato k="Sub área" v={inst.subArea} />}
             <Dato k="Estado" v={inst.estado} />
@@ -140,7 +143,7 @@ export function HojaDeVida() {
             <Dato k="Marca" v={inst.marca} />
             <Dato k="Modelo" v={inst.modelo} />
             <Dato k="Serie" v={inst.serie} />
-            <Dato k="Rango" v={rango} />
+            {!['carrera', 'funcional'].includes(pruebaDe(inst.tipo)) && <Dato k="Rango" v={rango} />}
             <Dato k="Alimentación" v={inst.alimentacion} />
             <Dato k="Tag NFC" v={inst.nfcToken ? 'Vinculado' : 'Sin tag'} />
             <Dato
@@ -160,7 +163,7 @@ export function HojaDeVida() {
           <p>
             {calibraciones.length === 0
               ? 'Sin calibraciones registradas.'
-              : `${calibraciones.length} ${calibraciones.length === 1 ? 'calibración' : 'calibraciones'}; la última el ${fechaDia(ultima.fecha)} (${ultima.resultado.toLowerCase()}).`}{' '}
+              : `${calibraciones.length} ${calibraciones.length === 1 ? 'calibración' : 'calibraciones'}; la última el ${fechaDia(ultima.fecha)} (${textoResultado(ultima.resultado, ultima.tipo).toLowerCase()}).`}{' '}
             {fallas.length === 0
               ? 'Sin fallas registradas.'
               : `${fallas.length} ${fallas.length === 1 ? 'falla' : 'fallas'}: ${cuantas(cerradas.length, 'cerrada', 'cerradas')}, ${cuantas(fallas.length - cerradas.length, 'abierta o en proceso', 'abiertas o en proceso')}.`}
@@ -191,10 +194,13 @@ export function HojaDeVida() {
                   {calibraciones.map((c) => (
                     <tr key={c.id} className="break-inside-avoid">
                       <td className={`${td} whitespace-nowrap`}>{fechaDia(c.fecha)}</td>
-                      <td className={`${td} ${c.resultado === 'Fuera de tolerancia' ? 'font-semibold text-red-700' : ''}`}>{c.resultado}</td>
-                      <td className={`${td} whitespace-nowrap`}>{errorMaximo(c, 'asFound')}</td>
-                      <td className={`${td} whitespace-nowrap`}>{errorMaximo(c, 'asLeft')}</td>
-                      <td className={`${td} whitespace-nowrap`}>± {c.tolerancia} %</td>
+                      <td className={`${td} min-w-28`}>
+                        <span className={c.resultado === 'Fuera de tolerancia' ? 'font-semibold text-red-700' : ''}>{textoResultado(c.resultado, c.tipo)}</span>
+                        {detallePrueba(c) && <span className="block text-slate-600">{detallePrueba(c)}</span>}
+                      </td>
+                      <td className={`${td} whitespace-nowrap`}>{textoErrorMaximo(c, 'asFound')}</td>
+                      <td className={`${td} whitespace-nowrap`}>{textoErrorMaximo(c, 'asLeft')}</td>
+                      <td className={`${td} whitespace-nowrap`}>{c.tolerancia > 0 ? textoTolerancia(c) : '—'}</td>
                       <td className={td}>{c.patron || '—'}</td>
                       <td className={td}>{c.tecnico.nombre}</td>
                       <td className={`${td} whitespace-nowrap`}>{fechaDia(c.proxima) ?? '—'}</td>

@@ -10,8 +10,22 @@ import {
 } from '../lib/instrumentos'
 import { useSubareas } from '../lib/subareas'
 import { ALIMENTACIONES, alimentacionConocida, unidadConocida } from '../lib/unidades'
+import {
+  ACCIONES_VALVULA,
+  CONTACTOS,
+  DISPARA_AL,
+  FINALES_CARRERA,
+  POSICIONADORES,
+  SENSORES_TEMPERATURA,
+  camposDeTipo,
+  pruebaDe,
+  soloDatosDelTipo,
+  tipoSugerido,
+} from '../lib/tipos'
 import { Icono } from '../components/Icono'
 import { SelectorUnidades } from '../components/SelectorUnidades'
+import { SelectorTipo } from '../components/SelectorTipo'
+import { Segmentado } from '../components/PruebasCalibracion'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { AREAS, ESTADOS_INSTRUMENTO, SENALES, dondeEsta, type InstrumentoNuevo } from '../types'
 
@@ -30,6 +44,24 @@ function aFecha(t: Timestamp | null): string {
   return t ? t.toDate().toISOString().slice(0, 10) : ''
 }
 
+/** Lista con las opciones; un valor que no está en ella se sigue viendo para no perderlo al guardar. */
+function Opciones({ value, onChange, opciones, vacio, label }: { value: string; onChange: (v: string) => void; opciones: readonly { valor: string; texto: string }[]; vacio: string; label?: string }) {
+  return (
+    <select className="campo" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{vacio}</option>
+      {opciones.map((o) => (
+        <option key={o.valor} value={o.valor}>
+          {o.texto}
+        </option>
+      ))}
+      {value && !opciones.some((o) => o.valor === value) && <option value={value}>{value} (anterior)</option>}
+    </select>
+  )
+}
+
+const comoOpciones = (lista: readonly string[]) => lista.map((v) => ({ valor: v, texto: v }))
+const OPCIONES_ALIMENTACION = ALIMENTACIONES.map((a) => ({ valor: a.valor, texto: a.texto }))
+
 export function FormInstrumento() {
   const { id } = useParams()
   const existente = useInstrumento(id)
@@ -38,6 +70,8 @@ export function FormInstrumento() {
   const navigate = useNavigate()
   const [datos, setDatos] = useState<InstrumentoNuevo>(instrumentoVacio())
   const [masDatos, setMasDatos] = useState(false)
+  /** En un alta, el tipo se sugiere por el tag mientras no se elija a mano. */
+  const [tipoAMano, setTipoAMano] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -61,6 +95,19 @@ export function FormInstrumento() {
 
   const set = <K extends keyof InstrumentoNuevo>(k: K, v: InstrumentoNuevo[K]) => setDatos((d) => ({ ...d, [k]: v }))
   const num = (s: string) => (s.trim() === '' ? null : Number(s))
+  const numDecimal = (s: string) => {
+    const t = s.trim().replace(',', '.')
+    return t === '' || !Number.isFinite(Number(t)) ? null : Number(t)
+  }
+
+  function cambiarTipo(tipo: string) {
+    setDatos((d) => {
+      // En un alta, interruptores y válvulas de corte suelen ser de señal discreta.
+      const discreta = ['interruptor', 'funcional'].includes(pruebaDe(tipo))
+      const senal = id || !['4-20 mA', 'Discreta'].includes(d.senal) ? d.senal : discreta ? 'Discreta' : '4-20 mA'
+      return { ...d, tipo, senal }
+    })
+  }
 
   // El tag NFC y las fotos son opcionales: se pueden agregar después desde la ficha.
   async function onSubmit(e: Pick<FormEvent, 'preventDefault'>, conTagYFotos = true) {
@@ -77,7 +124,14 @@ export function FormInstrumento() {
         setError(`Ya existe ${tagISA} en ${dondeEsta(datos)}. El mismo tag solo se puede repetir en otra área o sub área.`)
         return
       }
-      const limpio = { ...datos, tagISA, servicio: datos.servicio.trim(), notaDisparo: datos.disparaCaldera ? datos.notaDisparo.trim() : '' }
+      const limpio = soloDatosDelTipo({
+        ...datos,
+        tagISA,
+        servicio: datos.servicio.trim(),
+        notaDisparo: datos.disparaCaldera ? datos.notaDisparo.trim() : '',
+        rangoResorte: datos.rangoResorte.trim(),
+        presionSuministro: datos.presionSuministro.trim(),
+      })
       if (id) {
         const { nfcToken: _t, docs: _d, portadaMiniatura: _p, ...editables } = limpio
         actualizarInstrumento(id, editables)
@@ -94,6 +148,10 @@ export function FormInstrumento() {
 
   if (id && existente === undefined) return <p className="p-6 text-slate-500">Cargando…</p>
 
+  const sugerido = tipoSugerido(datos.tagISA)
+  const campos = camposDeTipo(datos.tipo)
+  const prueba = pruebaDe(datos.tipo)
+  const esValvula = prueba === 'carrera' || prueba === 'funcional'
   const delArea = (subareas ?? []).filter((s) => s.area === datos.area).map((s) => s.nombre)
   // Si la sub área se quitó o renombró, la que ya tenía se sigue viendo para no perderla al guardar.
   const opciones = datos.subArea && !delArea.includes(datos.subArea) ? [...delArea, datos.subArea] : delArea
@@ -116,10 +174,107 @@ export function FormInstrumento() {
           required
           placeholder="PT-101"
           value={datos.tagISA}
-          onChange={(e) => set('tagISA', e.target.value.toUpperCase())}
+          onChange={(e) => {
+            const tagISA = e.target.value.toUpperCase()
+            set('tagISA', tagISA)
+            if (!id && !tipoAMano) cambiarTipo(tipoSugerido(tagISA) ?? '')
+          }}
           autoCapitalize="characters"
         />
       </Campo>
+      <div>
+        <Campo label="Tipo de instrumento">
+          <SelectorTipo
+            value={datos.tipo}
+            onChange={(v) => {
+              setTipoAMano(true)
+              cambiarTipo(v)
+            }}
+          />
+        </Campo>
+        <p className="mt-1 text-xs text-slate-500">
+          {!id && !tipoAMano && datos.tipo
+            ? 'Sugerido por el tag; cámbialo si no es. '
+            : 'Define qué prueba pide su calibración. '}
+          {id && !datos.tipo && sugerido && (
+            <button type="button" className="font-semibold text-marca-700" onClick={() => cambiarTipo(sugerido)}>
+              Usar «{sugerido}» (según el tag)
+            </button>
+          )}
+        </p>
+      </div>
+      {campos.length > 0 && (
+        <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+          <p className="text-sm font-semibold">Datos de {datos.tipo.toLowerCase()}</p>
+          {campos.includes('accionValvula') && (
+            <div>
+              <span className="etiqueta">Acción</span>
+              <div role="radiogroup" aria-label="Acción" className="grid grid-cols-2 gap-2">
+                {ACCIONES_VALVULA.map((a) => (
+                  <button
+                    key={a.valor}
+                    type="button"
+                    role="radio"
+                    aria-checked={datos.accionValvula === a.valor}
+                    className={`rounded-lg border p-2 text-left text-sm ${datos.accionValvula === a.valor ? 'border-marca-700 bg-marca-50' : 'border-slate-300'}`}
+                    onClick={() => set('accionValvula', datos.accionValvula === a.valor ? '' : a.valor)}
+                  >
+                    <span className="block font-semibold">{a.valor}</span>
+                    <span className="block text-xs text-slate-600">{a.ayuda}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {campos.includes('posicionador') && (
+            <Campo label="Posicionador">
+              <Opciones label="Posicionador" value={datos.posicionador} onChange={(v) => set('posicionador', v)} opciones={comoOpciones(POSICIONADORES)} vacio="Sin especificar" />
+            </Campo>
+          )}
+          {campos.includes('rangoResorte') && (
+            <div className="grid grid-cols-2 gap-3">
+              <Campo label="Rango del resorte">
+                <input className="campo" placeholder="3-15 psi" maxLength={60} value={datos.rangoResorte} onChange={(e) => set('rangoResorte', e.target.value)} />
+              </Campo>
+              <Campo label="Presión de suministro">
+                <input className="campo" placeholder="20 psi" maxLength={60} value={datos.presionSuministro} onChange={(e) => set('presionSuministro', e.target.value)} />
+              </Campo>
+            </div>
+          )}
+          {campos.includes('finalesCarrera') && (
+            <>
+              <Campo label="Finales de carrera">
+                <Opciones label="Finales de carrera" value={datos.finalesCarrera} onChange={(v) => set('finalesCarrera', v)} opciones={comoOpciones(FINALES_CARRERA)} vacio="Sin especificar" />
+              </Campo>
+              <Campo label="Alimentación del solenoide">
+                <Opciones label="Alimentación del solenoide" value={datos.alimentacion} onChange={(v) => set('alimentacion', v)} opciones={OPCIONES_ALIMENTACION} vacio="Sin especificar" />
+              </Campo>
+            </>
+          )}
+          {campos.includes('sensor') && (
+            <Campo label="Sensor">
+              <Opciones label="Sensor" value={datos.sensor} onChange={(v) => set('sensor', v)} opciones={comoOpciones(SENSORES_TEMPERATURA)} vacio="Sin especificar" />
+            </Campo>
+          )}
+          {campos.includes('puntoAjuste') && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label={`Punto de ajuste${datos.unidades ? ` (${datos.unidades})` : ''}`}>
+                  <PuntoAjuste valor={datos.puntoAjuste} onChange={(v) => set('puntoAjuste', v)} leer={numDecimal} />
+                </Campo>
+                <Campo label="Contacto">
+                  <Opciones label="Contacto" value={datos.contacto} onChange={(v) => set('contacto', v)} opciones={CONTACTOS} vacio="Sin especificar" />
+                </Campo>
+              </div>
+              <div>
+                <span className="etiqueta">Dispara</span>
+                <Segmentado etiqueta="Dispara" opciones={comoOpciones(DISPARA_AL)} valor={datos.disparaAl} onChange={(v) => set('disparaAl', v)} />
+              </div>
+              <p className="text-xs text-slate-500">Las unidades se eligen en “Más datos”.</p>
+            </>
+          )}
+        </div>
+      )}
       <Campo label="Área *">
         <select
           className="campo"
@@ -216,15 +371,20 @@ export function FormInstrumento() {
             <Campo label="Serie">
               <input className="campo" value={datos.serie} onChange={(e) => set('serie', e.target.value)} />
             </Campo>
-            <Campo label="Unidades">
-              <SelectorUnidades value={datos.unidades} onChange={(v) => set('unidades', v)} />
-            </Campo>
-            <Campo label="Rango mínimo">
-              <input className="campo" inputMode="decimal" value={datos.rangoMin ?? ''} onChange={(e) => set('rangoMin', num(e.target.value))} />
-            </Campo>
-            <Campo label="Rango máximo">
-              <input className="campo" inputMode="decimal" value={datos.rangoMax ?? ''} onChange={(e) => set('rangoMax', num(e.target.value))} />
-            </Campo>
+            {/* La válvula se calibra de 0 a 100 % de carrera: no lleva rango ni unidades. */}
+            {!esValvula && (
+              <>
+                <Campo label="Unidades">
+                  <SelectorUnidades value={datos.unidades} onChange={(v) => set('unidades', v)} />
+                </Campo>
+                <Campo label={prueba === 'interruptor' ? 'Rango ajustable mín.' : 'Rango mínimo'}>
+                  <input className="campo" inputMode="decimal" value={datos.rangoMin ?? ''} onChange={(e) => set('rangoMin', num(e.target.value))} />
+                </Campo>
+                <Campo label={prueba === 'interruptor' ? 'Rango ajustable máx.' : 'Rango máximo'}>
+                  <input className="campo" inputMode="decimal" value={datos.rangoMax ?? ''} onChange={(e) => set('rangoMax', num(e.target.value))} />
+                </Campo>
+              </>
+            )}
           </div>
           <Campo label="Señal">
             <select className="campo" value={datos.senal} onChange={(e) => set('senal', e.target.value)}>
@@ -233,20 +393,12 @@ export function FormInstrumento() {
               ))}
             </select>
           </Campo>
-          <Campo label="Alimentación">
-            <select className="campo" value={datos.alimentacion} onChange={(e) => set('alimentacion', e.target.value)}>
-              <option value="">Sin especificar</option>
-              {ALIMENTACIONES.map((a) => (
-                <option key={a.valor} value={a.valor}>
-                  {a.texto}
-                </option>
-              ))}
-              {/* Si traía otra cosa escrita, se sigue viendo para no perderla al guardar. */}
-              {datos.alimentacion && !ALIMENTACIONES.some((a) => a.valor === datos.alimentacion) && (
-                <option value={datos.alimentacion}>{datos.alimentacion} (anterior)</option>
-              )}
-            </select>
-          </Campo>
+          {/* En la válvula de corte va arriba, como la del solenoide. */}
+          {prueba !== 'funcional' && (
+            <Campo label="Alimentación">
+              <Opciones value={datos.alimentacion} onChange={(v) => set('alimentacion', v)} opciones={OPCIONES_ALIMENTACION} vacio="Sin especificar" />
+            </Campo>
+          )}
           <Campo label="Estado">
             <select className="campo" value={datos.estado} onChange={(e) => set('estado', e.target.value as InstrumentoNuevo['estado'])}>
               {ESTADOS_INSTRUMENTO.map((s) => (
@@ -301,5 +453,26 @@ export function FormInstrumento() {
         </button>
       )}
     </form>
+  )
+}
+
+/** Número con coma o punto; lo escrito se respeta mientras se teclea ("10." o "-"). */
+function PuntoAjuste({ valor, onChange, leer }: { valor: number | null; onChange: (v: number | null) => void; leer: (s: string) => number | null }) {
+  const [texto, setTexto] = useState(valor === null ? '' : String(valor))
+  useEffect(() => {
+    if (leer(texto) !== valor) setTexto(valor === null ? '' : String(valor))
+    // Solo cuando el valor cambia desde fuera (al cargar el instrumento), no al teclear.
+  }, [valor])
+  return (
+    <input
+      className="campo"
+      inputMode="decimal"
+      aria-label="Punto de ajuste"
+      value={texto}
+      onChange={(e) => {
+        setTexto(e.target.value)
+        onChange(leer(e.target.value))
+      }}
+    />
   )
 }

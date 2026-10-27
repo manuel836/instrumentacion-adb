@@ -62,7 +62,7 @@ async function excel(archivo, marcaDe) {
   await page.setInputFiles('input[type=file]', plantilla)
   await page.waitForSelector('text=Columnas reconocidas')
   const texto = await page.locator('section:has-text("3. Revisa")').innerText()
-  if (!/Tag ISA, Servicio, Área/.test(texto)) throw new Error('la plantilla no se reconoció')
+  if (!/Tag ISA, Servicio, Tipo, Área/.test(texto)) throw new Error('la plantilla no se reconoció')
   console.log('plantilla descargada y reconocida ok:', descarga.suggestedFilename())
 
   // Archivo con 520 instrumentos y 2 filas con error.

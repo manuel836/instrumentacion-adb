@@ -205,3 +205,33 @@ describe('unidades y alimentación', () => {
     expect(a.avisos.map((x) => [x.tag, x.mensaje])).toEqual([['AT-103', 'Alimentación "220 VCA" no es 24 VCD ni 120 VCA: se guarda tal cual.']])
   })
 })
+
+describe('tipo de instrumento', () => {
+  const hojas = (filas: (string | number | null)[][]) => [
+    { nombre: 'Instrumentos', filas: [['Tag ISA', 'Servicio', 'Área', 'Tipo', 'Acción de válvula', 'Punto de ajuste', 'Dispara al', 'Contacto'], ...filas] },
+  ]
+  const existentes: Existente[] = [{ id: 'i1', tagISA: 'FCV-70', datos: { area: 'Generación de vapor', servicio: 'Vapor de atomización' } }]
+
+  it('lee el tipo y sus datos, y avisa lo que no reconoce', () => {
+    const a = analizar(
+      hojas([
+        ['KV-12', 'Corte de gas', 'vapor', 'valvula de corte', 'FC', null, null, null],
+        ['PSH-3', 'Alta presión', 'vapor', 'PSH', null, '10,5', 'alto', 'NO'],
+        ['TT-4', 'Temperatura', 'vapor', 'Transmisor de temperatura', 'Aire para abrir', null, null, null],
+        ['FCV-70', null, 'vapor', 'Válvula de control', 'aire para cerrar', null, null, null],
+        ['XX-5', 'Otra cosa', 'agua', 'bomba', null, null, null, null],
+      ]),
+      existentes,
+      true,
+    )
+    expect(a.nuevos.map((n) => [n.datos.tagISA, n.datos.tipo, n.datos.accionValvula, n.datos.puntoAjuste, n.datos.disparaAl, n.datos.contacto])).toEqual([
+      ['KV-12', 'Válvula de corte', 'Aire para abrir', null, '', ''],
+      ['PSH-3', 'Interruptor de presión', '', 10.5, 'Al subir', 'NA'],
+      // La acción de válvula no es de un transmisor: no se guarda.
+      ['TT-4', 'Transmisor de temperatura', '', null, '', ''],
+      ['XX-5', '', '', null, '', ''],
+    ])
+    expect(a.actualizar).toEqual([{ fila: 5, id: 'i1', tagISA: 'FCV-70', cambios: { tipo: 'Válvula de control', accionValvula: 'Aire para cerrar' } }])
+    expect(a.avisos.map((x) => [x.tag, x.mensaje])).toEqual([['XX-5', 'Tipo "bomba" no está en la lista: se deja como estaba.']])
+  })
+})

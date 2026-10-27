@@ -116,7 +116,7 @@ async function abrirPT101(page) {
   const max = tec.page.locator('label:has-text("Rango máximo") input')
   if (!(await min.inputValue())) await min.fill('0')
   if (!(await max.inputValue())) await max.fill('20')
-  await tec.page.locator('label:has-text("Unidades") input').fill('kg/cm²')
+  await tec.page.selectOption('select[aria-label="Unidades"]', 'kg/cm²')
   // Con el rango ya capturado, los puntos se escriben a mano.
   const filas = [
     ['0', '0.3', '0.02'],

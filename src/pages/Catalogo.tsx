@@ -9,6 +9,7 @@ import { Estado, Pendiente } from '../components/Estado'
 import { FotoImg } from '../components/FotoImg'
 import { vencimiento } from '../lib/tolerancia'
 import { Icono } from '../components/Icono'
+import { TIPOS_INSTRUMENTO } from '../lib/tipos'
 
 function normalizar(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -27,10 +28,10 @@ export type OtroFiltro = keyof typeof OTROS_FILTROS
 
 /** Texto en el que busca el buscador: todo lo que alguien podría recordar del instrumento. */
 const textoBuscable = (i: Instrumento) =>
-  normalizar([i.tagISA, i.servicio, i.area, i.subArea, i.lazo, i.ubicacionTexto, i.pid, i.marca, i.modelo, i.serie].join(' '))
+  normalizar([i.tagISA, i.servicio, i.tipo, i.area, i.subArea, i.lazo, i.ubicacionTexto, i.pid, i.marca, i.modelo, i.serie].join(' '))
 
 const CLAVE_SCROLL = 'catalogo-scroll'
-/** Valor del filtro de sub área para los instrumentos que no tienen. */
+/** Valor del filtro de sub área (y de tipo) para los instrumentos que no tienen. */
 const SIN_SUB = '-'
 
 export function Catalogo() {
@@ -49,6 +50,7 @@ export function Catalogo() {
   const area = params.get('area') ?? ''
   const sub = area ? (params.get('sub') ?? '') : ''
   const estado = params.get('estado') ?? ''
+  const tipo = params.get('tipo') ?? ''
   const filtro = (params.get('filtro') ?? '') as OtroFiltro | ''
   const cambiar = (clave: string, valor: string) =>
     setParams(
@@ -60,7 +62,7 @@ export function Catalogo() {
       },
       { replace: true },
     )
-  const hayFiltros = !!(texto || area || estado || filtro)
+  const hayFiltros = !!(texto || area || estado || tipo || filtro)
   const subsDelArea = (subareas ?? []).filter((s) => s.area === area).map((s) => s.nombre)
 
   const q = useDeferredValue(normalizar(texto.trim()))
@@ -74,10 +76,11 @@ export function Catalogo() {
         (!area || i.area === area) &&
         (!sub || i.subArea === (sub === SIN_SUB ? '' : sub)) &&
         (!estado || i.estado === estado) &&
+        (!tipo || i.tipo === (tipo === SIN_SUB ? '' : tipo)) &&
         (!extra || extra(i)) &&
         (!q || (buscables.get(i.id) ?? '').includes(q)),
     )
-  }, [lista, buscables, q, area, sub, estado, filtro])
+  }, [lista, buscables, q, area, sub, estado, tipo, filtro])
 
   const contenedor = useRef<HTMLDivElement>(null)
   const virtual = useWindowVirtualizer({
@@ -166,6 +169,19 @@ export function Catalogo() {
             <option value={SIN_SUB}>Sin sub área</option>
           </select>
         )}
+        <select className="campo py-2 text-sm" value={tipo} onChange={(e) => cambiar('tipo', e.target.value)} aria-label="Tipo">
+          <option value="">Todos los tipos</option>
+          {TIPOS_INSTRUMENTO.map((g) => (
+            <optgroup key={g.grupo} label={g.grupo}>
+              {g.tipos.map((t) => (
+                <option key={t.valor} value={t.valor}>
+                  {t.valor}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+          <option value={SIN_SUB}>Sin tipo</option>
+        </select>
         <select className="campo py-2 text-sm" value={filtro} onChange={(e) => cambiar('filtro', e.target.value)} aria-label="Otros filtros">
           <option value="">Sin otros filtros</option>
           {(Object.keys(OTROS_FILTROS) as OtroFiltro[]).map((k) => (
@@ -235,6 +251,7 @@ function Fila({ i, alto, y }: { i: ConPendiente<Instrumento>; alto: number; y: n
         <p className="truncate text-sm text-slate-600">{i.servicio}</p>
         <p className="truncate text-xs text-slate-400">
           {i.disparaCaldera && <span className="font-semibold text-red-700">Dispara caldera · </span>}
+          {i.tipo && `${i.tipo} · `}
           {i.area}
           {!i.nfcToken && ' · sin tag'}
           {v === 'vencida' && <span className="text-red-700"> · calibración vencida</span>}

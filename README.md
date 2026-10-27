@@ -44,7 +44,7 @@ el `.env.production` (proyecto real) gana sobre `.env.local`.
 
 Pruebas:
 
-- `npm test`: pruebas unitarias (token del tag, tamaño NDEF, cálculos de calibración, lectura de Excel
+- `npm test`: pruebas unitarias (token del tag, tamaño NDEF, cálculos de calibración, tipos de instrumento, lectura de Excel
   y CSV para importar, y el aviso semanal de calibraciones de las Functions).
 - `npm run test:reglas`: reglas de Firestore contra el emulador.
 - `node e2e/fase1.cjs`: flujo completo con Playwright contra `npx vite build --mode emuladores && npx vite preview --port 4173`
@@ -90,6 +90,10 @@ Pruebas:
 - `node e2e/formulario-instrumento.cjs`: unidades y alimentación de una lista (y las escritas a mano de
   antes se acomodan), quitar una próxima calibración puesta por error, y documentos con la cámara, de la
   galería (varias a la vez) o PDF, con la foto subida completa. Crea sus propios datos.
+- `node e2e/tipos-calibracion.cjs`: tipo de instrumento sugerido por el tag y sus datos (válvula de
+  corte con aire para abrir, sensor del transmisor de temperatura), y la calibración de cada tipo:
+  prueba funcional de la KV con revisiones y tiempos, transmisor leído en mA, interruptor con disparo,
+  reposición y diferencial, y válvula de control con señal invertida. Crea sus propios datos.
 
 Con los emuladores recién arrancados y el admin creado, el orden que funciona es: fase1, fase2, fase3,
 fase4, usuarios, restablecer, borrar, borrar-falla, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,
