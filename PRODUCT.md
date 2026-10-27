@@ -64,11 +64,12 @@ Vocabulario de la planta que la interfaz ya usa: Ficha, Hoja de vida, Vincular t
 - Nombre: **Instrumentación ADB**, con "Agroindustrias del Balsas" como subtítulo en el acceso; nombre corto al instalar: "Instrumentos".
 - Ícono: `public/icons/icon.svg` (y sus PNG de 192 y 512 px).
 - Voz: español sencillo y directo, de tú, que dice qué pasa y qué hacer ("Sin conexión: los cambios se guardan en el teléfono", "Toca aquí para elegir la tuya").
-- La app debe llevar el **logo oficial de la empresa** (lo pidió Manuel el 27 de octubre de 2026). El archivo aún no está en el repositorio y falta confirmar si es el de Agroindustrias del Balsas o el de Fertinal: no dibujar ni inventar uno, pedir el archivo.
+- La app debe llevar el **logo oficial de Fertinal** (lo pidió Manuel el 27 de octubre de 2026 y mandó el archivo): `docs/marca/logo-fertinal.png`, símbolo arriba y la palabra "Fertinal" abajo, con ®. Usar ese archivo tal cual; no redibujarlo, recortarle partes ni cambiarle los colores.
 
 ## Evidence on Hand
 
 - Especificación del 24 de octubre de 2026 (PDF de Manuel, fuera del repositorio).
+- Logo oficial de Fertinal: `docs/marca/logo-fertinal.png` (PNG de 2792 × 1646 px).
 - Pruebas de punta a punta en `e2e/` y pruebas unitarias y de reglas en `src/`, `functions/src` y `tests/`.
 - No hay en el repositorio fotos reales de la planta, cifras de uso, testimonios ni datos reales del catálogo: no inventarlos.
 
