@@ -14,6 +14,8 @@ import { useInstrumento } from '../lib/instrumentos'
 import { AvisoDisparo } from '../components/AvisoDisparo'
 import { BorrarFalla } from '../components/BorrarFalla'
 import { avisarGuardado } from '../components/Listo'
+import { AvisoBorrador } from '../components/AvisoBorrador'
+import { useBorrador } from '../hooks/useBorrador'
 import { Silueta } from '../components/Silueta'
 
 /** Llegó al servidor más de 10 minutos después de reportarse: se dice cuándo. */
@@ -34,6 +36,18 @@ export function DetalleFalla() {
   const [causa, setCausa] = useState('')
   const [accion, setAccion] = useState('')
   const [error, setError] = useState('')
+  const borrador = useBorrador(id ? `cierre:${id}` : null, { cerrando, causa, accion }, !!falla && falla.estado !== 'Cerrada', (d) => {
+    setCerrando(d.cerrando)
+    setCausa(d.causa)
+    setAccion(d.accion)
+  })
+
+  function dejarDeCerrar() {
+    setCerrando(false)
+    setCausa('')
+    setAccion('')
+    setError('')
+  }
 
   if (falla === undefined) return <Silueta />
   if (falla === null) return <p className="p-6 text-slate-500">Esta falla no existe. Puede que el administrador la haya eliminado.</p>
@@ -49,7 +63,7 @@ export function DetalleFalla() {
     }
     cerrarFalla(falla, causa, accion, yo, !!falla.tecnicoAsignado)
     avisarGuardado('Falla cerrada.', 'Falla cerrada en el teléfono. Se envía cuando haya señal.')
-    setCerrando(false)
+    dejarDeCerrar()
   }
 
   return (
@@ -132,6 +146,7 @@ export function DetalleFalla() {
       {cerrando && (
         <form onSubmit={onCerrar} className="tarjeta origin-top animate-desplegar space-y-3">
           <h2 className="font-semibold">Cerrar falla</h2>
+          <AvisoBorrador borrador={borrador} />
           <label className="block">
             <span className="etiqueta">Causa raíz *</span>
             <textarea className="campo min-h-20" value={causa} onChange={(e) => setCausa(e.target.value)} />
@@ -142,7 +157,7 @@ export function DetalleFalla() {
           </label>
           {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
           <div className="flex gap-2">
-            <button type="button" className="btn-secundario flex-1" onClick={() => setCerrando(false)}>
+            <button type="button" className="btn-secundario flex-1" onClick={dejarDeCerrar}>
               Cancelar
             </button>
             <button className="btn-primario flex-1">Cerrar</button>

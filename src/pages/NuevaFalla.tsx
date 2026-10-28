@@ -6,6 +6,8 @@ import { useInstrumentos } from '../lib/instrumentos'
 import { SelectorFotos, type FotoNueva } from '../components/SelectorFotos'
 import { dondeEsta } from '../types'
 import { avisarGuardado } from '../components/Listo'
+import { AvisoBorrador } from '../components/AvisoBorrador'
+import { useBorrador } from '../hooks/useBorrador'
 
 export function NuevaFalla() {
   const [params] = useSearchParams()
@@ -18,6 +20,11 @@ export function NuevaFalla() {
   const [fotos, setFotos] = useState<FotoNueva[]>([])
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
+  const borrador = useBorrador(`falla:${params.get('instrumento') ?? 'nueva'}`, { instrumentoId, descripcion, fotos }, true, (d) => {
+    setInstrumentoId(d.instrumentoId)
+    setDescripcion(d.descripcion)
+    setFotos(d.fotos)
+  })
 
   const inst = instrumentos?.find((i) => i.id === instrumentoId)
   const sugerencias = useMemo(() => {
@@ -43,6 +50,7 @@ export function NuevaFalla() {
         fotos.map((f) => f.archivo),
         { uid: user.uid, nombre: user.displayName || user.email || 'Usuario' },
       )
+      borrador.terminar()
       avisarGuardado('Falla reportada.', 'Falla guardada en el teléfono. Se envía cuando haya señal.')
       navigate(`/fallas/${id}`, { replace: true })
     } catch (err) {
@@ -54,6 +62,7 @@ export function NuevaFalla() {
   return (
     <form onSubmit={onSubmit} className="space-y-4 p-4">
       <h1 className="text-xl font-bold">Reportar falla</h1>
+      <AvisoBorrador borrador={borrador} />
 
       <div>
         <span className="etiqueta">Instrumento *</span>

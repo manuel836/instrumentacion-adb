@@ -8,6 +8,7 @@ import { useNoLeidosGeneral } from '../lib/chat'
 import { useNoLeidosPrivados } from '../lib/privados'
 import { sinConfirmar } from '../lib/rechazos'
 import { subidasDe } from '../lib/uploadQueue'
+import { hayVersionNueva, suscribirVersion } from '../lib/version'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
 import { ConCarga } from './Diferida'
 import { Icono } from './Icono'
@@ -48,6 +49,18 @@ export function BarraConexion() {
       )}
       {verDetenidas && <SubidasDetenidas onCerrar={cerrar} />}
     </>
+  )
+}
+
+/** Hay versión nueva pero alguien está escribiendo: se instala al terminar, o ya si la persona quiere. */
+function AvisoVersion() {
+  const [nueva, setNueva] = useState(hayVersionNueva)
+  useEffect(() => suscribirVersion(() => setNueva(hayVersionNueva())), [])
+  if (!nueva) return null
+  return (
+    <button className="block w-full bg-info-100 px-4 py-1.5 text-center text-sm font-medium text-info-900" onClick={() => location.reload()}>
+      Hay una versión nueva: se instala al terminar lo que escribes · Actualizar ya
+    </button>
   )
 }
 
@@ -99,6 +112,11 @@ function Menu({
             {usuarios && (
               <Link to="/subareas" className={clase}>
                 Sub áreas
+              </Link>
+            )}
+            {usuarios && (
+              <Link to="/telefonos" className={clase}>
+                Estado de los teléfonos
               </Link>
             )}
             <Link to="/refacciones" className={clase}>
@@ -226,6 +244,7 @@ export function Layout() {
           <Menu bitacora={p.verBitacora} exportar={p.exportar} importar={p.editarInstrumentos} usuarios={p.gestionarUsuarios} onSalir={() => void pedirSalida()} />
         </div>
         <BarraConexion />
+        <AvisoVersion />
         <AvisoContrasena />
         <AvisoNotificaciones />
         <AvisoListo />
