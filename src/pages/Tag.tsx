@@ -82,7 +82,7 @@ function VistaInvitado({ token }: { token: string }) {
         <section className="tarjeta space-y-3">
           <h2 className="font-semibold">Ubicación en campo</h2>
           <button className="block w-full overflow-hidden rounded-lg" onClick={() => setVisor(0)} aria-label={nombreFoto(0, fotos.length, fotos[0].pie)}>
-            <FotoImg url={fotos[0].url ?? fotos[0].miniaturaUrl} alt="" className="aspect-[4/3] w-full object-cover" />
+            <FotoImg url={fotos[0].url} respaldo={fotos[0].miniaturaUrl} alt="" className="aspect-[4/3] w-full object-cover" />
           </button>
           {fotos[0].pie && <p className="text-sm">{fotos[0].pie}</p>}
           {fotos.length > 1 && (

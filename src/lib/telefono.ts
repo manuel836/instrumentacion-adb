@@ -102,7 +102,8 @@ function erroresGuardados(): ErrorApp[] {
 
 /**
  * Errores que no son fallas de la app: falta de señal, permisos que la persona negó, y lo que
- * meten el navegador o sus extensiones ("Script error." es un script ajeno que no da detalles).
+ * meten el navegador o sus extensiones ("Script error." es un script ajeno que no da detalles;
+ * standardSelectors es del bloqueador de anuncios de Brave en el iPhone).
  */
 const RUIDO = [
   /ResizeObserver loop/,
@@ -111,16 +112,31 @@ const RUIDO = [
   /unavailable|offline|Failed to fetch|Load failed|NetworkError/,
   /^Script error\.?$/,
   /ethereum|web3|solana|phantom|metamask/i,
+  /standardSelectors/,
 ]
 
 function esRuido(mensaje: string) {
   return RUIDO.some((r) => r.test(mensaje))
 }
 
+/** El código de la app se sirve desde /assets/; lo demás lo metió el navegador o una extensión. */
+export const esDeLaApp = (archivo: string | undefined) => !!archivo?.startsWith(`${location.origin}/assets/`)
+
+/**
+ * Un error cuya pila no pasa por el código de la app es de un script ajeno: Brave en el iPhone,
+ * por ejemplo, mete su bloqueador de anuncios en la página y a veces falla. Si no trae pila no
+ * se sabe de dónde vino y sí se anota.
+ */
+function esDeOtroScript(err: unknown): boolean {
+  const pila = (err as { stack?: unknown } | null)?.stack
+  if (typeof pila !== 'string' || !/:\d+:\d+/.test(pila)) return false
+  return !pila.includes(`${location.origin}/assets/`)
+}
+
 /** Anota un error de la app; el admin lo ve en Estado de los teléfonos. */
 export function registrarError(err: unknown, donde = location.pathname) {
   const mensaje = (err instanceof Error ? `${err.name}: ${err.message}` : String(err)).slice(0, 300)
-  if (esRuido(mensaje)) return
+  if (esRuido(mensaje) || esDeOtroScript(err)) return
   const lista = [{ mensaje, donde: donde.slice(0, 100), fecha: Date.now() }, ...erroresGuardados().filter((e) => e.mensaje !== mensaje)]
   escribir(CLAVE_ERRORES, JSON.stringify(lista.slice(0, MAX_ERRORES)))
   programarEnvio()

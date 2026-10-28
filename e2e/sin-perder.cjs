@@ -210,11 +210,17 @@ async function cerrar(page, causa, accion) {
   console.log('lo que quedó sin respuesta al cerrar la app se revisa al reconectar ok')
 
   // Un error de la app queda anotado para el admin; los de scripts ajenos (una cartera de
-  // criptomonedas que mete el navegador) no.
+  // criptomonedas, el bloqueador de anuncios de Brave en el iPhone) no.
   await A.page.evaluate(() => {
-    void Promise.reject(new Error('Prueba de error para el admin'))
+    // Como los de la app: su pila pasa por /assets/.
+    const e = new Error('Prueba de error para el admin')
+    e.stack = `Error: Prueba de error para el admin\n    at guardar (${location.origin}/assets/index.js:1:100)`
+    void Promise.reject(e)
   })
   await A.page.addScriptTag({ content: 'window.ethereum = undefined; window.ethereum.selectedAddress = undefined' }).catch(() => undefined)
+  // Brave mete su script en la página: la promesa falla y su pila apunta a la página, no a /assets/.
+  await A.page.addScriptTag({ content: 'void (async () => { const n = undefined; return n.estiloAjeno })()' })
+  await A.page.addScriptTag({ content: "void (async () => { const n = undefined; return n.standardSelectors })()" })
 
   // ---------- Estado de los teléfonos (admin) ----------
   const adm = await entrar(browser, 'manuel@adb.test')
@@ -226,7 +232,9 @@ async function cerrar(page, causa, accion) {
   await tarjetaA.locator('text=3 registros rechazados por el servidor').waitFor({ timeout: 20000 })
   await tarjetaA.locator('summary:has-text("1 error reciente")').click()
   await tarjetaA.locator('text=Prueba de error para el admin').waitFor()
-  if (await tarjetaA.locator('text=ethereum').count()) throw new Error('se anotó el error de un script ajeno')
+  for (const ajeno of ['ethereum', 'estiloAjeno', 'standardSelectors']) {
+    if (await tarjetaA.locator(`text=${ajeno}`).count()) throw new Error(`se anotó el error de un script ajeno (${ajeno})`)
+  }
   await adm.page.locator('li.tarjeta', { hasText: 'Técnico B' }).waitFor()
   await shot(adm.page, '304-estado-telefonos')
   console.log('estado de los teléfonos: rechazos y errores de cada uno ok')

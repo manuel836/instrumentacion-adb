@@ -70,7 +70,14 @@ export function Galeria({ instrumentoId, editable }: { instrumentoId: string; ed
       {!editando && vista.length > 0 && (
         <>
           <button className="block w-full overflow-hidden rounded-lg" onClick={() => setVisor(0)} aria-label={nombreFoto(0, vista.length, vista[0].pie)}>
-            <FotoImg url={vista[0].url ?? vista[0].miniaturaUrl} ruta={vista[0].ruta} alt="" className="aspect-[4/3] w-full object-cover" />
+            <FotoImg
+              url={vista[0].url}
+              ruta={vista[0].ruta}
+              respaldo={vista[0].miniaturaUrl}
+              autor={vista[0].autor}
+              alt=""
+              className="aspect-[4/3] w-full object-cover"
+            />
           </button>
           {vista[0].pie && <p className="text-sm text-slate-700">{vista[0].pie}</p>}
           {vista.length > 1 && (
