@@ -93,19 +93,34 @@ export function describirDispositivo(ua = navigator.userAgent): string {
 
 function erroresGuardados(): ErrorApp[] {
   try {
-    return (JSON.parse(leer(CLAVE_ERRORES) ?? '[]') as ErrorApp[]).slice(0, MAX_ERRORES)
+    // Lo que se anotó con una versión anterior y resultó ser ruido ya no se manda.
+    return (JSON.parse(leer(CLAVE_ERRORES) ?? '[]') as ErrorApp[]).filter((e) => !esRuido(e.mensaje)).slice(0, MAX_ERRORES)
   } catch {
     return []
   }
 }
 
-/** Errores que no son fallas de la app: falta de señal, permisos que la persona negó, etc. */
-const RUIDO = [/ResizeObserver loop/, /dynamically imported module|Importing a module script failed/, /AbortError|NotAllowedError|aborted/, /unavailable|offline|Failed to fetch|Load failed|NetworkError/]
+/**
+ * Errores que no son fallas de la app: falta de señal, permisos que la persona negó, y lo que
+ * meten el navegador o sus extensiones ("Script error." es un script ajeno que no da detalles).
+ */
+const RUIDO = [
+  /ResizeObserver loop/,
+  /dynamically imported module|Importing a module script failed/,
+  /AbortError|NotAllowedError|aborted/,
+  /unavailable|offline|Failed to fetch|Load failed|NetworkError/,
+  /^Script error\.?$/,
+  /ethereum|web3|solana|phantom|metamask/i,
+]
+
+function esRuido(mensaje: string) {
+  return RUIDO.some((r) => r.test(mensaje))
+}
 
 /** Anota un error de la app; el admin lo ve en Estado de los teléfonos. */
 export function registrarError(err: unknown, donde = location.pathname) {
   const mensaje = (err instanceof Error ? `${err.name}: ${err.message}` : String(err)).slice(0, 300)
-  if (RUIDO.some((r) => r.test(mensaje))) return
+  if (esRuido(mensaje)) return
   const lista = [{ mensaje, donde: donde.slice(0, 100), fecha: Date.now() }, ...erroresGuardados().filter((e) => e.mensaje !== mensaje)]
   escribir(CLAVE_ERRORES, JSON.stringify(lista.slice(0, MAX_ERRORES)))
   programarEnvio()
