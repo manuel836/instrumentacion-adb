@@ -6,12 +6,13 @@ corre primero `gcloud auth login` y sigue el enlace.
 
 ## Qué queda respaldado
 
-Se activa una sola vez con estos cinco comandos (ya corridos el 28-oct-2026):
+Se activa una sola vez con estos cinco comandos (ya corridos el 28-oct-2026; el semanal de los lunes
+ya venía con la base desde que se creó):
 
 ```bash
 gcloud firestore databases update --database='(default)' --enable-pitr --project=instrumentacion-adb
 gcloud firestore backups schedules create --database='(default)' --recurrence=daily --retention=14d --project=instrumentacion-adb
-gcloud firestore backups schedules create --database='(default)' --recurrence=weekly --day-of-week=SUN --retention=14w --project=instrumentacion-adb
+gcloud firestore backups schedules create --database='(default)' --recurrence=weekly --day-of-week=MON --retention=14w --project=instrumentacion-adb
 gcloud storage buckets update gs://instrumentacion-adb.firebasestorage.app --soft-delete-duration=30d --project=instrumentacion-adb
 gcloud firestore databases update --database='(default)' --delete-protection --project=instrumentacion-adb
 ```
@@ -23,7 +24,7 @@ El último impide borrar por error la base completa de la app (por ejemplo, al b
 | --- | --- |
 | Fichas, fallas, chat, calibraciones, refacciones, usuarios y bitácora, **al minuto** | 7 días |
 | Lo mismo, como estaba cada día | 14 días |
-| Lo mismo, como estaba cada domingo | 14 semanas |
+| Lo mismo, como estaba cada lunes | 14 semanas |
 | Fotos y documentos borrados | 30 días |
 
 Los respaldos viven en Google Cloud, fuera de la app: borrar algo en la app no borra el respaldo.
@@ -55,7 +56,7 @@ gcloud firestore databases clone \
   --destination-database=recuperada --project=instrumentacion-adb
 ```
 
-**Si fue hace más**, busca el respaldo diario o del domingo anterior al error:
+**Si fue hace más**, busca el respaldo diario o del lunes anterior al error:
 
 ```bash
 gcloud firestore backups list --project=instrumentacion-adb --format='table(name,snapshotTime)'

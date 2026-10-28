@@ -131,7 +131,7 @@ el despliegue publica también en el sitio por defecto, instrumentacion-adb.web.
 
 ### Respaldos y alertas
 
-- Respaldos de Firestore (al minuto por 7 días, diarios por 14 días y de cada domingo por 14 semanas) y
+- Respaldos de Firestore (al minuto por 7 días, diarios por 14 días y de cada lunes por 14 semanas) y
   papelera de 30 días para fotos y documentos. Cómo activarlos y cómo recuperar algo borrado:
   [docs/respaldos.md](docs/respaldos.md).
 - Un correo cuando una Cloud Function falla: `bash scripts/alerta-errores.sh` en Cloud Shell (una vez).
