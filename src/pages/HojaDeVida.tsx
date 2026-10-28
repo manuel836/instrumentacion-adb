@@ -125,7 +125,7 @@ export function HojaDeVida() {
         <div className="mt-4 flex flex-col gap-4 sm:flex-row print:flex-row">
           {portada && (
             <figure className="shrink-0 sm:w-56 print:w-56">
-              <FotoImg url={portada.url ?? portada.miniaturaUrl} ruta={portada.ruta} alt={portada.pie || 'Ubicación'} className="max-h-72 w-full rounded border border-slate-300 object-cover sm:max-h-none print:max-h-none" />
+              <FotoImg url={portada.url} respaldo={portada.miniaturaUrl} ruta={portada.ruta} alt={portada.pie || 'Ubicación'} className="max-h-72 w-full rounded border border-slate-300 object-cover sm:max-h-none print:max-h-none" />
               {portada.pie && <figcaption className="mt-1 text-xs text-slate-600 print:text-[11px]">{portada.pie}</figcaption>}
             </figure>
           )}
