@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Timestamp } from 'firebase/firestore'
+import { AvisoBorrador } from '../components/AvisoBorrador'
+import { useBorrador } from '../hooks/useBorrador'
 import {
   actualizarInstrumento,
   crearInstrumento,
@@ -96,6 +98,22 @@ export function FormInstrumento() {
     }
   }, [existente])
 
+  // Del borrador solo se guarda lo que se escribe (texto, números, sí/no): las fechas y los
+  // documentos se quedan como estén en la ficha.
+  const escrito = Object.fromEntries(
+    Object.entries(datos).filter(([k, v]) => !['nfcToken', 'portadaMiniatura'].includes(k) && (v === null || ['string', 'number', 'boolean'].includes(typeof v))),
+  ) as Partial<InstrumentoNuevo>
+  const borrador = useBorrador(
+    `instrumento:${id ?? 'nuevo'}`,
+    { escrito, masDatos, tipoAMano },
+    !id || (!!existente && cargado.current === existente.id),
+    (d) => {
+      setDatos((x) => ({ ...x, ...d.escrito }))
+      setMasDatos(d.masDatos)
+      setTipoAMano(d.tipoAMano)
+    },
+  )
+
   const set = <K extends keyof InstrumentoNuevo>(k: K, v: InstrumentoNuevo[K]) => setDatos((d) => ({ ...d, [k]: v }))
   const num = (s: string) => (s.trim() === '' ? null : Number(s))
   const numDecimal = (s: string) => {
@@ -137,11 +155,13 @@ export function FormInstrumento() {
       })
       if (id) {
         const { nfcToken: _t, docs: _d, portadaMiniatura: _p, ...editables } = limpio
-        actualizarInstrumento(id, editables)
+        actualizarInstrumento(id, editables, tagISA)
+        borrador.terminar()
         avisarGuardado('Cambios guardados.', 'Cambios guardados en el teléfono. Se envía cuando haya señal.')
         navigate(`/instrumentos/${id}`, { replace: true })
       } else {
         const nuevoId = crearInstrumento(limpio)
+        borrador.terminar()
         avisarGuardado(`${tagISA} dado de alta.`, `${tagISA} dado de alta en el teléfono. Se envía cuando haya señal.`)
         // Alta rápida en campo: después del alta se ofrece vincular el tag y tomar fotos.
         navigate(conTagYFotos ? `/instrumentos/${nuevoId}/vincular` : `/instrumentos/${nuevoId}`, { replace: true })
@@ -164,6 +184,7 @@ export function FormInstrumento() {
   return (
     <form onSubmit={onSubmit} className="space-y-4 p-4">
       <h1 className="text-xl font-bold">{id ? `Editar ${datos.tagISA}` : 'Alta de instrumento'}</h1>
+      <AvisoBorrador borrador={borrador} />
       {!id && (
         <p className="text-sm text-slate-500">
           Solo el tag, el área y el servicio son obligatorios. El tag NFC, las fotos y lo demás se pueden agregar después desde la ficha.{' '}
@@ -465,7 +486,14 @@ export function FormInstrumento() {
 
       {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
       <div className="flex gap-2">
-        <button type="button" className="btn-secundario flex-1" onClick={() => navigate(-1)}>
+        <button
+          type="button"
+          className="btn-secundario flex-1"
+          onClick={() => {
+            borrador.terminar()
+            navigate(-1)
+          }}
+        >
           Cancelar
         </button>
         <button className="btn-primario flex-1" disabled={guardando}>

@@ -80,7 +80,7 @@ function firestore() {
   await page.goto(`${BASE}/fallas/nueva?instrumento=${ref.id}`)
   await page.fill('textarea', 'Retroaviso intermitente')
   await page.click('button:has-text("Reportar")')
-  await page.waitForURL(/\/fallas\/[^/]+$/)
+  await page.waitForURL((u) => /\/fallas\/[^/?]+$/.test(u.pathname) && !u.pathname.endsWith('/nueva'))
   await page.waitForSelector('[role=alert] >> text=Puede disparar la caldera')
   console.log('aviso en la falla ok')
 

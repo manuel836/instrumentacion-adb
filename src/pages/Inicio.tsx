@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
-import { duracionCierre, useFallas } from '../lib/fallas'
+import { duracionCierre, horaDelReporte, useFallas } from '../lib/fallas'
 import { useInstrumentos } from '../lib/instrumentos'
 import { porPedir, sinExistencia, useRefacciones } from '../lib/refacciones'
 import { vencimiento } from '../lib/tolerancia'
@@ -77,7 +77,7 @@ export function Inicio() {
     const ahora = Date.now()
     const cerradas30 = fs.filter((f) => f.estado === 'Cerrada' && (f.fechas.cerrada?.toMillis() ?? 0) > ahora - 30 * DIA)
     const horas = cerradas30
-      .map((f) => ((f.fechas.cerrada?.toMillis() ?? 0) - (f.fechas.creada?.toMillis() ?? 0)) / 3_600_000)
+      .map((f) => ((f.fechas.cerrada?.toMillis() ?? 0) - (horaDelReporte(f)?.toMillis() ?? 0)) / 3_600_000)
       .filter((h) => h > 0)
     return {
       total: insts.length,

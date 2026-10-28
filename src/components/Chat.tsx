@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { useBorrador } from '../hooks/useBorrador'
 import { enviarMensaje, MAX_FOTOS_MENSAJE, useMensajes, type Tambien } from '../lib/chat'
 import { FotoImg } from './FotoImg'
 import { nombreFoto, Visor, type FotoVisor } from './Visor'
@@ -47,6 +48,11 @@ export function Chat({
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [visor, setVisor] = useState<{ fotos: FotoVisor[]; i: number } | null>(null)
+  // Lo que se está escribiendo (y sus fotos) sobrevive si Android cierra Chrome al abrir la cámara.
+  useBorrador(cerrado ? null : `chat:${ruta}`, { texto, fotos }, true, (d) => {
+    setTexto(d.texto)
+    setFotos(d.fotos)
+  })
   const input = useRef<HTMLInputElement>(null)
   const fin = useRef<HTMLDivElement>(null)
   const antes = useRef<number | null>(null)

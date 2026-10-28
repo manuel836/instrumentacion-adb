@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
+import { collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Falla, FotoFalla, Instrumento, Persona } from '../types'
 import { comprimirFoto } from './images'
 import type { ConPendiente } from './instrumentos'
+import { vigilar } from './rechazos'
 import { descartarDePrefijo, encolar } from './uploadQueue'
 
 const colFallas = collection(db, 'fallas')
@@ -16,10 +17,15 @@ function aFalla(id: string, d: Record<string, unknown>, pendiente: boolean): Con
     causaRaiz: base.causaRaiz ?? '',
     accionCorrectiva: base.accionCorrectiva ?? '',
     tecnicoAsignado: base.tecnicoAsignado ?? null,
-    fechas: { creada: null, tomada: null, cerrada: null, ...(d.fechas as object) },
+    fechas: { creada: null, tomada: null, cerrada: null, enTelefono: null, ...(d.fechas as object) },
     id,
     sinSincronizar: pendiente,
   }
+}
+
+/** Hora real del reporte: la del teléfono si la tiene (sin señal, `creada` es la hora de llegada). */
+export function horaDelReporte(f: Pick<Falla, 'fechas'>) {
+  return f.fechas.enTelefono ?? f.fechas.creada
 }
 
 /** Tiempo promedio de cierre: minutos si fue menos de una hora (no "0.0 horas"), días si pasó de dos. */
@@ -83,7 +89,7 @@ export async function reportarFalla(inst: Instrumento, descripcion: string, arch
     url: null,
     miniaturaUrl: null,
   }))
-  void setDoc(ref_, {
+  const escritura = setDoc(ref_, {
     instrumentoId: inst.id,
     tagISA: inst.tagISA,
     area: inst.area,
@@ -95,7 +101,17 @@ export async function reportarFalla(inst: Instrumento, descripcion: string, arch
     fotos,
     causaRaiz: '',
     accionCorrectiva: '',
-    fechas: { creada: serverTimestamp(), tomada: null, cerrada: null },
+    // `creada` es la hora en que llegó al servidor; sin señal puede ser horas después.
+    // `enTelefono` guarda la hora real del reporte.
+    fechas: { creada: serverTimestamp(), tomada: null, cerrada: null, enTelefono: Timestamp.now() },
+  })
+  // Se espera a que quede en el teléfono: la persona puede cerrar la app en cuanto ve "Reportada".
+  await vigilar(escritura, {
+    docPath: ref_.path,
+    titulo: `Reporte de falla de ${inst.tagISA}`,
+    texto: descripcion.trim(),
+    ruta: `/instrumentos/${inst.id}`,
+    motivo: 'El servidor no aceptó el reporte. Puede que el instrumento se haya borrado mientras no había señal.',
   })
   if (fotos.length > 0) {
     await encolar(
@@ -113,18 +129,34 @@ export async function reportarFalla(inst: Instrumento, descripcion: string, arch
   return ref_.id
 }
 
-export function tomarFalla(id: string, tecnico: Persona) {
-  void updateDoc(doc(db, 'fallas', id), { estado: 'En proceso', tecnicoAsignado: tecnico, 'fechas.tomada': serverTimestamp() })
+export function tomarFalla(falla: Pick<Falla, 'id' | 'tagISA'>, tecnico: Persona) {
+  const escritura = updateDoc(doc(db, 'fallas', falla.id), { estado: 'En proceso', tecnicoAsignado: tecnico, 'fechas.tomada': serverTimestamp() })
+  vigilar(escritura, {
+    docPath: `fallas/${falla.id}`,
+    titulo: `Tomar la falla de ${falla.tagISA}`,
+    texto: '',
+    ruta: `/fallas/${falla.id}`,
+    motivo: 'Otra persona ya la había tomado o cerrado antes de que tu teléfono tuviera señal.',
+    esperado: { 'tecnicoAsignado.uid': tecnico.uid },
+  })
 }
 
-export function cerrarFalla(id: string, causaRaiz: string, accionCorrectiva: string, tecnico: Persona, yaAsignada: boolean) {
-  void updateDoc(doc(db, 'fallas', id), {
+export function cerrarFalla(falla: Pick<Falla, 'id' | 'tagISA'>, causaRaiz: string, accionCorrectiva: string, tecnico: Persona, yaAsignada: boolean) {
+  const escritura = updateDoc(doc(db, 'fallas', falla.id), {
     estado: 'Cerrada',
     causaRaiz: causaRaiz.trim(),
     accionCorrectiva: accionCorrectiva.trim(),
     'fechas.cerrada': serverTimestamp(),
     // Cerrar sin haberla tomado la asigna a quien la cierra.
     ...(yaAsignada ? {} : { tecnicoAsignado: tecnico, 'fechas.tomada': serverTimestamp() }),
+  })
+  vigilar(escritura, {
+    docPath: `fallas/${falla.id}`,
+    titulo: `Cierre de la falla de ${falla.tagISA}`,
+    texto: `Causa raíz: ${causaRaiz.trim()}\nAcción correctiva: ${accionCorrectiva.trim()}`,
+    ruta: `/fallas/${falla.id}`,
+    motivo: 'Otra persona la cerró antes de que tu teléfono tuviera señal, o el administrador la eliminó.',
+    esperado: { estado: 'Cerrada', causaRaiz: causaRaiz.trim() },
   })
 }
 

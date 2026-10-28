@@ -21,6 +21,8 @@ import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../firebase'
 import type { DocAdjunto, FotoUbicacion, Instrumento, InstrumentoNuevo } from '../types'
 import type { Analisis, InstrumentoImportado } from './importar'
+import { nombreCampo, textoValor } from './bitacora'
+import { vigilar } from './rechazos'
 import { comprimirFoto } from './images'
 import { descartarDeDocumento, descartarRuta, encolar } from './uploadQueue'
 
@@ -153,12 +155,38 @@ export async function tagISAExiste(tagISA: string, area: string, subArea: string
  */
 export function crearInstrumento(datos: InstrumentoNuevo): string {
   const ref_ = doc(colInstrumentos)
-  void setDoc(ref_, { ...datos, actualizado: serverTimestamp() })
+  vigilar(setDoc(ref_, { ...datos, actualizado: serverTimestamp() }), {
+    docPath: ref_.path,
+    titulo: `Alta de ${datos.tagISA}`,
+    texto: textoDeCambios(datos),
+    ruta: '/catalogo',
+    motivo: 'El servidor no aceptó el alta. Puede que tu cuenta haya cambiado de rol mientras no había señal.',
+  })
   return ref_.id
 }
 
-export function actualizarInstrumento(id: string, cambios: Partial<InstrumentoNuevo>) {
-  void updateDoc(doc(db, 'instrumentos', id), { ...cambios, actualizado: serverTimestamp() })
+/** "Servicio: Presión de vapor" por renglón, solo lo que es texto, número o sí/no. */
+function textoDeCambios(cambios: Partial<InstrumentoNuevo>) {
+  return Object.entries(cambios)
+    .filter(([, v]) => ['string', 'number', 'boolean'].includes(typeof v) && v !== '')
+    .map(([k, v]) => `${nombreCampo(k)}: ${textoValor(k, v)}`)
+    .join('\n')
+}
+
+/** Con `tagISA`, si el servidor no acepta los cambios se le avisa a la persona (formulario de la ficha). */
+export function actualizarInstrumento(id: string, cambios: Partial<InstrumentoNuevo>, tagISA?: string) {
+  const escritura = updateDoc(doc(db, 'instrumentos', id), { ...cambios, actualizado: serverTimestamp() })
+  if (!tagISA) {
+    void escritura
+    return
+  }
+  vigilar(escritura, {
+    docPath: `instrumentos/${id}`,
+    titulo: `Cambios en ${tagISA}`,
+    texto: textoDeCambios(cambios),
+    ruta: `/instrumentos/${id}`,
+    motivo: 'El servidor no aceptó los cambios. Puede que el instrumento se haya borrado mientras no había señal.',
+  })
 }
 
 export function asignarToken(id: string, token: string) {

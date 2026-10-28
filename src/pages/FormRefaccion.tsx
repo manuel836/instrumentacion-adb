@@ -5,6 +5,8 @@ import { actualizarRefaccion, crearRefaccion, useRefaccion } from '../lib/refacc
 import type { RefaccionNueva } from '../types'
 import { SelectorInstrumentos } from '../components/SelectorInstrumentos'
 import { avisarGuardado } from '../components/Listo'
+import { AvisoBorrador } from '../components/AvisoBorrador'
+import { useBorrador } from '../hooks/useBorrador'
 import { Silueta } from '../components/Silueta'
 
 function Campo({ label, ayuda, children }: { label: string; ayuda?: string; children: ReactNode }) {
@@ -53,6 +55,12 @@ export function FormRefaccion() {
     }
   }, [existente])
 
+  const borrador = useBorrador(`refaccion:${id ?? 'nueva'}`, { datos, minimo, inicial }, !id || (!!existente && cargado.current === existente.id), (d) => {
+    setDatos(d.datos)
+    setMinimo(d.minimo)
+    setInicial(d.inicial)
+  })
+
   if (id && existente === undefined) return <Silueta />
   if (id && existente === null) return <p className="p-6 text-slate-500">Esta refacción no existe.</p>
 
@@ -80,11 +88,13 @@ export function FormRefaccion() {
     }
     if (id) {
       actualizarRefaccion(id, limpio)
+      borrador.terminar()
       avisarGuardado('Cambios guardados.', 'Cambios guardados en el teléfono. Se envía cuando haya señal.')
       navigate(`/refacciones/${id}`, { replace: true })
     } else {
       const quien = { uid: user?.uid ?? '', nombre: user?.displayName || user?.email || 'Técnico' }
       const nuevoId = crearRefaccion(limpio, n ?? 0, quien)
+      borrador.terminar()
       avisarGuardado(`${nombre} dada de alta.`, `${nombre} dada de alta en el teléfono. Se envía cuando haya señal.`)
       navigate(`/refacciones/${nuevoId}`, { replace: true })
     }
@@ -93,6 +103,7 @@ export function FormRefaccion() {
   return (
     <form onSubmit={onSubmit} className="space-y-4 p-4">
       <h1 className="text-xl font-bold">{id ? 'Editar refacción' : 'Nueva refacción'}</h1>
+      <AvisoBorrador borrador={borrador} />
       <Campo label="Nombre *">
         <input className="campo" required maxLength={120} value={datos.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Sello de diafragma" />
       </Campo>
@@ -137,7 +148,14 @@ export function FormRefaccion() {
       </Campo>
       {error && <p className="rounded-lg bg-peligro-50 p-3 text-sm text-peligro-700">{error}</p>}
       <div className="flex gap-2">
-        <button type="button" className="btn-secundario" onClick={() => navigate(-1)}>
+        <button
+          type="button"
+          className="btn-secundario"
+          onClick={() => {
+            borrador.terminar()
+            navigate(-1)
+          }}
+        >
           Cancelar
         </button>
         <button className="btn-primario flex-1">{id ? 'Guardar cambios' : 'Dar de alta'}</button>

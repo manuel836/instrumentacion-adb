@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatc
 import { db } from '../firebase'
 import type { Calibracion, InstrumentoNuevo } from '../types'
 import type { ConPendiente } from './instrumentos'
+import { vigilar } from './rechazos'
 
 const colCalibraciones = (instrumentoId: string) => collection(db, 'instrumentos', instrumentoId, 'calibraciones')
 
@@ -70,6 +71,7 @@ export function registrarCalibracion(
   datos: Omit<Calibracion, 'id'>,
   esLaMasReciente: boolean,
   paraLaFicha: Partial<InstrumentoNuevo> = {},
+  tagISA = '',
 ): string {
   const ref_ = doc(colCalibraciones(instrumentoId))
   const lote = writeBatch(db)
@@ -80,6 +82,18 @@ export function registrarCalibracion(
   lote.set(ref_, { ...propios, creada: serverTimestamp() })
   const ficha = { ...paraLaFicha, ...(esLaMasReciente ? { proximaCalibracion: datos.proxima } : {}) }
   if (Object.keys(ficha).length) lote.update(doc(db, 'instrumentos', instrumentoId), ficha)
-  void lote.commit()
+  const texto = [
+    `Fecha: ${datos.fecha.toDate().toLocaleDateString('es-MX')}`,
+    `Resultado: ${datos.resultado}`,
+    ...datos.puntos.map((p) => `Entrada ${p.entrada}: As-Found ${p.asFound}${p.asLeft === null ? '' : `, As-Left ${p.asLeft}`}`),
+    ...(datos.observaciones ? [`Observaciones: ${datos.observaciones}`] : []),
+  ].join('\n')
+  vigilar(lote.commit(), {
+    docPath: ref_.path,
+    titulo: `Calibración de ${tagISA || 'un instrumento'}`,
+    texto,
+    ruta: `/instrumentos/${instrumentoId}`,
+    motivo: 'El servidor no la aceptó. Puede que el instrumento se haya borrado o que tu cuenta haya cambiado de rol mientras no había señal.',
+  })
   return ref_.id
 }

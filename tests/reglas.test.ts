@@ -221,6 +221,30 @@ describe('fallas', () => {
     await assertFails(updateDoc(ref_, { estado: 'Abierta' }))
   })
 
+  it('guarda la hora real del reporte en el teléfono, y después no se cambia', async () => {
+    const enTelefono = Timestamp.fromDate(new Date('2026-10-27T03:00:00'))
+    await assertSucceeds(
+      setDoc(doc(como('operador'), 'fallas/f1'), { ...nueva('u-operador'), fechas: { creada: null, tomada: null, cerrada: null, enTelefono } }),
+    )
+    await assertFails(
+      setDoc(doc(como('operador'), 'fallas/f2'), { ...nueva('u-operador'), fechas: { creada: null, tomada: null, cerrada: null, enTelefono: 'ayer' } }),
+    )
+    await assertFails(updateDoc(doc(como('tecnico'), 'fallas/f1'), { 'fechas.enTelefono': Timestamp.now() }))
+  })
+
+  it('si otro técnico ya la tomó, no se la quita (los dos la tomaron sin señal)', async () => {
+    await sembrar(nueva('u-operador'))
+    await assertSucceeds(updateDoc(doc(como('tecnico'), 'fallas/f1'), { estado: 'En proceso', tecnicoAsignado: tecnico }))
+    const otro = { uid: 'u-otro', nombre: 'Otro' }
+    await assertFails(updateDoc(doc(como('tecnico', 'u-otro'), 'fallas/f1'), { estado: 'En proceso', tecnicoAsignado: otro }))
+    // Pero sí la puede cerrar, y la asignación se queda con quien la tomó.
+    await assertSucceeds(
+      updateDoc(doc(como('tecnico', 'u-otro'), 'fallas/f1'), { estado: 'Cerrada', causaRaiz: 'Diafragma dañado', accionCorrectiva: 'Se cambió' }),
+    )
+    // Ya cerrada, un segundo cierre (otro teléfono sin señal) no entra.
+    await assertFails(updateDoc(doc(como('tecnico'), 'fallas/f1'), { estado: 'Cerrada', causaRaiz: 'Otra causa', accionCorrectiva: 'Otra acción' }))
+  })
+
   it('solo el admin la elimina, esté abierta, en proceso o cerrada', async () => {
     for (const estado of ['Abierta', 'En proceso', 'Cerrada']) {
       await sembrar({ ...nueva('u-operador'), estado, tecnicoAsignado: estado === 'Abierta' ? null : tecnico })
@@ -356,6 +380,34 @@ describe('chats privados', () => {
     await assertFails(updateDoc(doc(como('operador'), 'directorio/u-operador'), { nombre: 'Otro' }))
     await assertSucceeds(getDocs(collection(como('tecnico'), 'directorio')))
     await assertFails(getDocs(collection(como(null), 'directorio')))
+  })
+})
+
+describe('estado de los teléfonos', () => {
+  const estado = (uid: string) => ({
+    uid,
+    nombre: 'Op',
+    dispositivo: 'Android · Chrome',
+    version: '2026-10-27 23:40',
+    instalada: true,
+    almacenamientoProtegido: true,
+    sinConfirmar: 0,
+    subidas: 2,
+    detenidas: 0,
+    rechazos: 0,
+    errores: [{ mensaje: 'x', donde: '/fallas', fecha: 1 }],
+    actualizado: serverTimestamp(),
+  })
+
+  it('cada teléfono escribe solo el suyo y solo el admin lo lee', async () => {
+    await assertSucceeds(setDoc(doc(como('operador'), 'telefonos/u-operador_abcd1234'), estado('u-operador')))
+    await assertFails(setDoc(doc(como('operador'), 'telefonos/u-tecnico_abcd1234'), estado('u-tecnico')))
+    await assertFails(setDoc(doc(como('operador'), 'telefonos/u-operador_abcd1234'), { ...estado('u-operador'), extra: 1 }))
+    await assertFails(setDoc(doc(como('operador'), 'telefonos/u-operador_abcd1234'), { ...estado('u-operador'), actualizado: Timestamp.now() }))
+    await assertFails(setDoc(doc(como(null), 'telefonos/x_abcd1234'), estado('x')))
+    await assertFails(getDoc(doc(como('operador'), 'telefonos/u-operador_abcd1234')))
+    await assertFails(getDocs(collection(como('tecnico'), 'telefonos')))
+    await assertSucceeds(getDocs(collection(como('admin'), 'telefonos')))
   })
 })
 

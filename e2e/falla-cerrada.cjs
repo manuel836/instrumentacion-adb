@@ -40,7 +40,7 @@ async function instrumento() {
   await page.goto(`${BASE}/fallas/nueva?instrumento=${id}`)
   await page.fill('textarea', 'El transmisor marca cero con flujo')
   await page.click('button:has-text("Reportar")')
-  await page.waitForURL(/\/fallas\/[^/]+$/)
+  await page.waitForURL((u) => /\/fallas\/[^/?]+$/.test(u.pathname) && !u.pathname.endsWith('/nueva'))
   await page.waitForSelector('text=Chat de la falla')
   await page.setInputFiles('input[type=file][multiple]', [path.join(REPO, 'public/icons/icon-192.png')])
   await page.fill('textarea[placeholder="Escribe un mensaje"]', 'Se encontró el cable suelto en la caja de conexiones')

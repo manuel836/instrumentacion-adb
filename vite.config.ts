@@ -5,6 +5,10 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    // Versión de la app (cuándo se compiló, UTC): el admin ve qué teléfono sigue con una vieja.
+    __VERSION__: JSON.stringify(new Date().toISOString().slice(0, 16)),
+  },
   plugins: [
     react(),
     tailwindcss(),

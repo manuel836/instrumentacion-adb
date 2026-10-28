@@ -1,8 +1,9 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import { deleteField, doc, getDocFromCache, runTransaction, updateDoc } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { onAuthStateChanged } from 'firebase/auth'
 import { MAX_BYTES_FOTO } from '../config'
-import { db, storage } from '../firebase'
+import { auth, db, storage } from '../firebase'
 import { recodificar } from './images'
 
 // Firebase Storage no encola subidas sin señal, así que las fotos y documentos
@@ -30,6 +31,8 @@ export interface Subida {
   rechazos?: number
   /** El servidor la rechazó varias veces: ya no se reintenta sola, la persona decide. */
   detenida?: boolean
+  /** Quién la tomó: solo se sube con su sesión (otra persona puede entrar en el mismo teléfono). */
+  uid?: string
 }
 
 interface ColaDB extends DBSchema {
@@ -71,13 +74,19 @@ export function suscribirPendientes(o: Oyente): () => void {
 
 export async function encolar(items: Omit<Subida, 'id' | 'creado' | 'intentos'>[]): Promise<void> {
   const d = await abrir()
+  const uid = auth.currentUser?.uid
   const tx = d.transaction('subidas', 'readwrite')
   for (const it of items) {
-    await tx.store.put({ ...it, id: crypto.randomUUID(), creado: Date.now(), intentos: 0 })
+    await tx.store.put({ ...it, id: crypto.randomUUID(), creado: Date.now(), intentos: 0, uid })
   }
   await tx.done
   await avisar()
   void vaciarCola()
+}
+
+/** Cuántos archivos de esta persona faltan por subir (para avisar antes de salir). */
+export async function subidasDe(uid: string): Promise<number> {
+  return (await (await abrir()).getAll('subidas')).filter((s) => !s.uid || s.uid === uid).length
 }
 
 /** Blob local de un archivo que aún no se sube, para mostrarlo sin señal. */
@@ -216,6 +225,10 @@ export function vaciarCola(): Promise<void> {
   vaciando = (async () => {
     let fallaron = 0
     try {
+      // Al abrir la app la sesión tarda un momento en cargarse: sin ella Storage rechazaría todo.
+      await auth.authStateReady()
+      const uid = auth.currentUser?.uid
+      if (!uid) return
       const d = await abrir()
       const todas = await d.getAll('subidas')
       todas.sort((a, b) => a.creado - b.creado)
@@ -223,6 +236,8 @@ export function vaciarCola(): Promise<void> {
         if (!navigator.onLine) break
         // Una detenida no frena a las demás: se salta hasta que la persona la reintente.
         if (s.detenida) continue
+        // Lo de otra cuenta espera a que esa persona vuelva a entrar.
+        if (s.uid && s.uid !== uid) continue
         let actual = s
         try {
           actual = await prepararFoto(d, s)
@@ -270,5 +285,6 @@ export function vaciarCola(): Promise<void> {
 
 export function iniciarCola() {
   window.addEventListener('online', () => void vaciarCola())
-  void vaciarCola()
+  // También al entrar (o volver a entrar) con una cuenta.
+  onAuthStateChanged(auth, () => void vaciarCola())
 }

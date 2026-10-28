@@ -1,31 +1,47 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
-import { useOnline, useSubidasPendientes } from '../hooks/useOnline'
+import { useOnline, useRegistros, useSubidasPendientes } from '../hooks/useOnline'
 import { useFallas } from '../lib/fallas'
 import { useNoLeidosGeneral } from '../lib/chat'
 import { useNoLeidosPrivados } from '../lib/privados'
+import { sinConfirmar } from '../lib/rechazos'
+import { subidasDe } from '../lib/uploadQueue'
+import { hayVersionNueva, suscribirVersion } from '../lib/version'
 import { AvisoNotificaciones } from './AvisoNotificaciones'
 import { ConCarga } from './Diferida'
 import { Icono } from './Icono'
 import { AvisoListo } from './Listo'
+import { RegistrosRechazados } from './RegistrosRechazados'
 import { SubidasDetenidas } from './SubidasDetenidas'
 
 export function BarraConexion() {
   const online = useOnline()
+  const { user } = useAuth()
   const { pendientes, detenidas } = useSubidasPendientes()
+  const { sinConfirmar, rechazos } = useRegistros(user?.uid)
   const [verDetenidas, setVerDetenidas] = useState(false)
+  const [verRechazos, setVerRechazos] = useState(false)
   const cerrar = useCallback(() => setVerDetenidas(false), [])
+  const cerrarRechazos = useCallback(() => setVerRechazos(false), [])
   const subidas = pendientes - detenidas
   return (
     <>
       {(!online || subidas > 0) && (
         <div className={`px-4 py-1.5 text-center text-sm font-medium ${online ? 'bg-info-100 text-info-900' : 'bg-aviso-100 text-aviso-900'}`}>
           {!online && 'Sin conexión: los cambios se guardan en el teléfono'}
+          {!online && sinConfirmar > 0 && ` · ${sinConfirmar} por enviar`}
           {!online && subidas > 0 && ' · '}
           {subidas > 0 && `${subidas} ${subidas === 1 ? 'archivo' : 'archivos'} por subir`}
         </div>
       )}
+      {rechazos.length > 0 && (
+        <button className="block w-full bg-peligro-100 px-4 py-1.5 text-center text-sm font-medium text-peligro-900" onClick={() => setVerRechazos(true)}>
+          {rechazos.length === 1 ? '1 registro no se guardó' : `${rechazos.length} registros no se guardaron`} · Ver
+        </button>
+      )}
+      {verRechazos && <RegistrosRechazados rechazos={rechazos} onCerrar={cerrarRechazos} />}
       {detenidas > 0 && (
         <button className="block w-full bg-peligro-100 px-4 py-1.5 text-center text-sm font-medium text-peligro-900" onClick={() => setVerDetenidas(true)}>
           {detenidas === 1 ? '1 archivo no se pudo subir' : `${detenidas} archivos no se pudieron subir`} · Ver
@@ -33,6 +49,18 @@ export function BarraConexion() {
       )}
       {verDetenidas && <SubidasDetenidas onCerrar={cerrar} />}
     </>
+  )
+}
+
+/** Hay versión nueva pero alguien está escribiendo: se instala al terminar, o ya si la persona quiere. */
+function AvisoVersion() {
+  const [nueva, setNueva] = useState(hayVersionNueva)
+  useEffect(() => suscribirVersion(() => setNueva(hayVersionNueva())), [])
+  if (!nueva) return null
+  return (
+    <button className="block w-full bg-info-100 px-4 py-1.5 text-center text-sm font-medium text-info-900" onClick={() => location.reload()}>
+      Hay una versión nueva: se instala al terminar lo que escribes · Actualizar ya
+    </button>
   )
 }
 
@@ -84,6 +112,11 @@ function Menu({
             {usuarios && (
               <Link to="/subareas" className={clase}>
                 Sub áreas
+              </Link>
+            )}
+            {usuarios && (
+              <Link to="/telefonos" className={clase}>
+                Estado de los teléfonos
               </Link>
             )}
             <Link to="/refacciones" className={clase}>
@@ -163,8 +196,38 @@ function ArribaAlNavegar() {
   return null
 }
 
+/** Antes de salir con cosas sin enviar se avisa: solo se envían con la sesión de quien las hizo. */
+function ConfirmarSalida({ n, onQuedarse, onSalir }: { n: number; onQuedarse: () => void; onSalir: () => void }) {
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex animate-aparecer items-end justify-center bg-black/40 sm:items-center" role="dialog" aria-modal="true">
+      <div className="w-full max-w-lg animate-subir rounded-t-2xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-slate-900 sm:rounded-2xl">
+        <h2 className="text-lg font-semibold">{n === 1 ? 'Tienes 1 cosa sin enviar' : `Tienes ${n} cosas sin enviar`}</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Reportes, mensajes o fotos que aún no llegan al servidor. Se quedan guardados en este teléfono, pero solo se envían cuando
+          vuelvas a entrar con tu cuenta y haya señal.
+        </p>
+        <div className="mt-4 flex flex-col gap-2">
+          <button className="btn-primario" onClick={onQuedarse}>
+            Quedarme hasta que se envíe
+          </button>
+          <button className="btn-peligro" onClick={onSalir}>
+            Salir de todos modos
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 export function Layout() {
   const { user, rol, salir } = useAuth()
+  const [porEnviar, setPorEnviar] = useState<number | null>(null)
+  async function pedirSalida() {
+    const n = user ? (await sinConfirmar(user.uid).catch(() => 0)) + (await subidasDe(user.uid).catch(() => 0)) : 0
+    if (n === 0) void salir()
+    else setPorEnviar(n)
+  }
   const p = permisos(rol)
   const fallas = useFallas()
   const abiertas = fallas?.filter((f) => f.estado === 'Abierta').length ?? 0
@@ -178,13 +241,24 @@ export function Layout() {
       <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
         <div className="flex items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <span className="min-w-0 text-lg font-bold">Instrumentación ADB</span>
-          <Menu bitacora={p.verBitacora} exportar={p.exportar} importar={p.editarInstrumentos} usuarios={p.gestionarUsuarios} onSalir={() => void salir()} />
+          <Menu bitacora={p.verBitacora} exportar={p.exportar} importar={p.editarInstrumentos} usuarios={p.gestionarUsuarios} onSalir={() => void pedirSalida()} />
         </div>
         <BarraConexion />
+        <AvisoVersion />
         <AvisoContrasena />
         <AvisoNotificaciones />
         <AvisoListo />
       </header>
+      {porEnviar !== null && (
+        <ConfirmarSalida
+          n={porEnviar}
+          onQuedarse={() => setPorEnviar(null)}
+          onSalir={() => {
+            setPorEnviar(null)
+            void salir()
+          }}
+        />
+      )}
       {/* Cada pantalla entra con un fundido corto. Solo opacidad: un movimiento haría que los
           botones fijos (Alta, Reportar falla) se movieran con la pantalla mientras entra. */}
       <main className="flex-1 pb-24">

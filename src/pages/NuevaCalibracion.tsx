@@ -26,6 +26,8 @@ import { SelectorTipo } from '../components/SelectorTipo'
 import { ListaRevisiones, Segmentado, TablaPuntos, numero, type Fila } from '../components/PruebasCalibracion'
 import { unidadConocida } from '../lib/unidades'
 import { avisarGuardado } from '../components/Listo'
+import { AvisoBorrador } from '../components/AvisoBorrador'
+import { useBorrador } from '../hooks/useBorrador'
 import { Silueta } from '../components/Silueta'
 
 const MAX_PUNTOS = 11
@@ -158,6 +160,15 @@ export function NuevaCalibracion() {
   const [resultado, setResultado] = useState<ResultadoCalibracion | ''>('')
   const [observaciones, setObservaciones] = useState('')
   const [error, setError] = useState('')
+  const borrador = useBorrador(id ? `calibracion:${id}` : null, { fecha, proxima, plazo, patron, cap, resultado, observaciones }, !!cap, (d) => {
+    setFecha(d.fecha)
+    setProxima(d.proxima)
+    setPlazo(d.plazo)
+    setPatron(d.patron)
+    setCap(d.cap)
+    setResultado(d.resultado)
+    setObservaciones(d.observaciones)
+  })
 
   // Se arma una sola vez: lo que llegue de la ficha mientras se captura no borra lo escrito.
   useEffect(() => {
@@ -263,7 +274,8 @@ export function NuevaCalibracion() {
       if (!inst.disparaAl && cap.disparaAl) paraLaFicha.disparaAl = cap.disparaAl
     }
     const masReciente = (anteriores ?? []).every((c) => c.fecha.toMillis() <= datos.fecha.toMillis())
-    registrarCalibracion(inst.id, datos, masReciente, paraLaFicha)
+    registrarCalibracion(inst.id, datos, masReciente, paraLaFicha, inst.tagISA)
+    borrador.terminar()
     avisarGuardado('Calibración guardada.', 'Calibración guardada en el teléfono. Se envía cuando haya señal.')
     navigate(`/instrumentos/${inst.id}`, { replace: true })
   }
@@ -281,6 +293,7 @@ export function NuevaCalibracion() {
           {inst.subArea && <span className="font-sans text-sm"> · {inst.subArea}</span>}
         </p>
       </div>
+      <AvisoBorrador borrador={borrador} />
       {inst.disparaCaldera && <AvisoDisparo nota={inst.notaDisparo} />}
 
       {inst.tipo ? (

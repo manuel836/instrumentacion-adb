@@ -24,7 +24,8 @@ registerRoute(
     cacheName: 'storage-media',
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
-      new ExpirationPlugin({ maxEntries: 6000, maxAgeSeconds: 60 * 60 * 24 * 180 }),
+      // Si el teléfono se queda sin espacio se borran estas copias antes que lo pendiente.
+      new ExpirationPlugin({ maxEntries: 6000, maxAgeSeconds: 60 * 60 * 24 * 180, purgeOnQuotaError: true }),
     ],
   }),
 )

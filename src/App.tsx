@@ -6,6 +6,8 @@ import { AuthProvider, permisos, useAuth } from './auth/AuthContext'
 import { Layout } from './components/Layout'
 import { precargarMiniaturas } from './lib/instrumentos'
 import { anotarEnDirectorio } from './lib/privados'
+import { revisarSesionesAnteriores } from './lib/rechazos'
+import { iniciarEstadoTelefono } from './lib/telefono'
 import { Catalogo } from './pages/Catalogo'
 import { Inicio } from './pages/Inicio'
 import { ChatGeneral } from './pages/ChatGeneral'
@@ -38,6 +40,7 @@ const HistorialChat = diferida(() => import('./pages/HistorialChat'), 'Historial
 const DiaChat = diferida(() => import('./pages/HistorialChat'), 'DiaChat')
 const ChatsPrivados = diferida(() => import('./pages/ChatsPrivados'), 'ChatsPrivados')
 const Subareas = diferida(() => import('./pages/Subareas'), 'Subareas')
+const EstadoTelefonos = diferida(() => import('./pages/EstadoTelefonos'), 'EstadoTelefonos')
 const ConversacionPrivada = diferida(() => import('./pages/ChatsPrivados'), 'ConversacionPrivada')
 
 function ConSesion({ children }: { children: ReactNode }) {
@@ -47,6 +50,16 @@ function ConSesion({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (rol) return precargarMiniaturas()
   }, [rol])
+
+  useEffect(() => {
+    if (!user || !rol) return
+    // Lo que quedó sin respuesta del servidor la vez anterior se revisa al reconectar.
+    void revisarSesionesAnteriores(user.uid)
+    // Que el teléfono no borre lo guardado sin señal cuando se le llena la memoria.
+    void navigator.storage?.persist?.().catch(() => false)
+    // El admin ve en Estado de los teléfonos lo que este tiene pendiente y sus errores.
+    return iniciarEstadoTelefono(user)
+  }, [user, rol])
 
   // Para que los demás lo encuentren al abrir un chat privado.
   useEffect(() => {
@@ -157,6 +170,7 @@ function Rutas() {
         <Route path="exportar" element={<SoloSi permitido={p.exportar}><Exportar /></SoloSi>} />
         <Route path="usuarios" element={<SoloSi permitido={p.gestionarUsuarios}><Usuarios /></SoloSi>} />
         <Route path="subareas" element={<SoloSi permitido={p.gestionarUsuarios}><Subareas /></SoloSi>} />
+        <Route path="telefonos" element={<SoloSi permitido={p.gestionarUsuarios}><EstadoTelefonos /></SoloSi>} />
         <Route path="refacciones" element={<Refacciones />} />
         <Route path="refacciones/nueva" element={<SoloSi permitido={p.refacciones}><FormRefaccion /></SoloSi>} />
         <Route path="refacciones/:id" element={<DetalleRefaccion />} />

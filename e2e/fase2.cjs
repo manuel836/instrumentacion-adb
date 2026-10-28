@@ -72,7 +72,7 @@ async function abrirPT101(page) {
   await op.page.setInputFiles('input[type=file]', [path.join(REPO, 'public/icons/icon-192.png')])
   await shot(op.page, '10-reportar-offline')
   await op.page.click('button:has-text("Reportar")')
-  await op.page.waitForURL(/\/fallas\/[^/]+$/)
+  await op.page.waitForURL((u) => /\/fallas\/[^/?]+$/.test(u.pathname) && !u.pathname.endsWith('/nueva'))
   await op.page.waitForSelector('text=pendiente')
   await op.page.waitForSelector('text=Tomar falla', { state: 'detached' })
   await shot(op.page, '11-falla-pendiente')

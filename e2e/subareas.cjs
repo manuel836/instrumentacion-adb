@@ -102,7 +102,7 @@ async function alta(page, sub) {
   await page.waitForSelector(`text=Generación de vapor · ${CB}`)
   await page.fill('textarea', 'Lectura inestable')
   await page.click('button:has-text("Reportar")')
-  await page.waitForURL(/\/fallas\/[^/]+$/)
+  await page.waitForURL((u) => /\/fallas\/[^/?]+$/.test(u.pathname) && !u.pathname.endsWith('/nueva'))
   await page.waitForSelector(`text=Generación de vapor · ${CB}`)
   await page.goto(`${BASE}/fallas`)
   await page.locator('li', { hasText: TAG }).locator(`text=${CB}`).first().waitFor()

@@ -3,7 +3,7 @@ import { collection, collectionGroup, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { TIPOS_MOVIMIENTO, type Calibracion, type Falla, type Instrumento, type Movimiento, type Refaccion } from '../types'
 import { aCalibracion } from './calibraciones'
-import { useFallas } from './fallas'
+import { horaDelReporte, useFallas } from './fallas'
 import { useInstrumentos } from './instrumentos'
 import { porPedir, useRefacciones } from './refacciones'
 import { errorLectura, errorMaximo, esperado, textoTolerancia } from './tolerancia'
@@ -143,10 +143,10 @@ function reporteInstrumentos(lista: Instrumento[], f: Filtros): Reporte {
 
 function reporteFallas(lista: Falla[], f: Filtros): Reporte {
   const filas = lista
-    .filter((x) => (!f.area || x.area === f.area) && enPeriodo(fecha(x.fechas.creada), f))
-    .sort((a, b) => (a.fechas.creada?.toMillis() ?? 0) - (b.fechas.creada?.toMillis() ?? 0))
+    .filter((x) => (!f.area || x.area === f.area) && enPeriodo(fecha(horaDelReporte(x)), f))
+    .sort((a, b) => (horaDelReporte(a)?.toMillis() ?? 0) - (horaDelReporte(b)?.toMillis() ?? 0))
     .map((x): Valor[] => {
-      const creada = fecha(x.fechas.creada)
+      const creada = fecha(horaDelReporte(x))
       const cerrada = fecha(x.fechas.cerrada)
       return [
         x.tagISA,
