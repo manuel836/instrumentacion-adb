@@ -6,14 +6,18 @@ corre primero `gcloud auth login` y sigue el enlace.
 
 ## Qué queda respaldado
 
-Se activa una sola vez con estos cuatro comandos:
+Se activa una sola vez con estos cinco comandos (ya corridos el 28-oct-2026):
 
 ```bash
 gcloud firestore databases update --database='(default)' --enable-pitr --project=instrumentacion-adb
 gcloud firestore backups schedules create --database='(default)' --recurrence=daily --retention=14d --project=instrumentacion-adb
 gcloud firestore backups schedules create --database='(default)' --recurrence=weekly --day-of-week=SUN --retention=14w --project=instrumentacion-adb
 gcloud storage buckets update gs://instrumentacion-adb.firebasestorage.app --soft-delete-duration=30d --project=instrumentacion-adb
+gcloud firestore databases update --database='(default)' --delete-protection --project=instrumentacion-adb
 ```
+
+El último impide borrar por error la base completa de la app (por ejemplo, al borrar la copia
+`recuperada` del paso 3 con el nombre equivocado).
 
 | Qué | Hasta cuándo se puede recuperar |
 | --- | --- |
@@ -24,7 +28,7 @@ gcloud storage buckets update gs://instrumentacion-adb.firebasestorage.app --sof
 
 Los respaldos viven en Google Cloud, fuera de la app: borrar algo en la app no borra el respaldo.
 
-Para comprobar que siguen activos:
+Para comprobar que siguen activos (`retention: 1209600s` son 14 días y `8467200s` son 14 semanas):
 
 ```bash
 gcloud firestore backups schedules list --database='(default)' --project=instrumentacion-adb
@@ -104,7 +108,8 @@ La copia cobra almacenamiento mientras exista. Cuando ya esté todo de vuelta:
 gcloud firestore databases delete --database=recuperada --project=instrumentacion-adb
 ```
 
-Fíjate que diga `recuperada`. **Nunca** pongas `(default)` en ese comando: esa es la de la app.
+Fíjate que diga `recuperada`. **Nunca** pongas `(default)` en ese comando: esa es la de la app (y
+la protección contra borrado lo rechazaría).
 
 ## Solo una foto o un documento
 
