@@ -105,7 +105,8 @@ export async function reportarFalla(inst: Instrumento, descripcion: string, arch
     // `enTelefono` guarda la hora real del reporte.
     fechas: { creada: serverTimestamp(), tomada: null, cerrada: null, enTelefono: Timestamp.now() },
   })
-  vigilar(escritura, {
+  // Se espera a que quede en el teléfono: la persona puede cerrar la app en cuanto ve "Reportada".
+  await vigilar(escritura, {
     docPath: ref_.path,
     titulo: `Reporte de falla de ${inst.tagISA}`,
     texto: descripcion.trim(),

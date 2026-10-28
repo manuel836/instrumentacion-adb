@@ -60,7 +60,7 @@ async function abrirPT101(page) {
   await op.page.click('text=Reportar falla')
   await op.page.fill('textarea', 'Indicador local marca diferente al DCS')
   await op.page.click('button:has-text("Reportar")')
-  await op.page.waitForURL(/\/fallas\/[^/]+$/)
+  await op.page.waitForURL((u) => /\/fallas\/[^/?]+$/.test(u.pathname) && !u.pathname.endsWith('/nueva'))
   await op.page.waitForSelector('text=Chat de la falla')
   const urlFalla = op.page.url()
 

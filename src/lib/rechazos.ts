@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { doc, getDocFromServer, waitForPendingWrites } from 'firebase/firestore'
+import { doc, getDocFromCache, getDocFromServer, waitForPendingWrites } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
 // Lo que se guarda sin señal se queda en la caché de Firestore y se envía después. Si al
@@ -75,12 +75,13 @@ async function rechazar(d: IDBPDatabase<RegistrosDB>, v: Vigilado, error: string
 }
 
 /**
- * Anota un registro hasta que el servidor lo confirme. No espera nada: la pantalla sigue
- * como siempre, sin señal también.
+ * Anota un registro hasta que el servidor lo confirme. No espera al servidor: la pantalla
+ * sigue como siempre, sin señal también. La promesa termina cuando el registro ya quedó
+ * guardado en el teléfono (unos milisegundos); desde ahí, cerrar la app ya no lo pierde.
  */
-export function vigilar(escritura: Promise<unknown>, datos: Omit<Vigilado, 'id' | 'uid' | 'creado'>): void {
+export function vigilar(escritura: Promise<unknown>, datos: Omit<Vigilado, 'id' | 'uid' | 'creado'>): Promise<void> {
   const uid = auth.currentUser?.uid
-  if (!uid) return
+  if (!uid) return Promise.resolve()
   const v: Vigilado = { ...datos, id: crypto.randomUUID(), uid, creado: Date.now() }
   const anotado = abrir()
     .then(async (d) => {
@@ -102,6 +103,11 @@ export function vigilar(escritura: Promise<unknown>, datos: Omit<Vigilado, 'id' 
       if (d && DEFINITIVOS.includes(code)) await rechazar(d, v, code)
     },
   )
+  // Firestore atiende en orden: esta lectura corre después de guardar la escritura en la caché.
+  const enTelefono = getDocFromCache(doc(db, datos.docPath)).catch(() => undefined)
+  // Tope de 2 s: si el almacenamiento del teléfono se traba, la pantalla no se queda esperando.
+  const tope = new Promise<void>((r) => setTimeout(r, 2000))
+  return Promise.race([Promise.all([anotado, enTelefono]).then(() => undefined), tope])
 }
 
 /** Cuántos registros de esta persona aún no confirma el servidor. */
@@ -147,7 +153,8 @@ export async function revisarSesionesAnteriores(uid: string): Promise<void> {
         await d.delete('vigilados', v.id)
         avisar()
       } else {
-        await rechazar(d, v, snap.exists() ? 'cambio-distinto' : 'no-existe')
+        const motivo = snap.exists() ? v.motivo : `${v.motivo} También pasa si la app se cerró justo al guardarlo.`
+        await rechazar(d, { ...v, motivo }, snap.exists() ? 'cambio-distinto' : 'no-existe')
       }
     } catch {
       // Sin señal a medias: se revisa la próxima vez que abra la app.

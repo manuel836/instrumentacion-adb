@@ -103,7 +103,7 @@ export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[
   const lote = writeBatch(db)
   lote.set(ref_, { autor, texto: texto.trim(), fotos, fecha: serverTimestamp() })
   tambien?.(lote, { ref: ref_, texto: texto.trim(), fotos: fotos.length })
-  vigilar(lote.commit(), { ...dondeVa(ruta), docPath: ref_.path, texto: texto.trim() || '(solo fotos)' })
+  await vigilar(lote.commit(), { ...dondeVa(ruta), docPath: ref_.path, texto: texto.trim() || '(solo fotos)' })
   if (fotos.length > 0) {
     await encolar(
       comprimidas.flatMap((c, i) => [
