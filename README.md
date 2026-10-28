@@ -95,6 +95,10 @@ Pruebas:
   prueba funcional de la KV con revisiones y tiempos, transmisor leído en mA, interruptor con disparo,
   reposición y diferencial, válvula de control con señal invertida, y válvulas de doble efecto (aire
   para abrir y cerrar: revisiones propias y sin rango del resorte). Crea sus propios datos.
+- `node e2e/sin-perder.cjs`: borradores que sobreviven a una recarga (reporte de falla, calibración y
+  chat), dos técnicos que cierran o toman la misma falla con uno sin señal (al reconectar se le avisa
+  con lo que escribió), lo que quedó sin respuesta al cerrar la app, el estado de los teléfonos que ve
+  el admin y el aviso al salir con cosas sin enviar. Crea sus propios datos.
 
 Con los emuladores recién arrancados y el admin creado, el orden que funciona es: fase1, fase2, fase3,
 fase4, usuarios, restablecer, borrar, borrar-falla, catalogo, tags, areas, aviso-calibraciones, hoja-de-vida,
@@ -124,6 +128,15 @@ el despliegue publica también en el sitio por defecto, instrumentacion-adb.web.
    La primera vez pide iniciar sesión en Firebase y el valor de `ADMIN_INICIAL`: escribe el correo del paso 1.
 3. Abre https://instrumentacion-adb-fertinal.web.app, entra con esa cuenta y pulsa **Soy el administrador inicial**.
    Solo funciona para ese correo y mientras no exista otro admin. Desde ahí se dan de alta los demás usuarios.
+
+### Respaldos y alertas
+
+- Respaldos de Firestore (al minuto por 7 días, diarios por 14 días y de cada domingo por 14 semanas) y
+  papelera de 30 días para fotos y documentos. Cómo activarlos y cómo recuperar algo borrado:
+  [docs/respaldos.md](docs/respaldos.md).
+- Un correo cuando una Cloud Function falla: `bash scripts/alerta-errores.sh` en Cloud Shell (una vez).
+- Menú > Estado de los teléfonos (admin): qué tiene cada teléfono sin enviar o rechazado, su versión de
+  la app y sus últimos errores.
 
 **El dominio queda grabado en cada tag.** No grabes tags reales hasta tener el dominio definitivo;
 cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL exacta que se grabará.
@@ -161,5 +174,13 @@ cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL 
   La lista de personas sale de `directorio/{uid}`, que una Function mantiene igual que `usuarios`.
 - `src/lib/subareas.ts`: las sub áreas son documentos en `subareas` que edita el admin. El tag ISA es
   único por área y sub área, por eso el mismo PT-101 puede existir en la Caldera 1 y en la Caldera 2.
+- `src/lib/rechazos.ts`: Firestore descarta sin avisar lo que el servidor rechaza al sincronizar (por
+  ejemplo, otro técnico cerró la falla antes). Cada registro importante se anota en IndexedDB hasta que
+  el servidor lo confirma; si lo rechaza, la barra roja muestra lo que se escribió para copiarlo. Lo
+  que quedó sin respuesta al cerrar la app se busca en el servidor la siguiente vez.
+- `src/hooks/useBorrador.ts`: lo que se escribe en un formulario se guarda en el teléfono mientras se
+  escribe y se recupera al volver. Con un borrador abierto, una versión nueva espera para recargar.
+- `src/lib/telefono.ts`: cada teléfono anota en `telefonos/{uid}_{dispositivo}` lo que tiene pendiente,
+  su versión y sus últimos errores (Menú > Estado de los teléfonos).
 - `src/components/AvisoDisparo.tsx`: el aviso rojo de los instrumentos marcados con
   "Puede disparar la caldera"; sale en la ficha, la hoja de vida, al calibrar, en la falla y en el tag.
