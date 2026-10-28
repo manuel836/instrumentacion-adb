@@ -209,10 +209,12 @@ async function cerrar(page, causa, accion) {
   await A.page.waitForSelector('text=3 registros no se guardaron', { timeout: 60000 })
   console.log('lo que quedó sin respuesta al cerrar la app se revisa al reconectar ok')
 
-  // Un error de la app queda anotado para el admin.
+  // Un error de la app queda anotado para el admin; los de scripts ajenos (una cartera de
+  // criptomonedas que mete el navegador) no.
   await A.page.evaluate(() => {
     void Promise.reject(new Error('Prueba de error para el admin'))
   })
+  await A.page.addScriptTag({ content: 'window.ethereum = undefined; window.ethereum.selectedAddress = undefined' }).catch(() => undefined)
 
   // ---------- Estado de los teléfonos (admin) ----------
   const adm = await entrar(browser, 'manuel@adb.test')
@@ -222,8 +224,9 @@ async function cerrar(page, causa, accion) {
   const tarjetaA = adm.page.locator('li.tarjeta', { hasText: 'Técnico A' })
   await tarjetaA.waitFor()
   await tarjetaA.locator('text=3 registros rechazados por el servidor').waitFor({ timeout: 20000 })
-  await tarjetaA.locator('summary:has-text("error")').click()
+  await tarjetaA.locator('summary:has-text("1 error reciente")').click()
   await tarjetaA.locator('text=Prueba de error para el admin').waitFor()
+  if (await tarjetaA.locator('text=ethereum').count()) throw new Error('se anotó el error de un script ajeno')
   await adm.page.locator('li.tarjeta', { hasText: 'Técnico B' }).waitFor()
   await shot(adm.page, '304-estado-telefonos')
   console.log('estado de los teléfonos: rechazos y errores de cada uno ok')

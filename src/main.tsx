@@ -15,7 +15,11 @@ registerSW({ immediate: true, onNeedReload: avisarVersionNueva })
 iniciarCola()
 
 // Lo que falla fuera de una pantalla (promesas sin atender, scripts) también queda anotado.
-window.addEventListener('error', (e) => registrarError(e.error ?? e.message))
+// Solo cuenta lo que viene del código de la app: el navegador y sus extensiones (carteras de
+// criptomonedas, traductores) meten scripts propios que también fallan.
+window.addEventListener('error', (e) => {
+  if (e.filename?.startsWith(`${location.origin}/assets/`)) registrarError(e.error ?? e.message)
+})
 window.addEventListener('unhandledrejection', (e) => registrarError(e.reason))
 
 createRoot(document.getElementById('root')!).render(
