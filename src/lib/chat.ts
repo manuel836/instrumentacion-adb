@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Timestamp,
   collection,
+  deleteField,
   doc,
   limit,
   onSnapshot,
@@ -10,16 +11,17 @@ import {
   serverTimestamp,
   where,
   writeBatch,
+  type DocumentData,
   type DocumentReference,
   type WriteBatch,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { claveDia } from '../hooks/useHoy'
-import type { FotoFalla, Mensaje, Persona } from '../types'
+import type { FotoFalla, Mensaje, Persona, RespuestaA } from '../types'
 import { comprimirFoto } from './images'
 import type { ConPendiente } from './instrumentos'
 import { vigilar } from './rechazos'
-import { encolar } from './uploadQueue'
+import { descartarDeDocumento, encolar } from './uploadQueue'
 
 /** Canal general del equipo. */
 export const CANAL_GENERAL = 'chat_general'
@@ -31,6 +33,19 @@ export const hiloPrivado = (chatId: string) => `chats_privados/${chatId}/mensaje
 
 export const MAX_FOTOS_MENSAJE = 4
 const MAX_MENSAJES = 200
+
+function aMensaje(id: string, m: DocumentData): Mensaje {
+  return {
+    id,
+    autor: m.autor as Persona,
+    texto: (m.texto as string | undefined) ?? '',
+    fotos: (m.fotos as FotoFalla[] | undefined) ?? [],
+    fecha: (m.fecha as Timestamp | undefined) ?? null,
+    respondeA: (m.respondeA as RespuestaA | undefined) ?? null,
+    editado: (m.editado as Timestamp | undefined) ?? null,
+    eliminado: m.eliminado === true,
+  }
+}
 
 /**
  * Mensajes de un hilo, del más viejo al más nuevo. Los que se escribieron sin
@@ -52,17 +67,7 @@ export function useMensajes(ruta: string | null, desde?: Date, hasta?: Date) {
     return onSnapshot(q, { includeMetadataChanges: true }, (snap) =>
       setLista(
         snap.docs
-          .map((d) => {
-            const m = d.data({ serverTimestamps: 'estimate' })
-            return {
-              id: d.id,
-              autor: m.autor as Persona,
-              texto: (m.texto as string | undefined) ?? '',
-              fotos: (m.fotos as FotoFalla[] | undefined) ?? [],
-              fecha: (m.fecha as Timestamp | undefined) ?? null,
-              sinSincronizar: d.metadata.hasPendingWrites,
-            }
-          })
+          .map((d) => ({ ...aMensaje(d.id, d.data({ serverTimestamps: 'estimate' })), sinSincronizar: d.metadata.hasPendingWrites }))
           // Lo escrito sin señal aún no tiene hora del servidor: se filtra aquí con la del teléfono.
           .filter((m) => desdeMs === undefined || (m.fecha?.toMillis() ?? Date.now()) >= desdeMs)
           .reverse(),
@@ -72,8 +77,34 @@ export function useMensajes(ruta: string | null, desde?: Date, hasta?: Date) {
   return lista
 }
 
+/**
+ * Un mensaje suelto, para la cita de una respuesta cuyo original no está en pantalla (más
+ * viejo que los que se cargaron). undefined mientras llega; null si ya no existe.
+ */
+export function useMensaje(ruta: string | null, id: string) {
+  const [m, setM] = useState<{ ruta: string; id: string; m: Mensaje | null } | null>(null)
+  useEffect(() => {
+    if (!ruta) return
+    return onSnapshot(
+      doc(db, ruta, id),
+      (s) => setM({ ruta, id, m: s.exists() ? aMensaje(s.id, s.data({ serverTimestamps: 'estimate' })) : null }),
+      () => setM({ ruta, id, m: null }),
+    )
+  }, [ruta, id])
+  return m && m.ruta === ruta && m.id === id ? m.m : undefined
+}
+
 /** Escrituras que van en el mismo lote que el mensaje (el resumen de un chat privado). */
 export type Tambien = (lote: WriteBatch, mensaje: { ref: DocumentReference; texto: string; fotos: number }) => void
+
+/** Escrituras que acompañan a una corrección o un borrado (el resumen, si era el último mensaje). */
+export type AlCorregir = (lote: WriteBatch, cambio: { id: string; texto: string; fotos: number; eliminado: boolean }) => void
+
+/** Lo que se ve de un mensaje en una cita, en la lista de chats o al elegir qué hacer con él. */
+export function resumenMensaje(m: Pick<Mensaje, 'texto' | 'fotos' | 'eliminado'>): string {
+  if (m.eliminado) return 'Se eliminó este mensaje'
+  return m.texto || (m.fotos.length > 1 ? `${m.fotos.length} fotos` : m.fotos.length === 1 ? 'Foto' : '')
+}
 
 /** Qué decir de un mensaje que el servidor no aceptó, según el chat donde iba. */
 function dondeVa(ruta: string) {
@@ -90,7 +121,14 @@ function dondeVa(ruta: string) {
 }
 
 /** Envía un mensaje. Sin señal queda en el teléfono y las fotos en la cola local. */
-export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[], autor: Persona, tambien?: Tambien): Promise<void> {
+export async function enviarMensaje(
+  ruta: string,
+  texto: string,
+  archivos: Blob[],
+  autor: Persona,
+  tambien?: Tambien,
+  respondeA?: RespuestaA | null,
+): Promise<void> {
   const ref_ = doc(collection(db, ruta))
   const comprimidas = await Promise.all(archivos.map((a) => comprimirFoto(a)))
   const base = `${ruta}/${ref_.id}`
@@ -101,7 +139,7 @@ export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[
     miniaturaUrl: null,
   }))
   const lote = writeBatch(db)
-  lote.set(ref_, { autor, texto: texto.trim(), fotos, fecha: serverTimestamp() })
+  lote.set(ref_, { autor, texto: texto.trim(), fotos, fecha: serverTimestamp(), ...(respondeA ? { respondeA } : {}) })
   tambien?.(lote, { ref: ref_, texto: texto.trim(), fotos: fotos.length })
   await vigilar(lote.commit(), { ...dondeVa(ruta), docPath: ref_.path, texto: texto.trim() || '(solo fotos)' })
   if (fotos.length > 0) {
@@ -117,6 +155,42 @@ export async function enviarMensaje(ruta: string, texto: string, archivos: Blob[
       ]),
     )
   }
+}
+
+/** Su autor corrige el texto de un mensaje. Las fotos se quedan como estaban. */
+export function editarMensaje(ruta: string, m: Pick<Mensaje, 'id' | 'fotos'>, texto: string, alCorregir?: AlCorregir): Promise<void> {
+  const ref_ = doc(db, ruta, m.id)
+  const lote = writeBatch(db)
+  lote.update(ref_, { texto: texto.trim(), editado: serverTimestamp() })
+  alCorregir?.(lote, { id: m.id, texto: texto.trim(), fotos: m.fotos.length, eliminado: false })
+  return vigilar(lote.commit(), {
+    ...dondeVa(ruta),
+    titulo: 'Mensaje que corregiste',
+    docPath: ref_.path,
+    texto: texto.trim(),
+    esperado: { texto: texto.trim() },
+  })
+}
+
+/**
+ * Su autor elimina un mensaje: el texto y las fotos se quitan para todos y queda el aviso
+ * "Se eliminó este mensaje" (así nadie se queda buscando lo que ya había leído). Las fotos
+ * las borra de Storage una Function.
+ */
+export function eliminarMensaje(ruta: string, m: Pick<Mensaje, 'id' | 'texto'>, alCorregir?: AlCorregir): Promise<void> {
+  const ref_ = doc(db, ruta, m.id)
+  const lote = writeBatch(db)
+  lote.update(ref_, { texto: '', fotos: [], eliminado: true, respondeA: deleteField(), editado: deleteField() })
+  alCorregir?.(lote, { id: m.id, texto: '', fotos: 0, eliminado: true })
+  // Las fotos que aún no se subían ya no hacen falta.
+  void descartarDeDocumento(ref_.path).catch(() => undefined)
+  return vigilar(lote.commit(), {
+    ...dondeVa(ruta),
+    titulo: 'Mensaje que eliminaste',
+    docPath: ref_.path,
+    texto: m.texto || '(solo fotos)',
+    esperado: { eliminado: true },
+  })
 }
 
 // ---------- Historial del canal general ----------
@@ -150,7 +224,7 @@ export function useDiasDelCanal(antesDe: Date, cuantos: number) {
         const clave = claveDia(f)
         let dia = dias.get(clave)
         if (!dia) {
-          const texto = (d.get('texto') as string | undefined) || 'Foto'
+          const texto = d.get('eliminado') === true ? 'Se eliminó este mensaje' : (d.get('texto') as string | undefined) || 'Foto'
           dia = { clave, fecha: new Date(f.getFullYear(), f.getMonth(), f.getDate()), mensajes: 0, personas: [], ultimo: `${autor}: ${texto}` }
           dias.set(clave, dia)
         }

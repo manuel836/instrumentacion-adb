@@ -32,14 +32,43 @@ service cloud.firestore {
         && d.observaciones is string && d.observaciones.size() <= 2000;
     }
 
-    // Mensaje de chat a nombre de quien lo escribe, con texto o fotos.
+    // Mensaje de chat a nombre de quien lo escribe, con texto o fotos. Si responde a otro,
+    // solo guarda cuál y de quién (el texto se lee del original).
     function mensajeValido(d, maxFotos) {
       return d.autor.uid == request.auth.uid
         && d.autor.nombre is string
         && d.texto is string && d.texto.size() <= 2000
         && d.fotos is list && d.fotos.size() <= maxFotos
         && (d.texto.size() > 0 || d.fotos.size() > 0)
-        && d.fecha == request.time;
+        && d.fecha == request.time
+        && !d.keys().hasAny(['editado', 'eliminado'])
+        && (!d.keys().hasAny(['respondeA'])
+            || (d.respondeA.keys().hasOnly(['id', 'autor'])
+                && d.respondeA.id is string && d.respondeA.id.size() <= 100
+                && d.respondeA.autor.uid is string && d.respondeA.autor.nombre is string));
+    }
+
+    // Cambios del autor a su propio mensaje (las reglas de cada chat revisan que sea suyo):
+    // completar las URLs de sus fotos al subirlas,
+    function fotosCompletadas() {
+      return cambian().hasOnly(['fotos'])
+        && request.resource.data.fotos.size() == resource.data.fotos.size();
+    }
+    // corregir el texto (las fotos se quedan),
+    function mensajeCorregido() {
+      return cambian().hasOnly(['texto', 'editado'])
+        && resource.data.get('eliminado', false) == false
+        && request.resource.data.texto is string && request.resource.data.texto.size() <= 2000
+        && (request.resource.data.texto.size() > 0 || request.resource.data.fotos.size() > 0)
+        && request.resource.data.editado == request.time;
+    }
+    // o eliminarlo: se vacía y queda el aviso "Se eliminó este mensaje".
+    function mensajeEliminado() {
+      return cambian().hasOnly(['texto', 'fotos', 'eliminado', 'editado', 'respondeA'])
+        && request.resource.data.eliminado == true
+        && request.resource.data.texto == ''
+        && request.resource.data.fotos.size() == 0
+        && !request.resource.data.keys().hasAny(['editado', 'respondeA']);
     }
 
     function instrumentoValido(d) {
@@ -133,25 +162,28 @@ service cloud.firestore {
       allow delete: if admin();
 
       // Chat de la falla: cualquiera con rol escribe mientras la falla no esté cerrada; al
-      // cerrarse, lo escrito y las fotos se quedan para consulta. El autor solo completa
-      // las URLs de sus fotos (también después del cierre, si se subieron sin señal).
+      // cerrarse, lo escrito y las fotos se quedan para consulta. Mientras sigue abierta, el
+      // autor puede corregir o eliminar lo suyo. Las URLs de sus fotos las completa también
+      // después del cierre (si se subieron sin señal).
       match /mensajes/{msgId} {
         allow read: if conRol();
         allow create: if conRol() && mensajeValido(request.resource.data, 4)
           && get(/databases/$(database)/documents/fallas/$(id)).data.estado != 'Cerrada';
         allow update: if conRol() && resource.data.autor.uid == request.auth.uid
-          && cambian().hasOnly(['fotos'])
-          && request.resource.data.fotos.size() == resource.data.fotos.size();
+          && (fotosCompletadas()
+              || ((mensajeCorregido() || mensajeEliminado())
+                  && get(/databases/$(database)/documents/fallas/$(id)).data.estado != 'Cerrada'));
         allow delete: if admin();
       }
     }
 
     // Canal general del equipo (solo texto). La app muestra solo los de hoy;
-    // los de días anteriores quedan como historial.
+    // los de días anteriores quedan como historial. Cada quien corrige o elimina lo suyo.
     match /chat_general/{msgId} {
       allow read: if conRol();
       allow create: if conRol() && mensajeValido(request.resource.data, 0);
-      allow update: if false;
+      allow update: if conRol() && resource.data.autor.uid == request.auth.uid
+        && (mensajeCorregido() || mensajeEliminado());
       allow delete: if admin();
     }
 
@@ -172,20 +204,29 @@ service cloud.firestore {
       allow list: if conRol() && request.auth.uid in resource.data.miembros;
       // El último mensaje lo escribe quien lo manda, y cada quien solo marca lo que él ya leyó.
       allow create: if enChat(chatId) && chatValido(chatId, request.resource.data)
+        && request.resource.data.keys().hasOnly(['miembros', 'nombres', 'ultimo', 'leido'])
         && (request.resource.data.ultimo == null || request.resource.data.ultimo.autor == request.auth.uid)
         && request.resource.data.leido.keys().hasOnly([request.auth.uid]);
+      // Eliminar el chat: "solo para mí" anota la hora en borradoPara (cada quien la suya);
+      // "para ambos" anota la hora en vaciado y quita el último mensaje, y una Function borra
+      // los mensajes de antes con sus fotos. El documento no se borra: así nadie lo recrea a medias.
       allow update: if enChat(chatId) && chatValido(chatId, request.resource.data)
-        && cambian().hasOnly(['ultimo', 'nombres', 'leido'])
-        && (!cambian().hasAny(['ultimo']) || request.resource.data.ultimo.autor == request.auth.uid)
-        && request.resource.data.leido.diff(resource.data.leido).affectedKeys().hasOnly([request.auth.uid]);
+        && cambian().hasOnly(['ultimo', 'nombres', 'leido', 'borradoPara', 'vaciado'])
+        && (!cambian().hasAny(['ultimo'])
+            || (request.resource.data.ultimo == null && cambian().hasAny(['vaciado']))
+            || (request.resource.data.ultimo != null && request.resource.data.ultimo.autor == request.auth.uid))
+        && request.resource.data.leido.diff(resource.data.leido).affectedKeys().hasOnly([request.auth.uid])
+        && (!cambian().hasAny(['borradoPara'])
+            || (request.resource.data.borradoPara.diff(resource.data.get('borradoPara', {})).affectedKeys().hasOnly([request.auth.uid])
+                && request.resource.data.borradoPara[request.auth.uid] == request.time))
+        && (!cambian().hasAny(['vaciado']) || request.resource.data.vaciado == request.time);
       allow delete: if false;
 
       match /mensajes/{msgId} {
         allow read: if enChat(chatId);
         allow create: if enChat(chatId) && mensajeValido(request.resource.data, 4);
         allow update: if enChat(chatId) && resource.data.autor.uid == request.auth.uid
-          && cambian().hasOnly(['fotos'])
-          && request.resource.data.fotos.size() == resource.data.fotos.size();
+          && (fotosCompletadas() || mensajeCorregido() || mensajeEliminado());
         allow delete: if false;
       }
     }

@@ -14,19 +14,21 @@ export function ChatGeneral() {
   }, [])
 
   return (
-    <div className="space-y-3 p-3">
-      <PestanasChat />
-      <div>
-        <h1 className="text-xl font-bold">Canal general · hoy</h1>
-        <p className="text-sm text-slate-500">
-          Mensajes para todo el equipo. Cada día empieza en blanco; lo de días anteriores queda guardado en el{' '}
-          <Link to="/chat/historial" className="font-semibold text-marca-700">
-            historial
-          </Link>
-          .
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="oculto-con-teclado shrink-0 space-y-3 px-3 pt-3">
+        <PestanasChat />
+        <div>
+          <h1 className="text-xl font-bold">Canal general · hoy</h1>
+          <p className="text-sm text-slate-500">
+            Mensajes para todo el equipo. Cada día empieza en blanco; lo de días anteriores queda guardado en el{' '}
+            <Link to="/chat/historial" className="font-semibold text-marca-700">
+              historial
+            </Link>
+            .
+          </p>
+        </div>
       </div>
-      <Chat ruta={CANAL_GENERAL} desde={hoy} alInicioAbajo vacio="Aún no hay mensajes hoy." />
+      <Chat ruta={CANAL_GENERAL} desde={hoy} pantalla vacio="Aún no hay mensajes hoy." />
     </div>
   )
 }

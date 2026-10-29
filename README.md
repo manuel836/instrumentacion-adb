@@ -17,6 +17,7 @@ Firebase (Auth, Firestore con caché persistente, Storage, Cloud Functions, Host
 | 5. Mejoras | Contraseña temporal puesta por el admin; borrar instrumentos con todo lo suyo; el catálogo recuerda búsqueda, filtros y posición; revisar el tag antes de grabarlo; importar desde Excel o CSV; pantalla de inicio con resumen; avisos de fallas por área; aviso semanal de calibraciones; hoja de vida en PDF; app más ligera e íconos propios; refacciones con kardex | En producción |
 | 6. Orden y seguridad | Canal general que empieza en blanco cada día, con historial por día y chats privados; el chat de una falla se cierra con ella y conserva lo hablado; próxima calibración opcional; sub áreas editables (el mismo tag puede repetirse en otra caldera); marca "Puede disparar la caldera" con aviso rojo antes de intervenir | En producción |
 | 7. Correcciones | El admin elimina una falla reportada por error (abierta, en proceso o cerrada) con su chat y sus fotos; el instrumento vuelve a "Operando" si no le queda otra pendiente | Lista para prueba en campo |
+| 8. Chat más cómodo | La caja de escribir queda arriba del teclado del teléfono; responder a un mensaje; corregir y eliminar los mensajes propios; eliminar un chat privado solo para mí o para ambos | Lista para prueba en campo |
 
 ## Desarrollo local con emuladores
 
@@ -75,6 +76,9 @@ Pruebas:
   un chat privado entre una operadora y un técnico con foto y globo de no leídos, y que el admin no
   pueda ver chats privados ajenos.
 - `node e2e/falla-cerrada.cjs`: al cerrar la falla su chat queda de solo lectura con lo hablado y las fotos.
+- `node e2e/chat-responder.cjs`: con el teclado abierto (se simula achicando la pantalla) la caja de
+  escribir y el último mensaje quedan a la vista; responder, corregir y eliminar mensajes (las fotos
+  del eliminado se borran de Storage); eliminar un chat privado solo para mí y para ambos.
 - `node e2e/calibracion-opcional.cjs`: calibración sin próxima fecha (la ficha queda sin programar) y con el atajo de 6 meses.
 - `node e2e/subareas.cjs`: el admin da de alta sub áreas, el mismo tag en dos calderas, filtro del
   catálogo, renombrar y no dejar quitar una sub área en uso.
@@ -172,6 +176,14 @@ cambiarlo después obliga a regrabarlos. La pantalla de vincular muestra la URL 
   (el historial los agrupa por día, nada se borra). Un chat privado vive en `chats_privados/{uidA_uidB}`
   (los dos uid ordenados), así las reglas saben quién puede leerlo sin consultar otro documento.
   La lista de personas sale de `directorio/{uid}`, que una Function mantiene igual que `usuarios`.
+  Una respuesta guarda solo a qué mensaje contesta (`respondeA`): la cita lee el original, así una
+  corrección o un borrado también se ven ahí. Un mensaje eliminado queda vacío con `eliminado: true`
+  ("Se eliminó este mensaje") y `alCambiarMensajeFalla` / `alCambiarMensajePrivado` borran sus fotos.
+  Eliminar un chat privado solo para mí anota la hora en `borradoPara.{uid}`; para ambos, en `vaciado`,
+  y `alVaciarChatPrivado` borra los mensajes de antes con sus fotos.
+- `src/hooks/useTeclado.ts`: el teclado del iPhone (y de Chrome en Android) no achica la página, solo
+  la vista visible (`visualViewport`). El canal general y los chats privados toman el alto de esa vista:
+  los mensajes se recorren por dentro y la caja de escribir queda justo arriba del teclado.
 - `src/lib/subareas.ts`: las sub áreas son documentos en `subareas` que edita el admin. El tag ISA es
   único por área y sub área, por eso el mismo PT-101 puede existir en la Caldera 1 y en la Caldera 2.
 - `src/lib/rechazos.ts`: Firestore descarta sin avisar lo que el servidor rechaza al sincronizar (por

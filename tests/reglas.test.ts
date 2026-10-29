@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
+import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp, Timestamp } from 'firebase/firestore'
 
 // Se corre con: npm run test:reglas (levanta el emulador de Firestore).
 
@@ -298,18 +298,54 @@ describe('chat', () => {
     await assertSucceeds(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), { fotos: [{ ...foto, url: 'https://x' }] }))
   })
 
-  it('el autor solo completa las URLs de sus fotos', async () => {
+  it('el autor completa las URLs de sus fotos; nadie más toca su mensaje', async () => {
     const foto = { ruta: 'a', miniatura: 'b', url: null, miniaturaUrl: null }
     await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador', { texto: '', fotos: [foto] })))
     await assertSucceeds(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), { fotos: [{ ...foto, url: 'https://x' }] }))
+    // Corregir pide la marca de "editado" con la hora del servidor.
     await assertFails(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), { texto: 'editado' }))
     await assertFails(updateDoc(doc(como('tecnico'), 'fallas/f1/mensajes/m1'), { fotos: [{ ...foto, url: 'https://y' }] }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'fallas/f1/mensajes/m1'), { texto: 'otro', editado: serverTimestamp() }))
   })
 
-  it('canal general: solo texto, sin editar', async () => {
+  it('el autor corrige o elimina su mensaje mientras la falla sigue abierta', async () => {
+    const foto = { ruta: 'a', miniatura: 'b', url: null, miniaturaUrl: null }
+    const ref = (rol: string) => doc(como(rol), 'fallas/f1/mensajes/m1')
+    await assertSucceeds(setDoc(ref('operador'), msg('u-operador', { fotos: [foto] })))
+    await assertSucceeds(updateDoc(ref('operador'), { texto: 'Ya voy, llego en 10', editado: serverTimestamp() }))
+    await assertFails(updateDoc(ref('operador'), { texto: 'x'.repeat(2001), editado: serverTimestamp() }))
+    await assertFails(updateDoc(ref('operador'), { texto: 'otro', editado: serverTimestamp(), fotos: [] }))
+    // Eliminar: queda vacío con la marca; no se puede dejar texto ni fotos.
+    await assertFails(updateDoc(ref('operador'), { texto: 'sigue aquí', fotos: [], eliminado: true }))
+    await assertFails(updateDoc(ref('tecnico'), { texto: '', fotos: [], eliminado: true, editado: deleteField() }))
+    await assertSucceeds(updateDoc(ref('operador'), { texto: '', fotos: [], eliminado: true, editado: deleteField() }))
+    // Lo eliminado ya no se corrige.
+    await assertFails(updateDoc(ref('operador'), { texto: 'revivido', editado: serverTimestamp() }))
+
+    await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m2'), msg('u-operador')))
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'fallas/f1'), { estado: 'Cerrada' }))
+    await assertFails(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m2'), { texto: 'otro', editado: serverTimestamp() }))
+    await assertFails(updateDoc(doc(como('operador'), 'fallas/f1/mensajes/m2'), { texto: '', fotos: [], eliminado: true }))
+  })
+
+  it('una respuesta guarda solo a qué mensaje responde', async () => {
+    const respondeA = { id: 'm0', autor: { uid: 'u-tecnico', nombre: 'Téc' } }
+    await assertSucceeds(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m1'), msg('u-operador', { respondeA })))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m2'), msg('u-operador', { respondeA: { ...respondeA, texto: 'copia' } })))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m3'), msg('u-operador', { respondeA: { id: 5, autor: respondeA.autor } })))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m4'), msg('u-operador', { eliminado: true })))
+    await assertFails(setDoc(doc(como('operador'), 'fallas/f1/mensajes/m5'), msg('u-operador', { editado: serverTimestamp() })))
+  })
+
+  it('canal general: solo texto; cada quien corrige o elimina lo suyo', async () => {
     await assertSucceeds(setDoc(doc(como('operador'), 'chat_general/m1'), msg('u-operador')))
     await assertFails(setDoc(doc(como('operador'), 'chat_general/m2'), msg('u-operador', { fotos: [{ ruta: 'a' }] })))
     await assertFails(updateDoc(doc(como('operador'), 'chat_general/m1'), { texto: 'otro' }))
+    await assertFails(updateDoc(doc(como('tecnico'), 'chat_general/m1'), { texto: 'otro', editado: serverTimestamp() }))
+    await assertFails(updateDoc(doc(como('admin'), 'chat_general/m1'), { texto: '', fotos: [], eliminado: true }))
+    await assertSucceeds(updateDoc(doc(como('operador'), 'chat_general/m1'), { texto: 'Buenos días a todos', editado: serverTimestamp() }))
+    await assertFails(updateDoc(doc(como('operador'), 'chat_general/m1'), { texto: '', editado: serverTimestamp() }))
+    await assertSucceeds(updateDoc(doc(como('operador'), 'chat_general/m1'), { texto: '', fotos: [], eliminado: true, editado: deleteField() }))
     await assertFails(getDocs(collection(como(null), 'chat_general')))
   })
 })
@@ -369,6 +405,47 @@ describe('chats privados', () => {
     await assertFails(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { 'leido.u-operador': ahora() }))
     await assertFails(updateDoc(doc(como('tecnico'), `chats_privados/${chatId}`), { miembros: ['u-admin', 'u-tecnico'] }))
     await assertFails(deleteDoc(doc(como('operador'), `chats_privados/${chatId}`)))
+  })
+
+  it('cada quien corrige o elimina solo sus mensajes, y el último se corrige también en la lista', async () => {
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    const m1 = (rol: string) => doc(como(rol), `chats_privados/${chatId}/mensajes/m1`)
+    const chat = (rol: string) => doc(como(rol), `chats_privados/${chatId}`)
+    await assertFails(updateDoc(m1('tecnico'), { texto: 'otro', editado: serverTimestamp() }))
+    await assertSucceeds(updateDoc(m1('operador'), { texto: 'Te marco en la tarde', editado: serverTimestamp() }))
+    await assertSucceeds(updateDoc(chat('operador'), { 'ultimo.texto': 'Te marco en la tarde' }))
+    // El último mensaje es del operador: el técnico no cambia su resumen.
+    await assertFails(updateDoc(chat('tecnico'), { 'ultimo.texto': 'otra cosa' }))
+    await assertSucceeds(updateDoc(m1('operador'), { texto: '', fotos: [], eliminado: true, editado: deleteField() }))
+    await assertFails(deleteDoc(m1('operador')))
+  })
+
+  it('eliminar el chat solo para mí anota mi hora y no la del otro', async () => {
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    const chat = (rol: string) => doc(como(rol), `chats_privados/${chatId}`)
+    await assertSucceeds(updateDoc(chat('tecnico'), { 'borradoPara.u-tecnico': serverTimestamp(), 'leido.u-tecnico': serverTimestamp() }))
+    await assertFails(updateDoc(chat('tecnico'), { 'borradoPara.u-operador': serverTimestamp() }))
+    await assertFails(updateDoc(chat('tecnico'), { 'borradoPara.u-tecnico': Timestamp.fromMillis(0) }))
+    await assertFails(updateDoc(chat('admin'), { 'borradoPara.u-admin': serverTimestamp() }))
+    // Al volver a escribir, el chat aparece otra vez (el borrado de cada quien se queda).
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm2'))
+  })
+
+  it('eliminar para ambos anota la hora y quita el último mensaje; nadie más lo hace', async () => {
+    await assertSucceeds(enviar(como('operador'), 'u-operador', 'm1'))
+    const chat = (rol: string) => doc(como(rol), `chats_privados/${chatId}`)
+    // Sin vaciar no se puede esconder el chat a los dos.
+    await assertFails(updateDoc(chat('tecnico'), { ultimo: null }))
+    await assertFails(updateDoc(chat('tecnico'), { vaciado: Timestamp.fromMillis(0), ultimo: null }))
+    await assertFails(updateDoc(chat('admin'), { vaciado: serverTimestamp(), ultimo: null }))
+    await assertSucceeds(updateDoc(chat('tecnico'), { vaciado: serverTimestamp(), ultimo: null }))
+    await assertSucceeds(enviar(como('tecnico'), 'u-tecnico', 'm2'))
+  })
+
+  it('un chat nuevo no puede llegar ya eliminado', async () => {
+    await assertFails(setDoc(doc(como('operador'), `chats_privados/${chatId}`), resumen('u-operador', { vaciado: serverTimestamp() })))
+    await assertFails(setDoc(doc(como('operador'), `chats_privados/${chatId}`), resumen('u-operador', { borradoPara: { 'u-tecnico': serverTimestamp() } })))
+    await assertSucceeds(setDoc(doc(como('operador'), `chats_privados/${chatId}`), resumen('u-operador')))
   })
 
   it('el directorio lo leen todos; cada quien solo se anota a sí mismo con su rol', async () => {
