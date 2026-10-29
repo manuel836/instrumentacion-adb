@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router'
 import { permisos, useAuth } from '../auth/AuthContext'
 import { useOnline, useRegistros, useSubidasPendientes } from '../hooks/useOnline'
+import { useVistaVisible } from '../hooks/useTeclado'
 import { useFallas } from '../lib/fallas'
 import { useNoLeidosGeneral } from '../lib/chat'
 import { useNoLeidosPrivados } from '../lib/privados'
@@ -186,6 +187,13 @@ function MarcaPestana({ activa }: { activa: number }) {
   )
 }
 
+/**
+ * Pantallas de chat donde se escribe (canal general de hoy y un chat privado): ocupan justo lo
+ * que se ve de la pantalla, los mensajes se recorren por dentro y la caja de escribir queda
+ * abajo, arriba del teclado cuando está abierto.
+ */
+const esPantallaDeChat = (pathname: string) => pathname === '/chat' || pathname.startsWith('/chat/privado/')
+
 /** Cada pantalla nueva abre desde arriba; al regresar (Atrás) cada una decide. */
 function ArribaAlNavegar() {
   const { pathname } = useLocation()
@@ -235,10 +243,16 @@ export function Layout() {
   const noLeidos = useNoLeidosGeneral(user?.uid)
   const privados = useNoLeidosPrivados(user?.uid)
   const sinLeer = (pathname === '/chat' ? 0 : noLeidos) + privados
+  const chat = esPantallaDeChat(pathname)
+  const vista = useVistaVisible(chat)
   return (
-    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
+    <div
+      className={chat ? 'fixed inset-x-0 mx-auto flex max-w-2xl flex-col overflow-hidden' : 'mx-auto flex min-h-dvh max-w-2xl flex-col'}
+      style={chat ? { top: vista.arriba, height: vista.alto } : undefined}
+      data-teclado={chat && vista.teclado ? '' : undefined}
+    >
       <ArribaAlNavegar />
-      <header className="sticky top-0 z-20 bg-marca-700 text-white shadow">
+      <header className="sticky top-0 z-20 shrink-0 bg-marca-700 text-white shadow">
         <div className="flex items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <span className="min-w-0 text-lg font-bold">Instrumentación ADB</span>
           <Menu bitacora={p.verBitacora} exportar={p.exportar} importar={p.editarInstrumentos} usuarios={p.gestionarUsuarios} onSalir={() => void pedirSalida()} />
@@ -261,14 +275,17 @@ export function Layout() {
       )}
       {/* Cada pantalla entra con un fundido corto. Solo opacidad: un movimiento haría que los
           botones fijos (Alta, Reportar falla) se movieran con la pantalla mientras entra. */}
-      <main className="flex-1 pb-24">
+      <main className={chat ? 'flex min-h-0 flex-1 flex-col' : 'flex-1 pb-24'}>
         <ConCarga key={pathname}>
-          <div className="animate-pantalla">
+          <div className={chat ? 'flex min-h-0 flex-1 animate-pantalla flex-col' : 'animate-pantalla'}>
             <Outlet />
           </div>
         </ConCarga>
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-2xl border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
+      {/* En un chat con el teclado abierto las pestañas se esconden: queda más lugar para leer. */}
+      <nav
+        className={`z-20 flex border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] ${chat ? `relative shrink-0 ${vista.teclado ? 'hidden' : ''}` : 'fixed inset-x-0 bottom-0 mx-auto max-w-2xl'}`}
+      >
         <MarcaPestana activa={pestanaActiva(pathname)} />
         <NavLink to="/" end className={claseNav}>
           <Icono nombre="inicio" className="size-6" />

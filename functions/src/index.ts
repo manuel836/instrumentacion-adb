@@ -509,6 +509,39 @@ export const alCrearMensajePrivado = onDocumentCreated('chats_privados/{chatId}/
   await avisar([otro], { titulo: `${m.autor?.nombre ?? 'Mensaje'} (privado)`, cuerpo: resumen(m), ruta: `/chat/privado/${autor}` })
 })
 
+/** Su autor eliminó un mensaje con fotos: en el chat queda el aviso y las fotos se borran de Storage. */
+async function alCambiarMensaje(antes: FirebaseFirestore.DocumentSnapshot | undefined, despues: FirebaseFirestore.DocumentSnapshot | undefined) {
+  if (!antes || !despues || antes.get('eliminado') === true || despues.get('eliminado') !== true) return
+  if (!(antes.get('fotos') as unknown[] | undefined)?.length) return
+  await borrarArchivos(`${despues.ref.path}/`)
+}
+
+export const alCambiarMensajeFalla = onDocumentUpdated('fallas/{fallaId}/mensajes/{msgId}', (ev) =>
+  alCambiarMensaje(ev.data?.before, ev.data?.after),
+)
+
+export const alCambiarMensajePrivado = onDocumentUpdated('chats_privados/{chatId}/mensajes/{msgId}', (ev) =>
+  alCambiarMensaje(ev.data?.before, ev.data?.after),
+)
+
+/**
+ * Chat privado eliminado "para ambos": la app ya lo oculta a los dos desde esa hora; aquí se
+ * borran de verdad los mensajes de antes y sus fotos. Lo que se escriba después queda.
+ */
+export const alVaciarChatPrivado = onDocumentUpdated('chats_privados/{chatId}', async (ev) => {
+  const antes = ev.data?.before.get('vaciado') as Timestamp | undefined
+  const vaciado = ev.data?.after.get('vaciado') as Timestamp | undefined
+  if (!vaciado || (antes && antes.isEqual(vaciado))) return
+  const viejos = await db.collection(`chats_privados/${ev.params.chatId}/mensajes`).where('fecha', '<=', vaciado).get()
+  for (const m of viejos.docs) {
+    if ((m.get('fotos') as unknown[] | undefined)?.length) await borrarArchivos(`${m.ref.path}/`)
+  }
+  const lote = db.bulkWriter()
+  for (const m of viejos.docs) void lote.delete(m.ref)
+  await lote.close()
+  logger.info(`Chat privado vaciado: ${viejos.size} mensajes`, { chatId: ev.params.chatId })
+})
+
 /**
  * Copia el nombre, rol, área y si está activo de cada usuario al directorio, que todos
  * pueden leer para elegir con quién chatear (la ficha de usuarios tiene correos y tokens).

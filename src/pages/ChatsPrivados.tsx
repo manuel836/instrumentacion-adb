@@ -1,12 +1,26 @@
-import { useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router'
+import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import type { Timestamp } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { Chat } from '../components/Chat'
 import { Icono } from '../components/Icono'
+import { avisarGuardado } from '../components/Listo'
 import { PestanasChat } from '../components/PestanasChat'
 import { hiloPrivado, idChatPrivado } from '../lib/chat'
-import { otroDe, resumenDelChat, sinLeer, useChatPrivado, useChatsPrivados, useDirectorio, useMarcarLeido } from '../lib/privados'
+import {
+  borrarChatParaAmbos,
+  borrarChatParaMi,
+  corregirResumen,
+  otroDe,
+  resumenDelChat,
+  sinLeer,
+  useChatPrivado,
+  useChatsPrivados,
+  useDirectorio,
+  useMarcarLeido,
+  vistoDesde,
+} from '../lib/privados'
 import type { Rol } from '../types'
 import { Silueta } from '../components/Silueta'
 
@@ -113,6 +127,84 @@ export function ChatsPrivados() {
   )
 }
 
+/** Eliminar la conversación: solo para mí (la otra persona la sigue viendo) o para los dos. */
+function EliminarChat({ chatId, nombre, onCerrar }: { chatId: string; nombre: string; onCerrar: () => void }) {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [paraAmbos, setParaAmbos] = useState(false)
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCerrar()
+    }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [onCerrar])
+
+  function eliminar(ambos: boolean) {
+    if (!user) return
+    // Se quita al momento; sin señal, el servidor se entera al reconectar.
+    const hecho = ambos ? borrarChatParaAmbos(chatId) : borrarChatParaMi(chatId, user.uid)
+    hecho.catch((err) => console.error('No se pudo eliminar el chat', err))
+    avisarGuardado(`Se eliminó el chat con ${nombre}.`, `El chat con ${nombre} se quitó; se termina de eliminar al recuperar la señal.`)
+    navigate('/chat/privados', { replace: true })
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex animate-aparecer items-end justify-center bg-black/40 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-eliminar-chat"
+      onClick={onCerrar}
+    >
+      <div
+        className="w-full max-w-lg animate-subir space-y-3 rounded-t-2xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-slate-900 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {!paraAmbos ? (
+          <>
+            <h2 id="titulo-eliminar-chat" className="text-lg font-semibold">
+              ¿Eliminar el chat con {nombre}?
+            </h2>
+            <button className="btn-secundario w-full flex-col items-start gap-0.5 text-left" onClick={() => eliminar(false)}>
+              <span>Eliminar solo para mí</span>
+              <span className="text-sm font-normal text-slate-600">
+                Se quita de tu lista y ya no ves sus mensajes. {nombre} lo sigue viendo completo. Si te vuelve a escribir, el chat aparece de
+                nuevo solo con lo nuevo.
+              </span>
+            </button>
+            <button className="btn-peligro w-full flex-col items-start gap-0.5 text-left" onClick={() => setParaAmbos(true)}>
+              <span>Eliminar para ambos</span>
+              <span className="text-sm font-normal text-peligro-900">Se borran todos los mensajes y fotos, para ti y para {nombre}.</span>
+            </button>
+            <button className="btn w-full text-slate-600" onClick={onCerrar}>
+              Cancelar
+            </button>
+          </>
+        ) : (
+          <div className="animate-aparecer space-y-3">
+            <h2 id="titulo-eliminar-chat" className="text-lg font-semibold">
+              ¿Eliminar el chat para ti y para {nombre}?
+            </h2>
+            <p className="text-sm text-slate-600">
+              Todos los mensajes y fotos de esta conversación se borran para los dos. No se puede deshacer.
+            </p>
+            <div className="flex gap-2">
+              <button className="btn-secundario flex-1" onClick={() => setParaAmbos(false)}>
+                Cancelar
+              </button>
+              <button className="btn flex-1 bg-peligro-700 text-white" onClick={() => eliminar(true)}>
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 /** Conversación con una persona. Funciona sin señal, igual que los otros chats. */
 export function ConversacionPrivada() {
   const { uid: otro = '' } = useParams()
@@ -121,35 +213,52 @@ export function ConversacionPrivada() {
   const chatId = yo && otro && yo !== otro ? idChatPrivado(yo, otro) : null
   const chat = useChatPrivado(chatId)
   const contactos = useDirectorio(user?.uid)
+  const [eliminando, setEliminando] = useState(false)
   useMarcarLeido(chat, yo)
   const contacto = contactos?.find((c) => c.uid === otro)
   const nombre = contacto?.nombre || chat?.nombres[otro] || ''
   const miNombre = user?.displayName || user?.email || 'Usuario'
   const tambien = useMemo(() => resumenDelChat({ uid: yo, nombre: miNombre }, { uid: otro, nombre: nombre || 'Usuario' }), [yo, miNombre, otro, nombre])
+  const alCorregir = useMemo(() => corregirResumen(chat), [chat])
+  // Lo de antes de que lo eliminara (para mí o para ambos) ya no se ve.
+  const desde = vistoDesde(chat, yo) ?? undefined
 
   if (!chatId) return <Navigate to="/chat/privados" replace />
   if (contactos === null || chat === undefined) return <Silueta />
   if (!contacto && !chat) return <p className="p-6 text-slate-500">Esta persona no está en la app.</p>
 
   return (
-    <div className="space-y-3 p-3">
-      <div>
-        <Link to="/chat/privados" className="text-sm font-semibold text-marca-700">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 px-3 pt-3">
+        <Link to="/chat/privados" className="oculto-con-teclado text-sm font-semibold text-marca-700">
           ← Chats privados
         </Link>
-        <h1 className="text-xl font-bold">{nombre || 'Usuario'}</h1>
-        <p className="flex items-center gap-1.5 text-sm text-slate-500">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="min-w-0 truncate text-xl font-bold">{nombre || 'Usuario'}</h1>
+          {chat?.ultimo && (
+            <button
+              className="oculto-con-teclado -my-2 inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-3 text-sm font-semibold text-peligro-700"
+              onClick={() => setEliminando(true)}
+            >
+              <Icono nombre="basura" className="size-4" /> Eliminar chat
+            </button>
+          )}
+        </div>
+        <p className="oculto-con-teclado flex items-center gap-1.5 text-sm text-slate-500">
           <Icono nombre="candado" className="size-4" /> Chat privado: solo lo ven tú y {nombre || 'esta persona'}.
         </p>
       </div>
       <Chat
         ruta={hiloPrivado(chatId)}
         conFotos
-        alInicioAbajo
+        pantalla
+        desde={desde}
         vacio="Aún no hay mensajes. Escribe para empezar la conversación."
         cerrado={!contacto?.activo ? `${nombre || 'Esta persona'} ya no tiene acceso a la app. La conversación queda guardada.` : undefined}
         tambien={tambien}
+        alCorregir={alCorregir}
       />
+      {eliminando && chat && <EliminarChat chatId={chat.id} nombre={nombre || 'esta persona'} onCerrar={() => setEliminando(false)} />}
     </div>
   )
 }

@@ -148,12 +148,23 @@ export interface Falla {
   fechas: { creada: Timestamp | null; tomada: Timestamp | null; cerrada: Timestamp | null; enTelefono?: Timestamp | null }
 }
 
+/** El mensaje al que contesta otro. Solo quién y cuál: el texto se lee del original, así una corrección o un borrado se ven también en la cita. */
+export interface RespuestaA {
+  id: string
+  autor: Persona
+}
+
 export interface Mensaje {
   id: string
   autor: Persona
   texto: string
   fotos: FotoFalla[]
   fecha: Timestamp | null
+  respondeA: RespuestaA | null
+  /** Cuándo lo corrigió su autor por última vez. */
+  editado: Timestamp | null
+  /** Su autor lo eliminó: en su lugar queda "Se eliminó este mensaje". */
+  eliminado: boolean
 }
 
 export const RESULTADOS_CALIBRACION = ['Aprobada sin ajuste', 'Ajustada', 'Fuera de tolerancia'] as const
