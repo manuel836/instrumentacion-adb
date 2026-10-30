@@ -48,6 +48,20 @@ async function dentroDelLimite(bitmap: ImageBitmap, ladoMayor: number, calidad: 
   return blob
 }
 
+/**
+ * De la galería puede llegar algo que este navegador no abre (por ejemplo, una foto HEIC
+ * de algunos Samsung en Chrome). Se revisa al elegirla, antes de que falle al guardar.
+ */
+export async function sePuedeAbrir(archivo: Blob): Promise<boolean> {
+  try {
+    const bitmap = await createImageBitmap(archivo, { imageOrientation: 'from-image' })
+    bitmap.close()
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Reduce la foto en el teléfono: 1600 px de lado mayor más una miniatura de 320 px. */
 export async function comprimirFoto(archivo: Blob): Promise<FotoComprimida> {
   const tipo = await tipoFoto()
